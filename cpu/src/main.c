@@ -1,8 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <utils/hello.h>
+#include <logCpu.c>
+
 
 int main(int argc, char* argv[]) {
-    decir_hola("CPU");
+    iniciar_cpu();
+    apagarCpu();
     return 0;
 }
