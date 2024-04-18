@@ -8,7 +8,10 @@ int prenderServer(void) {
 	int cliente_fd = esperar_cliente(server_fd);
 
 	t_list* lista;
+    int i = 0;
 	while (1) {
+        i++;
+        printf("entre al WHILE %d veces",i);
 		int cod_op = recibir_operacion(cliente_fd);
 		switch (cod_op) {
 		case MENSAJE:

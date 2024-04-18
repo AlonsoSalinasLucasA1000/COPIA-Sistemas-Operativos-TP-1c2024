@@ -8,7 +8,6 @@ int iniciar_servidor(void)
 	//assert(!"no implementado!");
 
 	int socket_servidor;
-	int err;
 
 	struct addrinfo hints, *serv_info;
 
@@ -20,7 +19,7 @@ int iniciar_servidor(void)
 
 
 	
-	err = getaddrinfo(NULL, PUERTO, &hints, &serv_info);
+	socket_servidor = getaddrinfo(NULL, PUERTO, &hints, &serv_info);
 	// Asociamos el socket a un puerto
 
 
@@ -29,8 +28,8 @@ int iniciar_servidor(void)
                         serv_info->ai_protocol);
 	// Escuchamos las conexiones entrantes
 
-	err = bind(fd_escucha, serv_info->ai_addr, serv_info->ai_addrlen);
-	err = listen(fd_escucha, SOMAXCONN);
+	socket_servidor = bind(fd_escucha, serv_info->ai_addr, serv_info->ai_addrlen);
+	socket_servidor = listen(fd_escucha, SOMAXCONN);
 
 
 	freeaddrinfo(serv_info);
