@@ -61,4 +61,3 @@ int clientToMEM(void)
     paquete(conexion);
     terminar_programa(conexion, logger, config);
 }
-

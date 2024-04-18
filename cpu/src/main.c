@@ -1,8 +1,7 @@
-#include <headerMainCPU.h>
-
+#include <serverCPU.h>
 
 int main(int argc, char* argv[]) {
     int result;
-    result = prenderServer();
+    result = iniciar_servidor();
     return result;
 }
