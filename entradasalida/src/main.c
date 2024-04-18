@@ -10,9 +10,9 @@ int main(int argc, char* argv[]) {
 #include <clientToMem.h>
 
 int main(int argc, char* argv[]) {
-    int result = clientToMEM();
-    return result;
+    int resultMEM = clientToMEM();
+    return 0;
 
-    int result = clientToKer();
-    return result;
+    int resultKER = clientToKer();
+    return 0;
 }
