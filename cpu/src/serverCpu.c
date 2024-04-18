@@ -1,25 +1,29 @@
-#include <cpu.h>
+#include "headerServer.h"
 
-int main(void) {
+int prenderServer(void) {
 	logger = log_create("log.log", "Servidor", 1, LOG_LEVEL_DEBUG);
 
 	int server_fd = iniciar_servidor();
 	log_info(logger, "Servidor listo para recibir al cliente");
 	int cliente_fd = esperar_cliente(server_fd);
 
-
-	t_list* lista;
+	//t_list* lista;
+    int i = 0;
 	while (1) {
-		int cod_op = recibir_operacion(y);
+        i++;
+        printf("entre al WHILE %d veces",i);
+		int cod_op = recibir_operacion(cliente_fd);
 		switch (cod_op) {
 		case MENSAJE:
 			recibir_mensaje(cliente_fd);
 			break;
+            /*
 		case PAQUETE:
 			lista = recibir_paquete(cliente_fd);
 			log_info(logger, "Me llegaron los siguientes valores:\n");
 			list_iterate(lista, (void*) iterator);
 			break;
+            */
 		case -1:
 			log_error(logger, "el cliente se desconecto. Terminando servidor");
 			return EXIT_FAILURE;
@@ -28,30 +32,9 @@ int main(void) {
 			break;
 		}
 	}
-    /*
-    configUbi("utils/hello.h");
-    int i = talFuncion(x);
-    */
-
 	return EXIT_SUCCESS;
 }
 
 void iterator(char* value) {
 	log_info(logger,"%s", value);
-}
-
-void iniciar_cpu(){
-    talFuncion(x)
-    bool x = true;
-    while (x)
-    {
-        funco = conectar();
-        if (functo == 1)
-        {
-            enviarMensaje(1);
-        } else {
-            x = false;
-            error();
-        }
-    }
 }

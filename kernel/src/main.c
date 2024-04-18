@@ -1,8 +1,6 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <utils/hello.h>
+#include <headerMainKernel.h>
 
 int main(int argc, char* argv[]) {
-    decir_hola("Kernel");
-    return 0;
+    int result = clientToCPU();
+    return result;
 }
