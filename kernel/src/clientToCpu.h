@@ -1,7 +1,7 @@
 #ifndef CLIENTTOCPU_H_
 #define CLIENTTOCPU_H_
 
-/* Incluidos en `#include "../../utils/src/functions/client.h"`
+/* Incluidos en `#include ".h"`
 #include<stdio.h>
 #include<stdlib.h>
 #include<commons/log.h>

@@ -1,12 +1,14 @@
 #include "server.h"
 
-
 t_log* logger;
 
-int iniciar_servidor(void)
+int iniciar_socket(int puertoNum)
 {
-	// Quitar esta línea cuando hayamos terminado de implementar la funcion
-	//assert(!"no implementado!");
+	// EN UTILS POR AHORA NO USAMOS LOGS
+	//logger = iniciar_logger();
+
+	char *puerto = malloc(sizeof(char) * 6);
+	sprintf(puerto, "%d", puertoNum);
 
 	int socket_servidor;
 
@@ -17,25 +19,25 @@ int iniciar_servidor(void)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(NULL, PUERTO, &hints, &serv_info);
+	int err = getaddrinfo(NULL, puerto, &hints, &serv_info);
+	if (err != 0)
+	{
+		printf("error en greaddr\n");
+	}
 	
 	// Creamos el socket de escucha del servidor
-	int fd_escucha = socket(serv_info->ai_family,
-                        serv_info->ai_socktype,
-                        serv_info->ai_protocol);
-
-	
+	socket_servidor = socket(serv_info->ai_family,
+                       		 serv_info->ai_socktype,
+                       		 serv_info->ai_protocol);
 	// Asociamos el socket a un puerto
-	socket_servidor = bind(fd_escucha, serv_info->ai_addr, serv_info->ai_addrlen);
-
-
+	bind(socket_servidor, serv_info->ai_addr, serv_info->ai_addrlen);
 	// Escuchamos las conexiones entrantes
-	socket_servidor = listen(fd_escucha, SOMAXCONN);
-
+	listen(socket_servidor, SOMAXCONN);
 
 	freeaddrinfo(serv_info);
-	log_trace(logger, "Listo para escuchar a mi cliente");
+	//log_trace(logger, "Listo para escuchar a mi cliente");
 
+	free(puerto);
 	return socket_servidor;
 }
 
@@ -45,6 +47,7 @@ int esperar_cliente(int socket_servidor)
 	//assert(!"no implementado!");
 
 	// Aceptamos un nuevo cliente
+
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
 	log_info(logger, "Se conecto un cliente!");
 	size_t bytes;
@@ -59,8 +62,10 @@ int esperar_cliente(int socket_servidor)
 	} else {
 		bytes = send(socket_cliente, &resultError, sizeof(int32_t), 0);
 	}
-
+	// comentado hasta hacer q espere a conectar a un cliente
+	
 	close(socket_cliente);
+
 
 	return socket_cliente;
 }

@@ -1,21 +1,50 @@
-#include "headerServerMemoria.h"
+#include "serverMemoria.h"
+#include <commons/config.h>
 
-int prenderServerMR(void) {
-	logger = log_create("log.log", "Servidor", 1, LOG_LEVEL_DEBUG);
+//#define destino "CPU"
+#define destino "MEM"
+//#define destino "KER"
 
-	int server_fd = iniciar_servidorMR();
+int iniciar_servidor() {
+	
+	t_log *logger;
+
+	logger = iniciar_logger();
+	char pathLogs [27] = ".//src/logs/server";
+    strcat(pathLogs, destino);
+    strcat(pathLogs, ".log\0");
+    logger = log_create(pathLogs, "log_cliente", true, LOG_LEVEL_INFO);	
+
+	int puerto;
+    t_config *config;
+    config = iniciar_config();
+	
+    //config = config_create("../../utils/src/configs/serverPorts.config");
+    config = config_create("../utils/src/configs/serverPorts.config");
+    if (config == NULL)
+    {
+        printf("No encontro el archivo Config\n");
+        exit(MSG_ERRQUEUE);
+    }
+    char selPuerto [9] = "PUERTO\0";
+    strcat(selPuerto, destino);
+    
+    puerto = config_get_int_value(config, selPuerto);
+
+    log_info(logger, "Leí el puerto puerto: %d\n", puerto);
+	
+    config_destroy(config);
+
+	int server_fd = iniciar_socket(puerto);
 	log_info(logger, "Servidor listo para recibir al cliente");
-	int cliente_fd = esperar_clienteMR(server_fd);
+	int cliente_fd = esperar_cliente(server_fd);
 
 	//t_list* lista;
-   // int i = 0;
 	while (1) {
-       // i++;
-        // printf("entre al WHILE %d veces",i);
-		int cod_op = recibir_operacionMR(cliente_fd);
+		int cod_op = recibir_operacion(cliente_fd);
 		switch (cod_op) {
 		case MENSAJE:
-			recibir_mensajeMR(cliente_fd);
+			recibir_mensaje(cliente_fd);
 			break;
             /*
 		case PAQUETE:
@@ -35,6 +64,21 @@ int prenderServerMR(void) {
 	return EXIT_SUCCESS;
 }
 
-void iteratorMR(char* value) {
+void iterator(char* value) {
 	log_info(logger,"%s", value);
+}
+
+
+t_log *iniciar_logger(void)
+{
+    t_log *nuevo_logger;
+
+    return nuevo_logger;
+}
+
+t_config *iniciar_config(void)
+{
+    t_config *nuevo_config;
+
+    return nuevo_config;
 }
