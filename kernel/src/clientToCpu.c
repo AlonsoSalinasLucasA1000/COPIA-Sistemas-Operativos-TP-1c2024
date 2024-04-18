@@ -1,5 +1,6 @@
 #include <clientToCpu.h>
-//#define destino "CPU"
+
+#define destino "CPU"
 //#define destino "MEM"
 //#define destino "KER"
 
@@ -17,7 +18,10 @@ int clientToCPU(void)
 
     /* ---------------- LOGGING ---------------- */
     logger = iniciar_logger();
-    logger = log_create(".//src/logs/clientToCPU.log", "log_cliente", true, LOG_LEVEL_INFO);
+    char pathLogs [29] = ".//src/logs/clientTo";
+    strcat(pathLogs, destino);
+    strcat(pathLogs, ".log\0");
+    logger = log_create(pathLogs, "log_cliente", true, LOG_LEVEL_INFO);
 
     /* ---------------- ARCHIVOS DE CONFIGURACION ---------------- */
 
