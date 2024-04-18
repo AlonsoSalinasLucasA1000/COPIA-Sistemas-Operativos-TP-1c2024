@@ -1,7 +1,7 @@
-#ifndef HEADERCLIENTTOCPU_H_
-#define HEADERCLIENTTOCPU_H_
+#ifndef CLIENTTOCPU_H_
+#define CLIENTTOCPU_H_
 
-/* Incluidos en `#include "headerFunctionsClient.h"`
+/* Incluidos en `#include "../../utils/src/functions/client.h"`
 #include<stdio.h>
 #include<stdlib.h>
 #include<commons/log.h>
@@ -10,7 +10,7 @@
 #include<commons/config.h>
 #include<readline/readline.h>
 
-#include "headerFunctionsClient.h"
+#include "../../utils/src/functions/client.h"
 
 int clientToCPU(void);
 t_log* iniciar_logger(void);
@@ -19,4 +19,4 @@ void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
 
-#endif /* HEADERCLIENTTOCPU_H_ */
+#endif /* CLIENTTOCPU_H_ */

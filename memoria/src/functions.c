@@ -1,8 +1,8 @@
-#include <headerFunctionsSV.h>
+#include <headerFunctions.h>
 
 t_log* logger;
 
-int iniciar_servidor(void)
+int iniciar_servidorMR(void)
 {
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
 	//assert(!"no implementado!");
@@ -15,21 +15,21 @@ int iniciar_servidor(void)
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
+
+	getaddrinfo(NULL, PUERTO, &hints, &serv_info);
+
 	// Creamos el socket de escucha del servidor
-
-
 	
-	socket_servidor = getaddrinfo(NULL, PUERTO, &hints, &serv_info);
+	socket_servidor = socket(serv_info->ai_family,
+                       		 serv_info->ai_socktype,
+                       		 serv_info->ai_protocol);
+
 	// Asociamos el socket a un puerto
 
+	bind(socket_servidor, serv_info->ai_addr, serv_info->ai_addrlen);
 
-	int fd_escucha = socket(serv_info->ai_family,
-                        serv_info->ai_socktype,
-                        serv_info->ai_protocol);
 	// Escuchamos las conexiones entrantes
-
-	socket_servidor = bind(fd_escucha, serv_info->ai_addr, serv_info->ai_addrlen);
-	socket_servidor = listen(fd_escucha, SOMAXCONN);
+	listen(socket_servidor, SOMAXCONN);
 
 
 	freeaddrinfo(serv_info);
@@ -38,15 +38,17 @@ int iniciar_servidor(void)
 	return socket_servidor;
 }
 
-int esperar_cliente(int socket_servidor)
+int esperar_clienteMR(int socket_servidor)
 {
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
 	//assert(!"no implementado!");
 
 	// Aceptamos un nuevo cliente
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
+	
 	log_info(logger, "Se conecto un cliente!");
-	size_t bytes;
+	
+	/*size_t bytes;
 
 	int32_t handshake;
 	int32_t resultOk = 0;
@@ -59,12 +61,12 @@ int esperar_cliente(int socket_servidor)
 		bytes = send(socket_cliente, &resultError, sizeof(int32_t), 0);
 	}
 
-	close(socket_cliente);
+	close(socket_cliente);NO ENTIENDO*/
 
 	return socket_cliente;
 }
 
-void* recibir_buffer(int* size, int socket_cliente)
+void* recibir_bufferMR(int* size, int socket_cliente)
 {
 	void * buffer;
 
@@ -75,15 +77,15 @@ void* recibir_buffer(int* size, int socket_cliente)
 	return buffer;
 }
 
-void recibir_mensaje(int socket_cliente)
+void recibir_mensajeMR(int socket_cliente)
 {
 	int size;
-	char* buffer = recibir_buffer(&size, socket_cliente);
+	char* buffer = recibir_bufferMR(&size, socket_cliente);
 	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 
-int recibir_operacion(int socket_cliente)
+int recibir_operacionMR(int socket_cliente)
 {
 	int cod_op;
 	if(recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)

@@ -1,4 +1,4 @@
-#include "headerFunctionsClient.h"
+#include "client.h"
 
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
@@ -32,16 +32,14 @@ int crear_conexion(char *ip, char* puerto)
 		printf ("Error en getaddrinfo: %s", gai_strerror (err));
 		exit (-1);
 	}
-
 	
-	// Ahora vamos a crear el socket.
 	int socket_cliente = socket(server_info->ai_family,
                          server_info->ai_socktype,
                          server_info->ai_protocol);
 
-	// Ahora que tenemos el socket, vamos a conectarlo
 	err = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 
+	/*
 	size_t bytes;
 	int32_t handshake = 1;
 	int32_t result;
@@ -54,6 +52,8 @@ int crear_conexion(char *ip, char* puerto)
 	} else {
 		// Handshake ERROR
 	}
+	// IMPLEMENTAR CUANDO SEPAMOS COMO HACER Q ENCUENTRE Y AHI ANDE
+	*/
 
 	close(socket_cliente);
 
