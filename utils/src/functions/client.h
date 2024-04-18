@@ -10,6 +10,9 @@
 #include<string.h>
 #include<commons/log.h>
 
+#include<commons/config.h>
+#include<readline/readline.h>
+
 typedef enum
 {
 	MENSAJE,
@@ -37,5 +40,16 @@ t_paquete* crear_paquete(void);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+
+
+/****FUNCIONES QUE HABIA EN EL CLIENT_TO*****/
+
+
+t_log* iniciar_logger(void);
+t_config* iniciar_config(void);
+void leer_consola(t_log*);
+void paquete(int);
+void terminar_programa(int, t_log*, t_config*);
+
 
 #endif /* CLIENT_H_ */

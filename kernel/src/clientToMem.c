@@ -1,4 +1,4 @@
-#include <clientToCpu.h>
+#include <clientsKER.h>
 
 //#define destino "CPU"
 #define destino "MEM"
@@ -60,56 +60,4 @@ int clientToMem(void)
     // Armamos y enviamos el paquete
     paquete(conexion);
     terminar_programa(conexion, logger, config);
-}
-
-t_log *iniciar_logger2(void)
-{
-    t_log *nuevo_logger;
-
-    return nuevo_logger;
-}
-
-t_config *iniciar_config2(void)
-{
-    t_config *nuevo_config;
-
-    return nuevo_config;
-}
-
-void leer_consola2(t_log *logger)
-{
-    char *leido;
-
-    while (1)
-    {
-        leido = readline("> ");
-
-        if (strcmp(leido, "") == 0)
-        {
-            break;
-        }
-
-        log_info(logger, leido);
-        printf("%s/n", leido);
-
-        free(leido);
-    }
-}
-
-void paquete2(int conexion)
-{
-    // Ahora toca lo divertido!
-    char *leido;
-    t_paquete *paquete;
-
-    // Leemos y esta vez agregamos las lineas al paquete
-    // ¡No te olvides de liberar las líneas y el paquete antes de regresar!
-}
-
-void terminar_programa2(int conexion, t_log *logger, t_config *config)
-{
-    /* Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config)
-      con las funciones de las commons y del TP mencionadas en el enunciado */
-    free(logger);
-    free(config);
 }
