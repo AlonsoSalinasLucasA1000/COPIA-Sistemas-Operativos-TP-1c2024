@@ -1,10 +1,12 @@
 #ifndef HEADERSERVER_H_
 #define HEADERSERVER_H_
 
+/* /* Incluidos en `#include "headerFunctionsSV.h"`
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <commons/log.h>
+*/
 #include "headerFunctionsSV.h"
 
 int prenderServer(void);
