@@ -1,37 +1,37 @@
-int err;
+#include <functionsServer.c>
 
-struct addrinfo hints, *server_info;
+int prenderServer(void) {
+	logger = log_create("log.log", "Servidor", 1, LOG_LEVEL_DEBUG);
 
-memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
+	int server_fd = iniciar_servidor();
+	log_info(logger, "Servidor listo para recibir al cliente");
+	int cliente_fd = esperar_cliente(server_fd);
 
-err = getaddrinfo(NULL, "45007", &hints, &server_info);
-
-int fd_escucha = socket(server_info->ai_family,
-                        server_info->ai_socktype,
-                        server_info->ai_protocol);
-
-freeaddrinfo(server_info);
-
-err = bind(fd_escucha, server_info->ai_addr, server_info->ai_addrlen);
-err = listen(fd_escucha, SOMAXCONN);
-
-int fd_conexion = accept(fd_escucha, NULL, NULL);
-
-size_t bytes;
-
-int32_t handshake;
-int32_t resultOk = 0;
-int32_t resultError = -1;
-
-bytes = recv(fd_conexion, &handshake, sizeof(int32_t), MSG_WAITALL);
-if (handshake == 1) {
-    bytes = send(fd_conexion, &resultOk, sizeof(int32_t), 0);
-} else {
-    bytes = send(fd_conexion, &resultError, sizeof(int32_t), 0);
+	t_list* lista;
+	while (1) {
+		int cod_op = recibir_operacion(cliente_fd);
+		switch (cod_op) {
+		case MENSAJE:
+			recibir_mensaje(cliente_fd);
+			break;
+            /*
+		case PAQUETE:
+			lista = recibir_paquete(cliente_fd);
+			log_info(logger, "Me llegaron los siguientes valores:\n");
+			list_iterate(lista, (void*) iterator);
+			break;
+            */
+		case -1:
+			log_error(logger, "el cliente se desconecto. Terminando servidor");
+			//return EXIT_FAILURE;
+		default:
+			log_warning(logger,"Operacion desconocida. No quieras meter la pata");
+			break;
+		}
+	}
+	return EXIT_SUCCESS;
 }
 
-close(fd_conexion);
-close(fd_escucha);
+void iterator(char* value) {
+	log_info(logger,"%s", value);
+}

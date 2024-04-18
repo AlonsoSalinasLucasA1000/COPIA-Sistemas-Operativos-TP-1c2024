@@ -1,8 +1,8 @@
-#include <logCpu.c>
+#include <serverCpu.c>
 
 
 int main(int argc, char* argv[]) {
-    iniciar_cpu();
-    apagarCpu();
-    return 0;
+    int i;
+    i = prenderServer();
+    return i;
 }

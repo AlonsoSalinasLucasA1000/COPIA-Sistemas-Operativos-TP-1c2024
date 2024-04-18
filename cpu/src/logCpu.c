@@ -1,3 +1,4 @@
+/*
 #include <cpu.h>
 
 int main(void) {
@@ -31,7 +32,7 @@ int main(void) {
     /*
     configUbi("utils/hello.h");
     int i = talFuncion(x);
-    */
+    /
 
 	return EXIT_SUCCESS;
 }
@@ -55,3 +56,4 @@ void iniciar_cpu(){
         }
     }
 }
+*/
