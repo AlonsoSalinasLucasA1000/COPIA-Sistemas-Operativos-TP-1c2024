@@ -1,5 +1,8 @@
 .metadata/
 
+# vscode
+*.vscode
+
 # Prerequisites
 *.d
 
