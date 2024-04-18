@@ -1,4 +1,4 @@
-#include <serverCpu.c>
+#include <headerServer.h>
 
 
 int main(int argc, char* argv[]) {
