@@ -1,4 +1,4 @@
-#include <functionsServer.c>
+#include "headerServer.h"
 
 int prenderServer(void) {
 	logger = log_create("log.log", "Servidor", 1, LOG_LEVEL_DEBUG);
@@ -7,7 +7,7 @@ int prenderServer(void) {
 	log_info(logger, "Servidor listo para recibir al cliente");
 	int cliente_fd = esperar_cliente(server_fd);
 
-	t_list* lista;
+	//t_list* lista;
     int i = 0;
 	while (1) {
         i++;

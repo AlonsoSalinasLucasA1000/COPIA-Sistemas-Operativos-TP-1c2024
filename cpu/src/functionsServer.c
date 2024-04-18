@@ -1,4 +1,4 @@
-#include <headerServer.h>
+#include <headerFunctions.h>
 
 t_log* logger;
 
@@ -64,6 +64,17 @@ int esperar_cliente(int socket_servidor)
 	return socket_cliente;
 }
 
+void* recibir_buffer(int* size, int socket_cliente)
+{
+	void * buffer;
+
+	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
+	buffer = malloc(*size);
+	recv(socket_cliente, buffer, *size, MSG_WAITALL);
+
+	return buffer;
+}
+
 void recibir_mensaje(int socket_cliente)
 {
 	int size;
@@ -83,18 +94,8 @@ int recibir_operacion(int socket_cliente)
 		return -1;
 	}
 }
-/*
-void* recibir_buffer(int* size, int socket_cliente)
-{
-	void * buffer;
 
-	recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
-	buffer = malloc(*size);
-	recv(socket_cliente, buffer, *size, MSG_WAITALL);
 
-	return buffer;
-}
-*/
 /*
 t_list* recibir_paquete(int socket_cliente)
 {
