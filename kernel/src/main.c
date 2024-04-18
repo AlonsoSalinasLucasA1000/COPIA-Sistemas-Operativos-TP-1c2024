@@ -1,4 +1,4 @@
-#include <headerMainKernel.h>
+#include <clientToCpu.h>
 
 int main(int argc, char* argv[]) {
     int result = clientToCPU();

@@ -1,5 +1,5 @@
-#ifndef HEADERFUNCTIONSCLIENT_H_
-#define HEADERFUNCTIONSCLIENT_H_
+#ifndef CLIENT_H_
+#define CLIENT_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -38,4 +38,4 @@ void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
 
-#endif /* HEADERFUNCTIONSCLIENT_H_ */
+#endif /* CLIENT_H_ */

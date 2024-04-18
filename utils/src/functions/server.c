@@ -1,4 +1,5 @@
-#include <headerFunctionsSV.h>
+#include "server.h"
+
 
 t_log* logger;
 
@@ -15,20 +16,20 @@ int iniciar_servidor(void)
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
-	// Creamos el socket de escucha del servidor
 
-
+	getaddrinfo(NULL, PUERTO, &hints, &serv_info);
 	
-	socket_servidor = getaddrinfo(NULL, PUERTO, &hints, &serv_info);
-	// Asociamos el socket a un puerto
-
-
+	// Creamos el socket de escucha del servidor
 	int fd_escucha = socket(serv_info->ai_family,
                         serv_info->ai_socktype,
                         serv_info->ai_protocol);
-	// Escuchamos las conexiones entrantes
 
+	
+	// Asociamos el socket a un puerto
 	socket_servidor = bind(fd_escucha, serv_info->ai_addr, serv_info->ai_addrlen);
+
+
+	// Escuchamos las conexiones entrantes
 	socket_servidor = listen(fd_escucha, SOMAXCONN);
 
 

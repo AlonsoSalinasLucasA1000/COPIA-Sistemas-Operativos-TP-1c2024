@@ -1,4 +1,7 @@
-#include <headerClientToCPU.h>
+#include <clientToCpu.h>
+//#define destino "CPU"
+//#define destino "MEM"
+//#define destino "KER"
 
 int clientToCPU(void)
 {
@@ -20,15 +23,19 @@ int clientToCPU(void)
 
     config = iniciar_config();
 
-    config = config_create(".//src/configs/clientToCPU.config");
+    //config = config_create("../../utils/src/configs/serverPorts.config");
+    config = config_create("../utils/src/configs/serverPorts.config");
+    
     if (config == NULL)
     {
         printf("No encontro el archivo Config\n");
         exit(MSG_ERRQUEUE);
     }
-
+    char selPuerto [9] = "PUERTO\0";
+    strcat(selPuerto, destino);
+    
     ip = config_get_string_value(config, "IP");
-    puerto = config_get_string_value(config, "PUERTO");
+    puerto = config_get_string_value(config, selPuerto);
 
     log_info(logger, "Leí la ip: %s y puerto: %s\n", ip, puerto);
 

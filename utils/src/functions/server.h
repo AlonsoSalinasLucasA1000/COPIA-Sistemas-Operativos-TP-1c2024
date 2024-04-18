@@ -1,6 +1,6 @@
 
-#ifndef HEADERFUNCTIONS_H_
-#define HEADERFUNCTIONS_H_
+#ifndef SERVER_H_
+#define SERVER_H_
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -13,6 +13,7 @@
 #include<assert.h>
 
 #define PUERTO "45007"
+// Hay que definir el puerto en c/u de los servers sv
 
 typedef enum
 {
