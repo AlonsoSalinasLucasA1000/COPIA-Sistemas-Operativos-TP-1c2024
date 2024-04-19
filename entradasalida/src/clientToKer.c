@@ -56,4 +56,5 @@ strcpy(ip, config_get_string_value(config, "IP"));
     // Armamos y enviamos el paquete
     paquete(conexion);
     terminar_programa(conexion, logger, config);
+    return conexion;
 }

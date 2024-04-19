@@ -53,9 +53,10 @@ int clientToMEM(void)
     // Creamos una conexión hacia el servidor
     conexion = crear_conexion(ip, puerto);
     enviar_mensaje("123456789", conexion);
-    // Enviamos al servidor el valor de CLAVE como mensaje
+    leer_consola(logger);
     // Armamos y enviamos el paquete
-    paquete(conexion);
+    // Enviamos al servidor el valor de CLAVE como mensaje
+    //paquete(conexion);
     terminar_programa(conexion, logger, config);
     return conexion;
 }

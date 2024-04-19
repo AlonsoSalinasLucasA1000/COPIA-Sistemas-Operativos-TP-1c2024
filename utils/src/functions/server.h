@@ -3,6 +3,7 @@
 
 #include<commons/collections/list.h>
 #include<assert.h>
+#include<readline/readline.h>
 
 #include <./functions/generals.h>
 

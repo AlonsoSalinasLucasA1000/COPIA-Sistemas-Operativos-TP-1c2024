@@ -76,7 +76,7 @@ int crear_conexion(char* ip, int puertoNum)
 
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {
-	
+	printf("\nEsto mandando este mensaje `%s` al socket %d\n",mensaje, socket_cliente);
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = MENSAJE;
@@ -88,17 +88,15 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 
 	void* a_enviar = serializar_paquete(paquete, bytes);
-	send(socket_cliente, a_enviar, bytes, 0);
-	/*
+	bytes = send(socket_cliente, a_enviar, bytes, 0);
 	if (bytes == -1)
 	{
 		printf("Error al enviar");
-		fprintf (stderr, "Error al enviar por: %s\n", strerror (errno));
+		//fprintf (stderr, "Error al enviar por: %s\n", strerror (errno));
+		exit(EXIT_FAILURE);
 	} else {
-		printf("Se enviaron %d bytes\n",err);
+		printf("Se enviaron %d bytes\n", bytes);
 	}
-	*/
-	
 	free(a_enviar);
 	eliminar_paquete(paquete);
 }
