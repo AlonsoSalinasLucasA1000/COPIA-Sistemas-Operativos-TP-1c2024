@@ -8,8 +8,6 @@
 int iniciar_servidor() {
 	
 	t_log *logger;
-
-	logger = iniciar_logger();
 	char pathLogs [27] = ".//src/logs/server";//CAMBIAR
     strcat(pathLogs, destino);
     strcat(pathLogs, ".log\0");
@@ -17,8 +15,7 @@ int iniciar_servidor() {
 
 	int puerto;
     t_config *config;
-    config = iniciar_config();
-	
+
     //config = config_create("../../utils/src/configs/serverPorts.config");
     config = config_create("../utils/src/configs/serverPorts.config");
     if (config == NULL)
@@ -68,19 +65,4 @@ int iniciar_servidor() {
 
 void iterator(char* value) {
 	log_info(logger,"%s", value);
-}
-
-
-t_log *iniciar_logger(void)
-{
-    t_log *nuevo_logger;
-
-    return nuevo_logger;
-}
-
-t_config *iniciar_config(void)
-{
-    t_config *nuevo_config;
-
-    return nuevo_config;
 }

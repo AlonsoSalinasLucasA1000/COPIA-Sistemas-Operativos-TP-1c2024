@@ -16,7 +16,7 @@ void* serializar_paquete(t_paquete* paquete, int bytes)
 	return magic;
 }
 
-int crear_conexion(char *ip, char* puerto)
+int crear_conexion(int ipNum, int puertoNum)
 {
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -27,18 +27,30 @@ int crear_conexion(char *ip, char* puerto)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
+	char *puerto = malloc(sizeof(char) * 6);
+	sprintf(puerto, "%d", puertoNum);
+	char *ip = malloc(sizeof(char) * 16);
+	sprintf(ip, "%d", ipNum);
+
 	err = getaddrinfo(ip, puerto, &hints, &server_info);
 	if (err != 0){
 		printf ("Error en getaddrinfo: %s", gai_strerror (err));
 		exit (-1);
 	}
+	free(ip);
+	free(puerto);
 	
 	int socket_cliente = socket(server_info->ai_family,
-                         server_info->ai_socktype,
-                         server_info->ai_protocol);
+                        		server_info->ai_socktype,
+                         		server_info->ai_protocol);
 
 	err = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
-
+	if (err != 0)
+	{
+		printf("error en connect\n");
+		return -1;
+	}
+	
 
 	size_t bytes;
 	int32_t handshake = 1;
@@ -133,20 +145,6 @@ void liberar_conexion(int socket_cliente)
 /********************************************/
 /****FUNCIONES QUE HABIA EN EL CLIENT_TO*****/
 /********************************************/
-
-t_log *iniciar_logger(void)
-{
-    t_log *nuevo_logger;
-
-    return nuevo_logger;
-}
-
-t_config *iniciar_config(void)
-{
-    t_config *nuevo_config;
-
-    return nuevo_config;
-}
 
 void leer_consola(t_log *logger)
 {

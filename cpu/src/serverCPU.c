@@ -7,17 +7,13 @@
 int iniciar_servidor() {
 	
 	t_log *logger;
-
-	logger = iniciar_logger();
 	char pathLogs [27] = ".//src/logs/server";//CAMBIAR
     strcat(pathLogs, destino);
     strcat(pathLogs, ".log\0");
     logger = log_create(pathLogs, "log_cliente", true, LOG_LEVEL_INFO);	
 
 	int puerto;
-    t_config *config;
-    config = iniciar_config();
-	
+    t_config *config;	
     //config = config_create("../../utils/src/configs/serverPorts.config");
     config = config_create("../utils/src/configs/serverPorts.config");
     if (config == NULL)

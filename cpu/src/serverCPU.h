@@ -14,7 +14,4 @@
 int iniciar_servidor(void);
 void iterator(char* value);
 
-t_log* iniciar_logger(void);
-t_config* iniciar_config(void);
-
 #endif /* SERVERCPU_H_ */

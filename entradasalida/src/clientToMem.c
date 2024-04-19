@@ -9,24 +9,19 @@ int clientToMEM(void)
     /*---------------------------------------------------PARTE 2-------------------------------------------------------------*/
 
     int conexion;
-    char *ip;
-    char *puerto;
+    
     // char* valor;
 
     t_log *logger;
     t_config *config;
 
     /* ---------------- LOGGING ---------------- */
-    logger = iniciar_logger();
     char pathLogs [29] = ".//src/logs/clientTo";
     strcat(pathLogs, destino);
     strcat(pathLogs, ".log\0");
     logger = log_create(pathLogs, "log_cliente", true, LOG_LEVEL_INFO);
 
     /* ---------------- ARCHIVOS DE CONFIGURACION ---------------- */
-
-    config = iniciar_config();
-
     //config = config_create("../../utils/src/configs/serverPorts.config");
     config = config_create("../utils/src/configs/serverPorts.config");
     
@@ -38,10 +33,10 @@ int clientToMEM(void)
     char selPuerto [9] = "PUERTO\0";
     strcat(selPuerto, destino);
     
-    ip = config_get_string_value(config, "IP");
-    puerto = config_get_string_value(config, selPuerto);
+    int ip = config_get_int_value(config, "IP");
+    int puerto = config_get_int_value(config, selPuerto);
 
-    log_info(logger, "Leí la ip: %s y puerto: %s\n", ip, puerto);
+    log_info(logger, "Leí la ip: %d y puerto: %d\n", ip, puerto);
 
     config_destroy(config);
 

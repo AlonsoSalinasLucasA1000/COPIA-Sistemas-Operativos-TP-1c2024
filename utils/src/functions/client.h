@@ -7,7 +7,7 @@
 
 #include <./functions/generals.h>
 
-int crear_conexion(char* ip, char* puerto);
+int crear_conexion(int ip, int puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 t_paquete* crear_paquete(void);
@@ -18,9 +18,6 @@ void eliminar_paquete(t_paquete* paquete);
 
 /****FUNCIONES QUE HABIA EN EL CLIENT_TO*****/
 
-
-t_log* iniciar_logger(void);
-t_config* iniciar_config(void);
 void leer_consola(t_log*);
 void paquete(int);
 void terminar_programa(int, t_log*, t_config*);
