@@ -1,5 +1,4 @@
 #include "client.h"
-
 #include <errno.h>
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
@@ -52,27 +51,23 @@ int crear_conexion(char* ip, int puertoNum)
 		printf("error en connect\n");
 		fprintf (stderr, "Socket closure failed: %s\n", strerror (errno));
 		exit (EXIT_FAILURE);
-	}	else
-		printf("connect anda\n");
+	}
 
 	size_t bytes;
 	int32_t handshake = 1;
 	int32_t result;
-printf("hasta aca anda 1\n");
 	bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
-	printf("hasta aca anda 2\n");
 	bytes = recv(socket_cliente, &result, sizeof(int32_t), MSG_WAITALL);
-	printf("hasta aca anda 3\n");
 
 	if (result == 0) {
-		// Handshake OK
+		printf("Handshake OK\n");
 	} else {
-		// Handshake ERROR
+		printf("Handshake ERROR\n");
 	}
 	// IMPLEMENTAR CUANDO SEPAMOS COMO HACER Q ENCUENTRE Y AHI ANDE
 	
 
-	close(socket_cliente);
+	//close(socket_cliente);
 
 	freeaddrinfo(server_info);
 
@@ -81,6 +76,7 @@ printf("hasta aca anda 1\n");
 
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {
+	
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = MENSAJE;
@@ -92,9 +88,17 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 
 	void* a_enviar = serializar_paquete(paquete, bytes);
-
 	send(socket_cliente, a_enviar, bytes, 0);
-
+	/*
+	if (bytes == -1)
+	{
+		printf("Error al enviar");
+		fprintf (stderr, "Error al enviar por: %s\n", strerror (errno));
+	} else {
+		printf("Se enviaron %d bytes\n",err);
+	}
+	*/
+	
 	free(a_enviar);
 	eliminar_paquete(paquete);
 }
@@ -184,7 +188,5 @@ void paquete(int conexion)
 void terminar_programa(int conexion, t_log *logger, t_config *config)
 {
     /* Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config)
-      con las funciones de las commons y del TP mencionadas en el enunciado */
-    free(logger);
-    free(config);
+      con las funciones de las commons y del TP mencionadas en el enunciado */       
 }

@@ -4,12 +4,8 @@ t_log* logger;
 
 int iniciar_socket(int puertoNum)
 {
-	// EN UTILS POR AHORA NO USAMOS LOGS
-	//logger = iniciar_logger();
-
 	char *puerto = malloc(sizeof(char) * 6);
 	sprintf(puerto, "%d", puertoNum);
-
 	int socket_servidor;
 
 	struct addrinfo hints, *serv_info;
@@ -24,7 +20,6 @@ int iniciar_socket(int puertoNum)
 	{
 		printf("error en greaddr\n");
 	}
-	
 	// Creamos el socket de escucha del servidor
 	socket_servidor = socket(serv_info->ai_family,
                        		 serv_info->ai_socktype,
@@ -33,7 +28,6 @@ int iniciar_socket(int puertoNum)
 	bind(socket_servidor, serv_info->ai_addr, serv_info->ai_addrlen);
 	// Escuchamos las conexiones entrantes
 	listen(socket_servidor, SOMAXCONN);
-
 	freeaddrinfo(serv_info);
 	//log_trace(logger, "Listo para escuchar a mi cliente");
 
@@ -47,9 +41,8 @@ int esperar_cliente(int socket_servidor)
 	//assert(!"no implementado!");
 
 	// Aceptamos un nuevo cliente
-
 	int socket_cliente = accept(socket_servidor, NULL, NULL);
-	log_info(logger, "Se conecto un cliente!");
+	printf("Se conecto un cliente!\n");
 	size_t bytes;
 
 	int32_t handshake;
@@ -59,14 +52,13 @@ int esperar_cliente(int socket_servidor)
 	bytes = recv(socket_cliente, &handshake, sizeof(int32_t), MSG_WAITALL);
 	if (handshake == 1) {
 		bytes = send(socket_cliente, &resultOk, sizeof(int32_t), 0);
+		printf("Handshake OK\n");
 	} else {
 		bytes = send(socket_cliente, &resultError, sizeof(int32_t), 0);
+		printf("Handshake ERROR\n");
 	}
-	// comentado hasta hacer q espere a conectar a un cliente
-	
+
 	close(socket_cliente);
-
-
 	return socket_cliente;
 }
 
@@ -83,9 +75,11 @@ void* recibir_buffer(int* size, int socket_cliente)
 
 void recibir_mensaje(int socket_cliente)
 {
+	printf("Llegue a `recibir mensaje`");
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
-	log_info(logger, "Me llego el mensaje %s", buffer);
+	printf("Me llego el mensaje %s", buffer);
+//	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
 }
 

@@ -37,7 +37,7 @@ int clientToKer(void)
 strcpy(ip, config_get_string_value(config, "IP"));
     int puerto = config_get_int_value(config, selPuerto);
 
-    log_info(logger, "Leí la ip: %d y puerto: %d\n", ip, puerto);
+    log_info(logger, "Leí la ip: %s y puerto: %d\n", ip, puerto);
 
     config_destroy(config);
 

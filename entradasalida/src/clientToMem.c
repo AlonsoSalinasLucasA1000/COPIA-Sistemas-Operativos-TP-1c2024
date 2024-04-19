@@ -52,12 +52,7 @@ int clientToMEM(void)
 
     // Creamos una conexión hacia el servidor
     conexion = crear_conexion(ip, puerto);
-    if (conexion != 0)
-    {
-        printf("Falla en conexion. Salio al main.\n");
-        return conexion;
-    }
-    
+    enviar_mensaje("123456789", conexion);
     // Enviamos al servidor el valor de CLAVE como mensaje
     // Armamos y enviamos el paquete
     paquete(conexion);
