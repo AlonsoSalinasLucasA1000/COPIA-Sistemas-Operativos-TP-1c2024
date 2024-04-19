@@ -9,6 +9,7 @@ int clientToCPU(void)
     /*---------------------------------------------------PARTE 2-------------------------------------------------------------*/
 
     int conexion;
+    char* ip = malloc(sizeof(char) * 16);
     
     // char* valor;
 
@@ -34,7 +35,7 @@ int clientToCPU(void)
     char selPuerto [9] = "PUERTO\0";
     strcat(selPuerto, destino);
     
-    int ip = config_get_int_value(config, "IP");
+strcpy(ip, config_get_string_value(config, "IP"));
     int puerto = config_get_int_value(config, selPuerto);
 
     log_info(logger, "Leí la ip: %d y puerto: %d\n", ip, puerto);

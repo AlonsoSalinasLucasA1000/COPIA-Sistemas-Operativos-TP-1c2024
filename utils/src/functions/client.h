@@ -7,7 +7,7 @@
 
 #include <./functions/generals.h>
 
-int crear_conexion(int ip, int puerto);
+int crear_conexion(char* ip, int puerto);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 void liberar_conexion(int socket_cliente);
 t_paquete* crear_paquete(void);

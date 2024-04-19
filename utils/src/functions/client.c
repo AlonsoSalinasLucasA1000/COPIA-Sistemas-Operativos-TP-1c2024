@@ -1,5 +1,6 @@
 #include "client.h"
 
+#include <errno.h>
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
@@ -16,7 +17,7 @@ void* serializar_paquete(t_paquete* paquete, int bytes)
 	return magic;
 }
 
-int crear_conexion(int ipNum, int puertoNum)
+int crear_conexion(char* ip, int puertoNum)
 {
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -27,17 +28,18 @@ int crear_conexion(int ipNum, int puertoNum)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
+
+	printf("Leí la ip: %s y puerto: %d\n", ip, puertoNum);
 	char *puerto = malloc(sizeof(char) * 6);
 	sprintf(puerto, "%d", puertoNum);
-	char *ip = malloc(sizeof(char) * 16);
-	sprintf(ip, "%d", ipNum);
+
+	printf("Leí la ip: %s y puerto: %s\n", ip, puerto);
 
 	err = getaddrinfo(ip, puerto, &hints, &server_info);
 	if (err != 0){
 		printf ("Error en getaddrinfo: %s", gai_strerror (err));
 		exit (-1);
 	}
-	free(ip);
 	free(puerto);
 	
 	int socket_cliente = socket(server_info->ai_family,
@@ -48,16 +50,19 @@ int crear_conexion(int ipNum, int puertoNum)
 	if (err != 0)
 	{
 		printf("error en connect\n");
-		return -1;
-	}
-	
+		fprintf (stderr, "Socket closure failed: %s\n", strerror (errno));
+		exit (EXIT_FAILURE);
+	}	else
+		printf("connect anda\n");
 
 	size_t bytes;
 	int32_t handshake = 1;
 	int32_t result;
-
+printf("hasta aca anda 1\n");
 	bytes = send(socket_cliente, &handshake, sizeof(int32_t), 0);
+	printf("hasta aca anda 2\n");
 	bytes = recv(socket_cliente, &result, sizeof(int32_t), MSG_WAITALL);
+	printf("hasta aca anda 3\n");
 
 	if (result == 0) {
 		// Handshake OK

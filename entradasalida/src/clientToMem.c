@@ -9,6 +9,7 @@ int clientToMEM(void)
     /*---------------------------------------------------PARTE 2-------------------------------------------------------------*/
 
     int conexion;
+    char* ip = malloc(sizeof(char) * 16);
     
     // char* valor;
 
@@ -33,16 +34,16 @@ int clientToMEM(void)
     char selPuerto [9] = "PUERTO\0";
     strcat(selPuerto, destino);
     
-    int ip = config_get_int_value(config, "IP");
+    strcpy(ip, config_get_string_value(config, "IP"));
     int puerto = config_get_int_value(config, selPuerto);
 
-    log_info(logger, "Leí la ip: %d y puerto: %d\n", ip, puerto);
+    log_info(logger, "Leí la ip: %s y puerto: %d\n", ip, puerto);
 
     config_destroy(config);
 
     /* ---------------- LEER DE CONSOLA ---------------- */
 
-    leer_consola(logger);
+    //leer_consola(logger);
     log_destroy(logger);
 
     /*---------------------------------------------------PARTE 3-------------------------------------------------------------*/
@@ -51,8 +52,15 @@ int clientToMEM(void)
 
     // Creamos una conexión hacia el servidor
     conexion = crear_conexion(ip, puerto);
+    if (conexion != 0)
+    {
+        printf("Falla en conexion. Salio al main.\n");
+        return conexion;
+    }
+    
     // Enviamos al servidor el valor de CLAVE como mensaje
     // Armamos y enviamos el paquete
     paquete(conexion);
     terminar_programa(conexion, logger, config);
+    return conexion;
 }
