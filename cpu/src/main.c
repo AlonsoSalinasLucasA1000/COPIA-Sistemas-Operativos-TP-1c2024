@@ -1,7 +1,9 @@
 #include <serverCPU.h>
+#include <clientsCPU.h>
 
 int main(int argc, char* argv[]) {
-    int result;
-    result = iniciar_servidor();
-    return result;
+    int err;
+    err = clientToMem();
+    err = iniciar_servidor();
+    return err;
 }

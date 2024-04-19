@@ -1,24 +1,14 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<commons/log.h>
-#include<string.h>
-#include<sys/socket.h>
-#include<unistd.h>
-#include<netdb.h>
 #include<commons/collections/list.h>
 #include<assert.h>
+
+#include <./functions/generals.h>
 
 //#define PUERTO "45007"
 // Hay que definir el puerto en c/u de los servers sv
 
-typedef enum
-{
-	MENSAJE,
-	PAQUETE
-}op_code;
 
 extern t_log* logger;
 

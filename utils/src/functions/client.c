@@ -39,7 +39,7 @@ int crear_conexion(char *ip, char* puerto)
 
 	err = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 
-	/*
+
 	size_t bytes;
 	int32_t handshake = 1;
 	int32_t result;
@@ -53,7 +53,7 @@ int crear_conexion(char *ip, char* puerto)
 		// Handshake ERROR
 	}
 	// IMPLEMENTAR CUANDO SEPAMOS COMO HACER Q ENCUENTRE Y AHI ANDE
-	*/
+	
 
 	close(socket_cliente);
 
