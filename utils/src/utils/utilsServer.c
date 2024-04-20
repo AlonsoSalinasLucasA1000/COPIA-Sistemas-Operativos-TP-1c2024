@@ -71,10 +71,20 @@ void* recibir_buffer(int* size, int socket_cliente)
 
 void recibir_mensaje(int socket_cliente)
 {
+
 	int size;
 	char* buffer = recibir_buffer(&size, socket_cliente);
+	if( (buffer[0] == '/') && (buffer[strlen(buffer)-1] == '/'))
+	{
 	log_info(logger, "Me llego el mensaje %s", buffer);
 	free(buffer);
+	}
+	else
+	{
+		log_info(logger, "El mensaje no cumple protocolo");
+		free(buffer);
+	}
+	
 }
 
 t_list* recibir_paquete(int socket_cliente)
