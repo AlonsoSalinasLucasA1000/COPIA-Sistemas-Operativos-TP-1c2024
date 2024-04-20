@@ -10,7 +10,11 @@ int iniciarClienteIO(void)
     t_log* logger;
     t_config* config;
 
-    logger = log_create("/home/utnso/Documents/logDePrueba.log","PruebaIO",true,LOG_LEVEL_INFO);
+    logger = log_create("./src/logDePrueba.log","PruebaIO",true,LOG_LEVEL_INFO);
+    if( logger == NULL )
+    {
+        printf("No encontre");
+    }
     config = config_create("../utils/cliente.config");
     if( config == NULL )
     {
@@ -28,7 +32,10 @@ int iniciarClienteIO(void)
 
     conexion = crear_conexion(ip,puerto);
 
-    enviar_mensaje("/Esto no sé si funciona/",conexion);
+    enviar_mensaje("/Prueba de otro dia/",conexion);
+
+    log_destroy(logger);
+    config_destroy(config);
 
     //LUEGO SEGUIMOS
 }
