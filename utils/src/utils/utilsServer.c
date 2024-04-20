@@ -6,15 +6,16 @@ int iniciar_servidor(void)
 {
 	// Quitar esta línea cuando hayamos terminado de implementar la funcion
 
-
 	int socket_servidor;
 
 	struct addrinfo hints, *servinfo, *p;
+
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
+
 
 	getaddrinfo(NULL, PUERTO, &hints, &servinfo);
 
@@ -25,8 +26,10 @@ int iniciar_servidor(void)
 	// Escuchamos las conexiones entrantes
 	listen(socket_servidor, SOMAXCONN);
 
+
 	freeaddrinfo(servinfo);
-	log_trace(logger, "Listo para escuchar a mi cliente");
+	log_info(logger, "Listo para escuchar a mi cliente");
+
 
 	return socket_servidor;
 }
