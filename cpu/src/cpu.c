@@ -13,7 +13,7 @@ cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	}
 
 //cambiar la ruta del archivo config a una abreviatura
-	t_config *cpu_config = config_create("/home/utnso/tp-2024-1c-Grupo-120/cpu/src/cpu.config");
+	t_config *cpu_config = config_create("src/cpu.config");
 	if (cpu_config == NULL)
 	{
 		perror("Error al crear el config.");

@@ -13,7 +13,7 @@ kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	}
 
 //cambiar la ruta del archivo config a una abreviatura
-	t_config *kernel_config = config_create("/home/utnso/tp-2024-1c-Grupo-120/kernel/src/kernel.config");
+	t_config *kernel_config = config_create("src/kernel.config");
 	if (kernel_config == NULL)
 	{
 		perror("Error al crear el config.");

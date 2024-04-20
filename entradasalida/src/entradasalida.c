@@ -13,7 +13,7 @@ entradasalida_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_IN
 	}
 
 //cambiar la ruta del archivo config a una abreviatura
-	t_config *entradasalida_config = config_create("/home/utnso/tp-2024-1c-Grupo-120/entradasalida/src/entradasalida.config");
+	t_config *entradasalida_config = config_create("src/entradasalida.config");
 	if (entradasalida_config == NULL)
 	{
 		perror("Error al crear el config.");
