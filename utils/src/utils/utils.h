@@ -36,6 +36,8 @@ int iniciar_servidor(char* puerto, t_log* un_log, char* msj_server);
 int esperar_cliente(int socket_servidor, t_log* un_log, char* msj);
 int recibir_operacion(int socket_cliente);
 
+void handshakeClient(int fd_servidor, int32_t handshake);
+void handshakeServer(int fd_client);
 
 
 #endif /* UTILS_H_ */
