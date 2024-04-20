@@ -26,5 +26,7 @@ int iniciarClienteIO(void)
     puerto = config_get_string_value(config,"PUERTO");
     valor = config_get_string_value(config,"CLAVE");
 
+    conexion = crear_conexion(ip,puerto);
+
     //LUEGO SEGUIMOS
 }
