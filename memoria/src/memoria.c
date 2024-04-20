@@ -40,34 +40,17 @@ fd_memoria = iniciar_servidor (PUERTO_ESCUCHA, memoria_logger, "INICIADA LA MEMO
 //espero conexion cpu
 log_info (memoria_logger, "Esperando a conectar con CPU.");
 fd_cpu = esperar_cliente (fd_memoria, memoria_logger, "CPU");
-
 handshakeServer(fd_cpu);
-/*
-size_t bytes;
-int32_t handshake;
-int32_t resultOk = 0;
-int32_t resultError = -1;
-
-bytes = recv(fd_cpu, &handshake,sizeof(int32_t),MSG_WAITALL);
-if( handshake == 1 )
-{
-	bytes = send(fd_cpu, &resultOk,sizeof(int32_t),0);
-}
-else
-{
-    bytes = send(fd_cpu, &resultError,sizeof(int32_t),0);
-}
-*/
-
 
 //espero conexion kernel
 log_info (memoria_logger, "Esperando a conectar con Kernel.");
 fd_kernel = esperar_cliente (fd_memoria, memoria_logger, "KERNEL");
+handshakeServer(fd_kernel);
 
 //espero conexion entradasalida
 log_info (memoria_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_memoria, memoria_logger, "ENTRADASALIDA");
-
+handshakeServer(fd_entradasalida);
 
 
 

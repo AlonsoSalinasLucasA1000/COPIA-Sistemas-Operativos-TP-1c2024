@@ -53,16 +53,18 @@ fd_kernel = iniciar_servidor (PUERTO_ESCUCHA, kernel_logger, "INICIADO EL KERNEL
 log_info (kernel_logger, "Intentando conexion a memoria");
 fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
 //log_info (kernel_logger, "Conectado a memoria exitosamente.");
+handshakeClient(fd_memoria, 2);
 
 //conestarse a cpu como cliente
 log_info (kernel_logger, "Intentando conexion a CPU");
 fd_cpu = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH,"CPU");
 //log_info (kernel_logger, "Conectado a cpu exitosamente.");
+handshakeClient(fd_cpu, 2);
 
 //esperar conexion de entradasalida
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_kernel, kernel_logger, "ENTRADASALIDA");
-
+handshakeServer(fd_entradasalida);
 
 //escuchar mensajes de entradasalida
 pthread_t hilo_entradasalida;

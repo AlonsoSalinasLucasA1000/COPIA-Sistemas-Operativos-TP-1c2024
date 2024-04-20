@@ -38,31 +38,13 @@ fd_cpu = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU
 log_info(cpu_logger,"Intentando conexión con memoria");
 fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"Memoria");
 //log_info (cpu_logger, "Conectado a memoria exitosamente.");
-
 handshakeClient(fd_memoria, 1);
-/*
-size_t bytes;
-int32_t handshake = 1;
-int result;
-
-bytes = send(fd_memoria,&handshake,sizeof(int32_t),0);
-bytes = recv(fd_memoria,&result,sizeof(int32_t),0);
-
-if( result == 0 )
-{
-	printf("bien hecho el handshake\n");
-}
-else
-{
-	printf("error en el handshake\n");
-}
-*/
 
 
 //esperar conexion de kernel
 log_info (cpu_logger, "Esperando a conectar con Kernel.");
 fd_kernel = esperar_cliente (fd_cpu, cpu_logger, "KERNEL");
-
+handshakeServer(fd_kernel);
 
 //escuchar mensajes de Kernel
 pthread_t hilo_kernel;
