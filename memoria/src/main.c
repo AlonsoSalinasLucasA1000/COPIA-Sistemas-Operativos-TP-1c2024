@@ -1,8 +1,7 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <utils/hello.h>
+#include<MEM.h>
 
 int main(int argc, char* argv[]) {
-    decir_hola("Memoria");
-    return 0;
+   decir_hola("putos");
+   iniciarServerMEM();
+ return 0;
 }
