@@ -38,6 +38,23 @@ fd_cpu = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU
 log_info(cpu_logger,"Intentando conexión con memoria");
 fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"Memoria");
 //log_info (cpu_logger, "Conectado a memoria exitosamente.");
+size_t bytes;
+
+int32_t handshake = 9;
+int result;
+
+bytes = send(fd_memoria,&handshake,sizeof(int32_t),0);
+bytes = recv(fd_memoria,&result,sizeof(int32_t),0);
+
+if( result == 0 )
+{
+	printf("bien hecho el handshake\n");
+}
+else
+{
+	printf("error en el handshake\n");
+}
+
 
 //esperar conexion de kernel
 log_info (cpu_logger, "Esperando a conectar con Kernel.");
