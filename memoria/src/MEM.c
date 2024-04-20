@@ -9,6 +9,19 @@ int iniciarServerMEM(void)
     //printf("el socket es %d",server_fd);
     //int cliente_fd = esperar_cliente();
     int cliente_fd = esperar_cliente(server_fd);
+    
+    while (1) {
+        int cod_op = recibir_operacion(cliente_fd);
+        switch (cod_op)
+        {
+        case MESSAGE:
+            recibir_mensaje(cliente_fd);
+            break;
+        
+        default:
+            break;
+        }
+    }
 
 
     log_destroy(logger);

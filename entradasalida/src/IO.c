@@ -28,5 +28,7 @@ int iniciarClienteIO(void)
 
     conexion = crear_conexion(ip,puerto);
 
+    enviar_mensaje("SISTEMAS OPERATIVOS LA CONCHA DE TU MADRE",conexion);
+
     //LUEGO SEGUIMOS
 }
