@@ -28,7 +28,7 @@ int iniciarClienteIO(void)
 
     conexion = crear_conexion(ip,puerto);
 
-    enviar_mensaje("Tengo sueño",conexion);
+    enviar_mensaje("/Esto no sé si funciona/",conexion);
 
     //LUEGO SEGUIMOS
 }

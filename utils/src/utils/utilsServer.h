@@ -12,7 +12,7 @@
 #include<string.h>
 #include<assert.h>
 
-#define PUERTO "4444"
+//#define PUERTO "4444"
 
 typedef enum
 {
@@ -24,7 +24,7 @@ extern t_log* logger;
 
 void* recibir_buffer(int*, int);
 
-int iniciar_servidor(void);
+int iniciar_servidor(char*);
 int esperar_cliente(int);
 t_list* recibir_paquete(int);
 void recibir_mensaje(int);
