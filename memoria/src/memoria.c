@@ -41,13 +41,15 @@ fd_memoria = iniciar_servidor (PUERTO_ESCUCHA, memoria_logger, "INICIADA LA MEMO
 log_info (memoria_logger, "Esperando a conectar con CPU.");
 fd_cpu = esperar_cliente (fd_memoria, memoria_logger, "CPU");
 
+//espero conexion kernel
+log_info (memoria_logger, "Esperando a conectar con Kernel.");
+fd_kernel = esperar_cliente (fd_memoria, memoria_logger, "KERNEL");
+
 //espero conexion entradasalida
 log_info (memoria_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_memoria, memoria_logger, "ENTRADASALIDA");
 
-//espero conexion kernel
-log_info (memoria_logger, "Esperando a conectar con Kernel.");
-fd_kernel = esperar_cliente (fd_memoria, memoria_logger, "KERNEL");
+
 
 
 //escuchar mensajes de cpu

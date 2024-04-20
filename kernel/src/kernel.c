@@ -50,12 +50,14 @@ fd_kernel = iniciar_servidor (PUERTO_ESCUCHA, kernel_logger, "INICIADO EL KERNEL
 
 
 //conestarse a memoria como cliente
-fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA);
-log_info (kernel_logger, "Conectado a memoria exitosamente.");
+log_info (kernel_logger, "Intentando conexion a memoria");
+fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
+//log_info (kernel_logger, "Conectado a memoria exitosamente.");
 
 //conestarse a cpu como cliente
-fd_cpu = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH);
-log_info (kernel_logger, "Conectado a cpu exitosamente.");
+log_info (kernel_logger, "Intentando conexion a CPU");
+fd_cpu = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH,"CPU");
+//log_info (kernel_logger, "Conectado a cpu exitosamente.");
 
 //esperar conexion de entradasalida
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");

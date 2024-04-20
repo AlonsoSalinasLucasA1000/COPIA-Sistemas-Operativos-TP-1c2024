@@ -35,8 +35,9 @@ cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 fd_cpu = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU");
 
 //conestarse a memoria como cliente
-fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA);
-log_info (cpu_logger, "Conectado a memoria exitosamente.");
+log_info(cpu_logger,"Intentando conexión con memoria");
+fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"Memoria");
+//log_info (cpu_logger, "Conectado a memoria exitosamente.");
 
 //esperar conexion de kernel
 log_info (cpu_logger, "Esperando a conectar con Kernel.");

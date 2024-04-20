@@ -2,7 +2,7 @@
 
 
 
-int crear_conexion(char *ip, char* puerto)
+int crear_conexion(char *ip, char* puerto, char* nameServ)
 {
 	struct addrinfo hints;
 	struct addrinfo *server_info;
@@ -26,10 +26,10 @@ int crear_conexion(char *ip, char* puerto)
 	// Ahora que tenemos el socket, vamos a conectarlo
 	int connect_resultado = connect(socket_cliente, server_info->ai_addr, server_info->ai_addrlen);
 		if (connect_resultado == 0) {
-			printf ("El cliente se conecto al servidor correctamente.");
+			printf ("El cliente se conecto al servidor correctamente a %s.\n",nameServ);
 		}
 		else {
-			printf ("Error al conectar cliente.");
+			printf ("Error al conectar servidor %s\n", nameServ);
 		}
 
 	freeaddrinfo(server_info);
@@ -64,7 +64,7 @@ int iniciar_servidor(char* puerto, t_log* un_log, char* msj_server)
 	// Asociamos el socket a un puerto
 	int bind_resultado = bind (socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
 	if (bind_resultado != 0){
-		error ("Fallo el bind");
+		herror ("Fallo el bind");
 		exit (-3);
 	}
 					

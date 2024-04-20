@@ -46,12 +46,14 @@ entradasalida_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_IN
 
 
 //conestarse a memoria como cliente
-fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA);
-log_info (entradasalida_logger, "Conectado a memoria exitosamente.");
+log_info(entradasalida_logger,"Intentando conexion a memoria");
+fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
+//log_info (entradasalida_logger, "Conectado a memoria exitosamente.");
 
 //conestarse a kernel como cliente
-fd_kernel = crear_conexion (IP_KERNEL, PUERTO_KERNEL);
-log_info (entradasalida_logger, "Conectado a kernel exitosamente.");
+log_info (entradasalida_logger, "Intentado conexion a memoria.");
+fd_kernel = crear_conexion (IP_KERNEL, PUERTO_KERNEL,"kernel");
+//log_info (entradasalida_logger, "Conectado a kernel exitosamente.");
 
 
 //escuchar mensajes de memoria
