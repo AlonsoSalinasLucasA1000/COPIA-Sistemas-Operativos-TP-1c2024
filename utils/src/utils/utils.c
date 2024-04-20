@@ -43,7 +43,7 @@ int iniciar_servidor(char* puerto, t_log* un_log, char* msj_server)
 
 	int socket_servidor;
 
-	struct addrinfo hints, *servinfo, *p;
+	struct addrinfo hints, *servinfo;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -103,10 +103,9 @@ int recibir_operacion(int socket_cliente)
 
 void handshakeClient(int fd_servidor, int32_t handshake){
 	int result;
-	size_t bytes;
 
-	bytes = send(fd_servidor,&handshake,sizeof(int32_t),0);
-	bytes = recv(fd_servidor,&result,sizeof(int32_t),0);
+	send(fd_servidor,&handshake,sizeof(int32_t),0);
+	recv(fd_servidor,&result,sizeof(int32_t),0);
 
 	if( result == 0 )
 		printf("Handshake Success\n");
@@ -115,24 +114,23 @@ void handshakeClient(int fd_servidor, int32_t handshake){
 }
 
 void handshakeServer(int fd_client){
-	size_t bytes;
 	int32_t handshake;
 	int32_t resultOk = 0;
 	int32_t resultError = -1;
 
-	bytes = recv(fd_client, &handshake,sizeof(int32_t),MSG_WAITALL);
+	recv(fd_client, &handshake,sizeof(int32_t),MSG_WAITALL);
 	switch (handshake){
 		case 1: //CPU
-				bytes = send(fd_client, &resultOk,sizeof(int32_t),0);
+				send(fd_client, &resultOk,sizeof(int32_t),0);
 				break;
 		case 2: //Kernel
-				bytes = send(fd_client, &resultOk,sizeof(int32_t),0);
+				send(fd_client, &resultOk,sizeof(int32_t),0);
 				break;
 		case 3: //IO
-				bytes = send(fd_client, &resultOk,sizeof(int32_t),0);
+				send(fd_client, &resultOk,sizeof(int32_t),0);
 				break;
 		default: //ERROR
-				bytes = send(fd_client, &resultError,sizeof(int32_t),0);
+				send(fd_client, &resultError,sizeof(int32_t),0);
 				break;
 	}
 }
