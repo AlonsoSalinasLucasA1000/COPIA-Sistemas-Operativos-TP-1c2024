@@ -59,8 +59,13 @@ pthread_create (&hilo_memoria, NULL, (void*)cpu_escuchar_memoria, NULL);
 pthread_join (hilo_memoria, NULL);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
 
-return (EXIT_SUCCESS);
+liberar_config(cpu_config);
+liberar_logger(cpu_logger);
+liberar_conexion(fd_cpu);
+liberar_conexion(fd_memoria);
+liberar_conexion(fd_kernel);
 
+return (EXIT_SUCCESS);
 }
 
 

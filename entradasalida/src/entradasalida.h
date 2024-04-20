@@ -5,7 +5,6 @@
 #include<stdlib.h>
 #include<utils/utils.h>
 #include <utils/utils.c>
-#include <pthread.h>
 
 //file descriptors de entradasalida y los modulos que se conectaran con el
 int fd_entradasalida;

@@ -84,8 +84,14 @@ pthread_create (&hilo_memoria, NULL, (void*)kernel_escuchar_memoria, NULL);
 pthread_join (hilo_memoria, NULL);
 
 
-return (EXIT_SUCCESS);
+liberar_config(kernel_config);
+liberar_logger(kernel_logger);
+liberar_conexion(fd_memoria);
+liberar_conexion(fd_cpu);
+liberar_conexion(fd_kernel);
+liberar_conexion(fd_entradasalida);
 
+return (EXIT_SUCCESS);
 }
 
 

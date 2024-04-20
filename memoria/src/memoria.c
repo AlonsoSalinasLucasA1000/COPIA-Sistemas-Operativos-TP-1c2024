@@ -75,6 +75,13 @@ pthread_join (hilo_kernel, NULL);
 
 
 
+liberar_config(memoria_config);
+liberar_logger(memoria_logger);
+liberar_conexion(fd_memoria);
+liberar_conexion(fd_cpu);
+liberar_conexion(fd_kernel);
+liberar_conexion(fd_entradasalida);
+
 return (EXIT_SUCCESS);
 
 }

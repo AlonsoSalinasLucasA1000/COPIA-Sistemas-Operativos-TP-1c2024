@@ -5,7 +5,6 @@
 #include<stdlib.h>
 #include<utils/utils.h>
 #include <utils/utils.c>
-#include <pthread.h>
 
 //file descriptors de memoria y los modulos que se conectaran con ella
 int fd_memoria;

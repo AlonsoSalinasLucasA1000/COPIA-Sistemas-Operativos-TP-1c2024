@@ -134,3 +134,17 @@ void handshakeServer(int fd_client){
 				break;
 	}
 }
+void liberar_conexion(int socket)
+{
+    close(socket);
+}
+void liberar_logger(t_log* logger)
+{
+	log_destroy(logger);
+	free(logger);
+}
+void liberar_config(t_config* config)
+{
+	config_destroy(config);
+	free(config);
+}

@@ -71,6 +71,10 @@ pthread_join (hilo_kernel, NULL);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
 
 
-return (EXIT_SUCCESS);
+liberar_config(entradasalida_config);
+liberar_logger(entradasalida_logger);
+liberar_conexion(fd_memoria);
+liberar_conexion(fd_kernel);
 
+return (EXIT_SUCCESS);
 }

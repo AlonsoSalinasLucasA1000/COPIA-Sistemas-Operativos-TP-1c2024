@@ -5,7 +5,6 @@
 #include<stdlib.h>
 #include<utils/utils.h>
 #include <utils/utils.c>
-#include <pthread.h>
 
 //file descriptors de CPU y los modulos que se conectaran con el
 int fd_cpu; //luego se dividira en dos fd un dispach y un interrupt, por ahora nos es suficiente con este
@@ -19,7 +18,7 @@ char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
 char* PUERTO_ESCUCHA_DISPATCH;
 char* PUERTO_ESCUCHA_INTERRUPT;
-int* CANTIDAD_ENTRADAS_TLB;
+int CANTIDAD_ENTRADAS_TLB;
 char* ALGORITMO_TLB;
 
 

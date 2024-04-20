@@ -10,6 +10,7 @@
 #include<string.h>
 #include<commons/log.h>
 #include<commons/config.h>
+#include <pthread.h>
 
 
 typedef enum
@@ -38,6 +39,8 @@ int recibir_operacion(int socket_cliente);
 
 void handshakeClient(int fd_servidor, int32_t handshake);
 void handshakeServer(int fd_client);
-
+void liberar_conexion(int socket);
+void liberar_logger(t_log* logger);
+void liberar_config(t_config* config);
 
 #endif /* UTILS_H_ */
