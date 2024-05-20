@@ -95,4 +95,106 @@ void kernel_escuchar_memoria (){
 		}	
 }
 
+void validarFuncionesConsola(char* leido)
+{
+	 char** valorLeido = string_split(leido, " ");
+	 printf(valorLeido[0]);
+
+	 if(strcmp(valorLeido[0], "EJECUTAR_SCRIPT\n") == 0)
+	 {
+		printf("Comando válido\n");
+	 }
+	 else
+	 {
+		if(strcmp(valorLeido[0], "INICIAR_PROCESO") == 0)
+	    {
+		    printf("Comando válido\n");
+	    }
+		else
+		{
+			if(strcmp(valorLeido[0], "FINALIZAR_PROCESO\n") == 0)
+	        {  
+		         printf("Comando válido\n");
+	        }
+			else
+			{
+				if(strcmp(valorLeido[0], "DETENER_PLANIFICACION\n") == 0)
+	            {  
+		             printf("Comando válido\n");
+	            }
+				else
+				{
+					if(strcmp(valorLeido[0], "INICIAR_PLANIFICACION\n") == 0)
+	                {  
+		                printf("Comando válido\n");
+	                }
+					else
+					{
+						if(strcmp(valorLeido[0], "MULTIPROGRAMACION\n") == 0)
+	                    {  
+		                       printf("Comando válido\n");
+	                    }
+						else
+						{
+							if(strcmp(valorLeido[0], "PROCESO_ESTADO\n") == 0)
+	                        {  
+		                       printf("Comando válido\n");
+	                        }
+							else
+							{
+								printf("Comando no válido\n");
+							}
+						}
+					}
+				}
+			}
+		}
+	 }
+	 string_array_destroy(valorLeido);
+}
+
+void consolaInteractiva()
+{
+	char* leido;
+	leido = readline("> ");
+	
+	while( strcmp(leido,"") != 0 )
+	{
+		validarFuncionesConsola(leido);
+		free(leido);
+		leido = readline("> ");
+	}
+}
+
+void f_iniciar_proceso(t_buffer* un_buffer)
+{
+
+}
+
+void atender_instruccion (char* leido){
+    char** comando_consola = string_split(leido, " ");
+    t_buffer* un_buffer;
+	crear_buffer(un_buffer);
+
+    if((strcmp(comando_consola [0], "INICIAR_PROCESO") == 0)
+	){
+        cargar_string_al_buffer(un_buffer, comando_consola [1] ); //|path]  
+        cargar_string_al_buffer(un_buffer, comando_consola [2]); //[size]  
+        cargar_string_al_buffer(un_buffer, comando_consola [3]); //[prioridad]  
+        f_iniciar_proceso(un_buffer); 
+    //
+    // 
+    }else if(strcmp(comando_consola [0], "FINALIZAR_PROCESO") == 0){
+    }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
+    }else if(strcmp(comando_consola [0], "INICIAR_PLANIFICACION") == 0){
+    }else if(strcmp(comando_consola [0], "MULTIPROGRAMACION") == 0){ 
+    }else if(strcmp(comando_consola [0], "PROCESO_ESTADO") == 0){
+    }else if(strcmp(comando_consola [0], "HELP") == 0){
+    }else if(strcmp(comando_consola [0], "PRINT") == 0){
+    }else{   
+        log_error(kernel_logger, "Comando no reconocido, pero que paso el filtro ???");  
+        exit(EXIT_FAILURE);
+    }
+    string_array_destroy(comando_consola); 
+}
 #endif /* KERNEL_H_ */

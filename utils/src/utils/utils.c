@@ -148,3 +148,20 @@ void liberar_config(t_config* config)
 	config_destroy(config);
 	free(config);
 }
+
+void crear_buffer(t_buffer* un_buffer)
+{
+	un_buffer = malloc(sizeof(t_buffer));
+	un_buffer->size = 0;
+	un_buffer->stream = NULL;
+}
+
+void cargar_string_al_buffer(t_buffer* un_buffer, char* un_string)
+{
+	un_buffer->stream = realloc(un_buffer->stream, un_buffer->size + (strlen(un_string) + 1) +sizeof(int));
+
+	memcpy(un_buffer->stream + un_buffer->size,  strlen(un_string) + 1, sizeof(int));
+	memcpy(un_buffer->stream + un_buffer->size + sizeof(int), un_string, (strlen(un_string) + 1));
+
+	un_buffer->size +=  (strlen(un_string) + 1) + sizeof(int) ;
+}

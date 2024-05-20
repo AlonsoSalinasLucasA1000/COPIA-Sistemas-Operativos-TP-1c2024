@@ -66,6 +66,8 @@ log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_kernel, kernel_logger, "ENTRADASALIDA");
 handshakeServer(fd_entradasalida);
 
+
+
 //escuchar mensajes de entradasalida
 pthread_t hilo_entradasalida;
 pthread_create (&hilo_entradasalida, NULL, (void*)kernel_escuchar_entradasalida, NULL);
@@ -81,7 +83,10 @@ pthread_detach (hilo_cpu);
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)kernel_escuchar_memoria, NULL);
-pthread_join (hilo_memoria, NULL);
+pthread_detach (hilo_memoria);
+
+consolaInteractiva();
+
 
 
 liberar_config(kernel_config);
