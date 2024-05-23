@@ -98,9 +98,9 @@ void kernel_escuchar_memoria (){
 void validarFuncionesConsola(char* leido)
 {
 	 char** valorLeido = string_split(leido, " ");
-	 printf(valorLeido[0]);
+	 printf("%s\n",valorLeido[0]);
 
-	 if(strcmp(valorLeido[0], "EJECUTAR_SCRIPT\n") == 0)
+	 if(strcmp(valorLeido[0], "EJECUTAR_SCRIPT") == 0)
 	 {
 		printf("Comando válido\n");
 	 }
@@ -112,38 +112,34 @@ void validarFuncionesConsola(char* leido)
 	    }
 		else
 		{
-			if(strcmp(valorLeido[0], "FINALIZAR_PROCESO\n") == 0)
+			if(strcmp(valorLeido[0], "FINALIZAR_PROCESO") == 0)
 	        {  
 		         printf("Comando válido\n");
 	        }
 			else
 			{
-				if(strcmp(valorLeido[0], "DETENER_PLANIFICACION\n") == 0)
+				if(strcmp(valorLeido[0], "DETENER_PLANIFICACION") == 0)
 	            {  
 		             printf("Comando válido\n");
 	            }
 				else
 				{
-					if(strcmp(valorLeido[0], "INICIAR_PLANIFICACION\n") == 0)
+					if(strcmp(valorLeido[0], "INICIAR_PLANIFICACION") == 0)
 	                {  
 		                printf("Comando válido\n");
 	                }
 					else
 					{
-						if(strcmp(valorLeido[0], "MULTIPROGRAMACION\n") == 0)
+						if(strcmp(valorLeido[0], "MULTIPROGRAMACION") == 0)
 	                    {  
 		                       printf("Comando válido\n");
 	                    }
 						else
 						{
-							if(strcmp(valorLeido[0], "PROCESO_ESTADO\n") == 0)
+							if(strcmp(valorLeido[0], "PROCESO_ESTADO") == 0)
 	                        {  
 		                       printf("Comando válido\n");
 	                        }
-							else
-							{
-								printf("Comando no válido\n");
-							}
 						}
 					}
 				}
