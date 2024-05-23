@@ -33,6 +33,21 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef struct
+{
+	int AX;
+	int BX;
+	int CX;
+	int DX;
+} RegistrosCPU;
+
+typedef struct
+{
+	int PID;
+	int PC;
+	int quantum;
+	RegistrosCPU r;
+} PCB;
 
 int crear_conexion(char* ip, char* puerto,char* nameServ);
 int iniciar_servidor(char* puerto, t_log* un_log, char* msj_server);

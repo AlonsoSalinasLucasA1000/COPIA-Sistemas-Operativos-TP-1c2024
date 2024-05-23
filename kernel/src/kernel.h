@@ -176,7 +176,6 @@ void atender_instruccion (char* leido){
 	){
         cargar_string_al_buffer(un_buffer, comando_consola [1] ); //|path]  
         cargar_string_al_buffer(un_buffer, comando_consola [2]); //[size]  
-        cargar_string_al_buffer(un_buffer, comando_consola [3]); //[prioridad]  
         f_iniciar_proceso(un_buffer); 
     //
     // 
