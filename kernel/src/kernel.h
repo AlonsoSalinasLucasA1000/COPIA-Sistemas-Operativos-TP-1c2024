@@ -36,7 +36,7 @@ char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 void kernel_escuchar_cpu (){
 	bool control_key = 1;
 	while (control_key) {
-			int cod_op = recibir_operacion(fd_cpu);
+			int cod_op = recibir_operacion(fd_cpu_dispach);
 			switch (cod_op) {
 			case MENSAJE:
 				//
@@ -171,7 +171,6 @@ void f_iniciar_proceso(t_buffer* un_buffer)
 	PCB* pcb = malloc(sizeof(PCB));
 	if ( pcb == NULL )
 	{
-		printf("Error en la creación de PCB\n");
 		return NULL;
 	}
 	pid++;

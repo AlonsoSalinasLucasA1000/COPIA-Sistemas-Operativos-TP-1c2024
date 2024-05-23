@@ -48,6 +48,10 @@ log_info (cpu_logger, "Esperando a conectar con Kernel.");
 fd_kernel = esperar_cliente (fd_cpu_dispach, cpu_logger, "KERNEL");
 handshakeServer(fd_kernel);
 
+log_info (cpu_logger, "Esperando a conectar con Kernel.");
+fd_kernel = esperar_cliente (fd_cpu_interrupt, cpu_logger, "KERNEL");
+handshakeServer(fd_kernel);
+
 //escuchar mensajes de Kernel
 pthread_t hilo_kernel;
 pthread_create (&hilo_kernel, NULL, (void*)cpu_escuchar_kernel, NULL);

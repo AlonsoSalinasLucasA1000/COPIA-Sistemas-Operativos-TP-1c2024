@@ -64,7 +64,7 @@ handshakeClient(fd_cpu_dispach, 2);
 //conestarse a cpu como cliente INTERRUPT
 log_info (kernel_logger, "Intentando conexion a CPU");
 fd_cpu_interrupt = crear_conexion (IP_CPU, PUERTO_CPU_INTERRUPT,"CPU");
-//log_info (kernel_logger, "Conectado a cpu exitosamente.");
+log_info (kernel_logger, "Conectado a cpu exitosamente.");
 handshakeClient(fd_cpu_interrupt, 2);
 
 
