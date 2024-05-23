@@ -8,7 +8,8 @@
 
 //file descriptors de kernel y los modulos que se conectaran con ella
 int fd_kernel;
-int fd_cpu; //luego se dividira en dos fd, un dispach y un interrupt, por ahora nos es suficiente con este
+int fd_cpu_interrupt; 
+int fd_cpu_dispach; //luego se dividira en dos fd, un dispach y un interrupt, por ahora nos es suficiente con este
 int fd_memoria;
 int fd_entradasalida;
 

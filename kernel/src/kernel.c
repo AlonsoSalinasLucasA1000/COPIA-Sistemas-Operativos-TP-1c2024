@@ -55,11 +55,19 @@ fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
 //log_info (kernel_logger, "Conectado a memoria exitosamente.");
 handshakeClient(fd_memoria, 2);
 
-//conestarse a cpu como cliente
+//conestarse a cpu como cliente DISPACH
 log_info (kernel_logger, "Intentando conexion a CPU");
-fd_cpu = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH,"CPU");
+fd_cpu_dispach = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH,"CPU");
 //log_info (kernel_logger, "Conectado a cpu exitosamente.");
-handshakeClient(fd_cpu, 2);
+handshakeClient(fd_cpu_dispach, 2);
+
+//conestarse a cpu como cliente INTERRUPT
+log_info (kernel_logger, "Intentando conexion a CPU");
+fd_cpu_interrupt = crear_conexion (IP_CPU, PUERTO_CPU_INTERRUPT,"CPU");
+//log_info (kernel_logger, "Conectado a cpu exitosamente.");
+handshakeClient(fd_cpu_interrupt, 2);
+
+
 
 //esperar conexion de entradasalida
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
@@ -92,7 +100,8 @@ consolaInteractiva();
 liberar_config(kernel_config);
 liberar_logger(kernel_logger);
 liberar_conexion(fd_memoria);
-liberar_conexion(fd_cpu);
+liberar_conexion(fd_cpu_interrupt);
+liberar_conexion(fd_cpu_dispach);
 liberar_conexion(fd_kernel);
 liberar_conexion(fd_entradasalida);
 

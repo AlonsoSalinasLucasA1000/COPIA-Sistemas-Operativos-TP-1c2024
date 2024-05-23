@@ -7,7 +7,8 @@
 #include <utils/utils.c>
 
 //file descriptors de CPU y los modulos que se conectaran con el
-int fd_cpu; //luego se dividira en dos fd un dispach y un interrupt, por ahora nos es suficiente con este
+int fd_cpu_dispach;
+int fd_cpu_interrupt; //luego se dividira en dos fd un dispach y un interrupt, por ahora nos es suficiente con este
 int fd_memoria;
 int fd_kernel;
 

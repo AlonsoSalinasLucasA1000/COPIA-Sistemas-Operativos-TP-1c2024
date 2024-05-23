@@ -32,7 +32,9 @@ cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
     log_info(cpu_logger, "Leí la ip: %s y puerto: %s\n", IP_MEMORIA, PUERTO_MEMORIA);
 
 //inicia servidor cpu   SE DEBE INICIAR EL SERVIDOR DEL OTRO PUERTO DE CPU, EL PUERTO INTERRUPT!!!
-fd_cpu = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU");
+fd_cpu_dispach = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU");
+
+fd_cpu_interrupt = iniciar_servidor (PUERTO_ESCUCHA_INTERRUPT, cpu_logger, "INICIADO EL CPU");
 
 //conestarse a memoria como cliente
 log_info(cpu_logger,"Intentando conexión con memoria");
@@ -43,7 +45,7 @@ handshakeClient(fd_memoria, 1);
 
 //esperar conexion de kernel
 log_info (cpu_logger, "Esperando a conectar con Kernel.");
-fd_kernel = esperar_cliente (fd_cpu, cpu_logger, "KERNEL");
+fd_kernel = esperar_cliente (fd_cpu_dispach, cpu_logger, "KERNEL");
 handshakeServer(fd_kernel);
 
 //escuchar mensajes de Kernel
@@ -61,7 +63,8 @@ pthread_join (hilo_memoria, NULL);
 
 liberar_config(cpu_config);
 liberar_logger(cpu_logger);
-liberar_conexion(fd_cpu);
+liberar_conexion(fd_cpu_interrupt);
+liberar_conexion(fd_cpu_dispach);
 liberar_conexion(fd_memoria);
 liberar_conexion(fd_kernel);
 
