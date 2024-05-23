@@ -12,6 +12,8 @@ int fd_cpu; //luego se dividira en dos fd, un dispach y un interrupt, por ahora 
 int fd_memoria;
 int fd_entradasalida;
 
+int pid = 0;
+
 
 
 t_log *kernel_logger; // LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
@@ -109,6 +111,7 @@ void validarFuncionesConsola(char* leido)
 		if(strcmp(valorLeido[0], "INICIAR_PROCESO") == 0)
 	    {
 		    printf("Comando válido\n");
+			atender_instruccion(valorLeido);
 	    }
 		else
 		{
@@ -164,21 +167,30 @@ void consolaInteractiva()
 
 void f_iniciar_proceso(t_buffer* un_buffer)
 {
+	PCB* pcb = malloc(sizeof(PCB));
+	if ( pcb == NULL )
+	{
+		printf("Error en la creación de PCB\n");
+		return NULL;
+	}
+	pid++;
+	pcb->PID = pid;
+	pcb->PC = 0;
+	pcb->quantum = QUANTUM;
+	pcb->r.AX = 0;
+	pcb->r.BX = 0;
+	pcb->r.CX = 0;
+	pcb->r.DX = 0;
+
 
 }
 
 void atender_instruccion (char* leido){
     char** comando_consola = string_split(leido, " ");
-    t_buffer* un_buffer;
-	crear_buffer(un_buffer);
 
     if((strcmp(comando_consola [0], "INICIAR_PROCESO") == 0)
-	){
-        cargar_string_al_buffer(un_buffer, comando_consola [1] ); //|path]  
-        cargar_string_al_buffer(un_buffer, comando_consola [2]); //[size]  
-        f_iniciar_proceso(un_buffer); 
-    //
-    // 
+	){ 
+        f_iniciar_proceso(comando_consola[1]);  
     }else if(strcmp(comando_consola [0], "FINALIZAR_PROCESO") == 0){
     }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
     }else if(strcmp(comando_consola [0], "INICIAR_PLANIFICACION") == 0){

@@ -13,6 +13,7 @@
 #include<commons/string.h>
 #include <pthread.h>
 #include<readline/readline.h>
+#include "queue.h"
 
 
 typedef enum
