@@ -333,8 +333,10 @@ void planificador_largo_plazo()
 	while(1)
 	{
 		if( queue_size(cola_new) > 0)
-		{
+		{		
 	 		informar_memoria_nuevo_proceso();
+			printf("ESTOY INFORMANDO A MEMORIA DE UN NUEVO PROCESO\n");
+		    printf("%d\n",queue_size(cola_new));
 		}
 	}			
 	// 	}

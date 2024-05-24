@@ -107,12 +107,12 @@ void abrir_archivo(char* path)
 		printf("Error al abrir archivo, sorry");
 	}
 	char* content = leerArchivo(file);
-	char** newContent = string_split(content," ");
-	printf("%s\n",newContent[0]);
-	printf("%s\n",newContent[1]);
-	printf("%s\n",newContent[2]);
-	printf("%s\n",newContent[3]);
-	printf("%s\n",newContent[4]);
+	char** newContent = string_split(content,"\n");
+
+	for(int i=0; newContent[i] != '\0'; i++)
+	{
+		printf("%s\n",newContent[i]);
+	}
 
     free(content);
 	fclose(file);
