@@ -67,9 +67,56 @@ void memoria_escuchar_entradasalida (){
 		}
 }
 
+void iterator(char* value) 
+{
+	log_info(memoria_logger,"%s", value);
+}
+
+char* leerArchivo(FILE* file)
+{
+	fseek(file,0,SEEK_END);
+
+	int tamanioArchivo = ftell(file);
+
+	rewind(file);
+
+	char* contenido = malloc((tamanioArchivo + 1) * sizeof(char) );
+	if( contenido == NULL )
+	{
+		printf("Error al intentar reservar memoria");
+		return NULL;
+	}
+
+	size_t leidos = fread(contenido, sizeof(char), tamanioArchivo, file);
+	if( leidos < tamanioArchivo )
+	{
+		printf("No se pudo leer el contenido del archivo");
+		free(contenido);
+		return NULL;
+	}
+
+	contenido[tamanioArchivo] = '\0';
+	return contenido;
+}
+
+void abrir_archivo(char* path)
+{
+	FILE* file = fopen(path,"r");
+	if( file == NULL )
+	{
+		printf("Error al abrir archivo, sorry");
+	}
+	char* content = leerArchivo(file);
+
+	printf("%s\n",content);
+
+    free(content);
+	fclose(file);
+}
 
 void memoria_escuchar_kernel (){
 		bool control_key = 1;
+			t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 			switch (cod_op) {
@@ -77,9 +124,18 @@ void memoria_escuchar_kernel (){
 				//
 				break;
 			case PAQUETE:
-			//FALTA OPERACION DE RECIBIR PAQUETE.
-				printf("Recibi el paquete nice");
-				break;
+			//FUNCIONES PARA CUANDO RECIBAMOS PAQUETE
+				// lista = recibir_paquete(fd_kernel);
+				// log_info(memoria_logger, "Me llegaron los siguientes valores:\n");
+				// //list_iterate(lista, (void*) iterator);
+				// //extraigp el elemento lista y muestro sus parametros
+				// ProcesoMemoria* random = list_get(lista,0);
+				// printf("El pid recibido es %d", random->PID);
+				// printf("El path recibido es %s", random->path);
+			//ABRIR ARCHIVO PSEUDOCODIGO
+			char* path = "/home/utnso/tp-2024-1c-Grupo-120/memoria/";
+			abrir_archivo(path);
+			break;
 			case -1:
 				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor");
 				control_key = 0;
@@ -89,5 +145,8 @@ void memoria_escuchar_kernel (){
 			}
 		}
 }
+
+
+
 
 #endif /* MEMORIA_H_ */

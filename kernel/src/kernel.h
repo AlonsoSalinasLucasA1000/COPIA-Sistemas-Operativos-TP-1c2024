@@ -17,6 +17,8 @@ int fd_entradasalida;
 int procesos_en_new = 0;
 int procesos_fin = 0;
 
+sem_t sem;
+
 int pid = 0;
 t_queue* cola_new;
 t_queue* cola_ready;
@@ -127,7 +129,14 @@ void iniciar_proceso(char* path)
 	pcb->path = path;
 
 	//agrego el pcb a la cola new
+	
+	sem_wait(&sem);
+    printf("Entrando en la sección crítica...\n");
 	queue_push(cola_new,pcb);
+	printf("Saliendo de la sección crítica...\n");
+    // Señalar (incrementar) el semáforo
+    sem_post(&sem);
+
 	procesos_en_new++;
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW", pcb->PID);
 	
@@ -224,14 +233,49 @@ void consolaInteractiva()
 	}
 }
 
+//NOS FALTA SERIALIZAR
 void informar_memoria_nuevo_proceso()
 {
 	//deberemos informarle a la memoria de un nuevo proceso intentaremos enviarle un mensaje random
+
+	//creo paquete
 	t_paquete* to_memory = crear_paquete();
-	char* msj = "Hola, me recibiste?";
-	agregar_a_paquete(to_memory,msj,strlen(msj)+1);
+
+	//saco al proceso de la cola de new
+	PCB* proceso_nuevo = queue_peek(cola_new);
+    
+//probamos que datos se van a enviar	
+	printf("El proceso extraído de la cola de new es %d",proceso_nuevo->PID);
+	printf("El proceso extraído de la cola de new tiene path %s",proceso_nuevo->path);
+
+	sem_wait(&sem);
+    printf("Entrando en la sección crítica...\n");
+	queue_pop(cola_new);
+	printf("Saliendo de la sección crítica...\n");
+    // Señalar (incrementar) el semáforo
+    sem_post(&sem);
+
+
+	//declaro el proceso a enviar
+	ProcesoMemoria* proceso_a_memoria;
+	proceso_a_memoria->PID = proceso_nuevo->PID;
+	proceso_a_memoria->path = proceso_nuevo->path;
+
+//probamos que datos se van a enviar
+    printf("EL proceso que enviaremos a memoria tiene pid %d\n",proceso_a_memoria->PID);
+	printf("EL proceso que enviaremos a memoria tiene pid %s\n",proceso_a_memoria->path);
+
+    //lo envio
+	agregar_a_paquete(to_memory,proceso_a_memoria,sizeof(ProcesoMemoria));
+
+	char* contenidoPaquete = to_memory->buffer;
+	printf("El contenido del paquete es el siguiente: %s",contenidoPaquete);
+	
 	enviar_paquete(to_memory,fd_memoria);
 	eliminar_paquete(to_memory);
+
+    //meto el proceso a la cola de ready
+	queue_push(cola_ready,proceso_nuevo);
 }
 
 void finalizar_proceso ()
@@ -286,7 +330,13 @@ void planificador_largo_plazo()
 	// 	{
 	// 		//avisar a memoria
 	// 		//USAR QUEUE PEEK
-	 		informar_memoria_nuevo_proceso();			
+	while(1)
+	{
+		if( queue_size(cola_new) > 0)
+		{
+	 		informar_memoria_nuevo_proceso();
+		}
+	}			
 	// 	}
 	// 	else
 	// 	{

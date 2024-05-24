@@ -67,6 +67,12 @@ typedef struct
 	char* path;
 } PCB;
 
+typedef struct
+{
+	int PID;
+	char* path;
+} ProcesoMemoria;
+
 //funciones crear conexion
 int crear_conexion(char* ip, char* puerto,char* nameServ);
 int iniciar_servidor(char* puerto, t_log* un_log, char* msj_server);
@@ -75,12 +81,14 @@ int recibir_operacion(int socket_cliente);
 
 //funciones de paquetes, buffers y envios de mensajes
 void crear_buffer(t_paquete* paquete);
+void* recibir_buffer(int* size, int socket_cliente);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 t_paquete *crear_paquete(void);
 void paquete(int conexion,char* lo_que_se_desea_enviar);
 void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void enviar_mensaje(char* mensaje, int socket_cliente);
+t_list* recibir_paquete(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
 
 //handshake y liberar conexiones

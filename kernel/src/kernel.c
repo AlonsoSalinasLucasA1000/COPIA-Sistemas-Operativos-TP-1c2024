@@ -4,7 +4,7 @@
 
 int main(int argc, char* argv[]) {
 
-
+sem_init(&sem, 0, 1);
 kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (kernel_logger == NULL)
 	{
@@ -127,6 +127,7 @@ liberar_conexion(fd_cpu_interrupt);
 liberar_conexion(fd_cpu_dispach);
 liberar_conexion(fd_kernel);
 liberar_conexion(fd_entradasalida);
+sem_destroy(&sem);
 
 return (EXIT_SUCCESS);
 }
