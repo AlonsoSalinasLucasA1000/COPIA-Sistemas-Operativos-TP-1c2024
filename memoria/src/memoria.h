@@ -77,7 +77,8 @@ void memoria_escuchar_kernel (){
 				//
 				break;
 			case PAQUETE:
-				//
+			//FALTA OPERACION DE RECIBIR PAQUETE.
+				printf("Recibi el paquete nice");
 				break;
 			case -1:
 				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor");

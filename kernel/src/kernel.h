@@ -128,6 +128,7 @@ void iniciar_proceso(char* path)
 
 	//agrego el pcb a la cola new
 	queue_push(cola_new,pcb);
+	procesos_en_new++;
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW", pcb->PID);
 	
 	//sem_signal(&planificador);
@@ -225,7 +226,12 @@ void consolaInteractiva()
 
 void informar_memoria_nuevo_proceso()
 {
-	//deberemos informarle a la memoria de un nuevo proceso
+	//deberemos informarle a la memoria de un nuevo proceso intentaremos enviarle un mensaje random
+	t_paquete* to_memory = crear_paquete();
+	char* msj = "Hola, me recibiste?";
+	agregar_a_paquete(to_memory,msj,strlen(msj)+1);
+	enviar_paquete(to_memory,fd_memoria);
+	eliminar_paquete(to_memory);
 }
 
 void finalizar_proceso ()
@@ -269,31 +275,32 @@ void mover_procesos_ready(int grado_multiprogramacion)
 
 void planificador_largo_plazo()
 {
-    //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
-    int grado_multiprogramacion = config_get_int_value(kernel_config, "GRADO_MULTIPROGRAMACION");
-
-	//pregunto constantemente
-	while(1)
-	{
-		//hay nuevos procesos en new?
-		if( procesos_en_new > 0 )
-		{
-			//avisar a memoria
-			//USAR QUEUE PEEK
-			informar_memoria_nuevo_proceso();			
-		}
-		else
-		{
-			//algun proceso terminó?
-			if(procesos_fin > 0 )
-			{
-				//
-			}
-		}
-		//luego de esto muevo los procesos a ready mientras pueda
-		mover_procesos_ready(grado_multiprogramacion);
-		sleep(1);
-	}	
+    // //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
+    // //int grado_multiprogramacion = config_get_int_value(kernel_config, "GRADO_MULTIPROGRAMACION");
+	// int grado_multiprogramacion = 20;
+	// //pregunto constantemente
+	// while(1)
+	// {
+	// 	//hay nuevos procesos en new?
+	// 	if( procesos_en_new > 0 )
+	// 	{
+	// 		//avisar a memoria
+	// 		//USAR QUEUE PEEK
+	 		informar_memoria_nuevo_proceso();			
+	// 	}
+	// 	else
+	// 	{
+	// 		//algun proceso terminó?
+	// 		if(procesos_fin > 0 )
+	// 		{
+	// 			//
+	// 			printf("esta parte es la del fin del proceso");
+	// 		}
+	// 	}
+	// 	//luego de esto muevo los procesos a ready mientras pueda
+	// 	//mover_procesos_ready(grado_multiprogramacion);
+	// 	sleep(1);
+	//}	
 }
 
 #endif KERNEL_H_ 

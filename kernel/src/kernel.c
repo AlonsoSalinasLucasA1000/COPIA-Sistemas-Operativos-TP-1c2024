@@ -105,7 +105,20 @@ kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, 
 		exit(EXIT_FAILURE);
 	}
 
-consolaInteractiva();
+pthread_t hilo_consola;
+pthread_create (&hilo_consola, NULL, (void*)consolaInteractiva, NULL);
+pthread_detach (hilo_consola);
+
+planificador_largo_plazo();
+
+// pthread_t hilo_planificador_largo_plazo;
+// pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
+// pthread_detach (hilo_planificador_largo_plazo);
+
+while(1)
+{
+    //nada
+}
 
 liberar_config(kernel_config);
 liberar_logger(kernel_logger);
