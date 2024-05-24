@@ -107,8 +107,12 @@ void abrir_archivo(char* path)
 		printf("Error al abrir archivo, sorry");
 	}
 	char* content = leerArchivo(file);
-
-	printf("%s\n",content);
+	char** newContent = string_split(content," ");
+	printf("%s\n",newContent[0]);
+	printf("%s\n",newContent[1]);
+	printf("%s\n",newContent[2]);
+	printf("%s\n",newContent[3]);
+	printf("%s\n",newContent[4]);
 
     free(content);
 	fclose(file);
@@ -133,7 +137,7 @@ void memoria_escuchar_kernel (){
 				// printf("El pid recibido es %d", random->PID);
 				// printf("El path recibido es %s", random->path);
 			//ABRIR ARCHIVO PSEUDOCODIGO
-			char* path = "/home/utnso/tp-2024-1c-Grupo-120/memoria/";
+			char* path = "archivopseudocodigo";
 			abrir_archivo(path);
 			break;
 			case -1:
