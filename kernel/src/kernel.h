@@ -107,17 +107,52 @@ void kernel_escuchar_memoria ()
 		}	
 }
 
-void consolaInteractiva()
+void iniciar_proceso(char* path)
 {
-	char* leido;
-	leido = readline("> ");
-	
-	while( strcmp(leido,"") != 0 )
+	PCB* pcb = malloc(sizeof(PCB));
+	if ( pcb == NULL )
 	{
-		validarFuncionesConsola(leido);
-		free(leido);
-		leido = readline("> ");
+		printf("Error al crear pcb");
 	}
+	//inicializo el PCB del proceso
+	pid++;
+	pcb->PID = pid;
+	pcb->PC = 0;
+	pcb->quantum = 0;
+	pcb->registro.AX = 0;
+	pcb->registro.BX = 0;
+	pcb->registro.CX = 0;
+	pcb->registro.DX = 0;
+	pcb->estado = NEW;
+	pcb->path = path;
+
+	//agrego el pcb a la cola new
+	queue_push(cola_new,pcb);
+	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW", pcb->PID);
+	
+	//sem_signal(&planificador);
+}
+
+void atender_instruccion (char* leido)
+{
+    char** comando_consola = string_split(leido, " ");
+	//printf("%s\n",comando_consola[0]);
+
+    if((strcmp(comando_consola[0], "INICIAR_PROCESO") == 0))
+	{ 
+        iniciar_proceso(comando_consola[1]);  
+    }else if(strcmp(comando_consola [0], "FINALIZAR_PROCESO") == 0){
+    }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
+    }else if(strcmp(comando_consola [0], "INICIAR_PLANIFICACION") == 0){
+    }else if(strcmp(comando_consola [0], "MULTIPROGRAMACION") == 0){ 
+    }else if(strcmp(comando_consola [0], "PROCESO_ESTADO") == 0){
+    }else if(strcmp(comando_consola [0], "HELP") == 0){
+    }else if(strcmp(comando_consola [0], "PRINT") == 0){
+    }else{   
+        log_error(kernel_logger, "Comando no reconocido, pero que paso el filtro ???");  
+        exit(EXIT_FAILURE);
+    }
+    string_array_destroy(comando_consola); 
 }
 
 void validarFuncionesConsola(char* leido)
@@ -175,88 +210,27 @@ void validarFuncionesConsola(char* leido)
 	 string_array_destroy(valorLeido);
 }
 
-void atender_instruccion (char* leido)
+void consolaInteractiva()
 {
-    char** comando_consola = string_split(leido, " ");
-	//printf("%s\n",comando_consola[0]);
-
-    if((strcmp(comando_consola[0], "INICIAR_PROCESO") == 0))
-	{ 
-        iniciar_proceso(comando_consola[1]);  
-    }else if(strcmp(comando_consola [0], "FINALIZAR_PROCESO") == 0){
-    }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
-    }else if(strcmp(comando_consola [0], "INICIAR_PLANIFICACION") == 0){
-    }else if(strcmp(comando_consola [0], "MULTIPROGRAMACION") == 0){ 
-    }else if(strcmp(comando_consola [0], "PROCESO_ESTADO") == 0){
-    }else if(strcmp(comando_consola [0], "HELP") == 0){
-    }else if(strcmp(comando_consola [0], "PRINT") == 0){
-    }else{   
-        log_error(kernel_logger, "Comando no reconocido, pero que paso el filtro ???");  
-        exit(EXIT_FAILURE);
-    }
-    string_array_destroy(comando_consola); 
-}
-
-void iniciar_proceso(char* path)
-{
-	PCB* pcb = malloc(sizeof(PCB));
-	if ( pcb == NULL )
-	{
-		return NULL;
-	}
-	//inicializo el PCB del proceso
-	pid++;
-	pcb->PID = pid;
-	pcb->PC = 0;
-	pcb->quantum = QUANTUM;
-	pcb->registro.AX = 0;
-	pcb->registro.BX = 0;
-	pcb->registro.CX = 0;
-	pcb->registro.DX = 0;
-	pcb->estado = NEW;
-	pcb->path = path;
-
-	//agrego el pcb a la cola new
-	queue_push(cola_new,pcb);
-	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW", pcb->PID);
+	char* leido;
+	leido = readline("> ");
 	
-	//sem_signal(&planificador);
-}
-
-void planificador_largo_plazo()
-{
-    //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
-    int grado_multiprogramacion = config_get_string_value(kernel.config, "GRADO_MULTIPROGRAMACION");
-
-	//pregunto constantemente
-	while(1)
+	while( strcmp(leido,"") != 0 )
 	{
-		//hay nuevos procesos en new?
-		if( procesos_en_new > 0 )
-		{
-			//avisar a memoria
-			//USAR QUEUE PEEK
-			informar_memoria_nuevo_proceso()			
-		}
-		else
-		{
-			//algun proceso terminó?
-			if(procesos_fin > 0 )
-			{
-				//
-			}
-		}
-		//luego de esto muevo los procesos a ready mientras pueda
-		mover_procesos_ready(grado_multiprogramacion);
-	}	
-}
-
-void planificador_corto_plazo()
-{
-	while(1)
-	{
-
+		validarFuncionesConsola(leido);
+		free(leido);
+		leido = readline("> ");
 	}
+}
+
+void informar_memoria_nuevo_proceso()
+{
+	//deberemos informarle a la memoria de un nuevo proceso
+}
+
+void finalizar_proceso ()
+{
+
 }
 
 void mover_procesos_ready(int grado_multiprogramacion)
@@ -274,7 +248,7 @@ void mover_procesos_ready(int grado_multiprogramacion)
         {
             // Seleccionar el primer proceso de la cola de NEW y los borramos de la cola
             PCB* proceso_nuevo = queue_peek(cola_new);
-            queue_pop();
+            queue_pop(cola_new);
 
             // Cambiar el estado del proceso a READY
             proceso_nuevo->estado = READY;
@@ -293,11 +267,33 @@ void mover_procesos_ready(int grado_multiprogramacion)
     }
 }
 
-void informar_memoria_nuevo_proceso()
+void planificador_largo_plazo()
 {
+    //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
+    int grado_multiprogramacion = config_get_int_value(kernel_config, "GRADO_MULTIPROGRAMACION");
 
+	//pregunto constantemente
+	while(1)
+	{
+		//hay nuevos procesos en new?
+		if( procesos_en_new > 0 )
+		{
+			//avisar a memoria
+			//USAR QUEUE PEEK
+			informar_memoria_nuevo_proceso();			
+		}
+		else
+		{
+			//algun proceso terminó?
+			if(procesos_fin > 0 )
+			{
+				//
+			}
+		}
+		//luego de esto muevo los procesos a ready mientras pueda
+		mover_procesos_ready(grado_multiprogramacion);
+		sleep(1);
+	}	
 }
 
-void finalizar_proceso ()*/
-
-#endif /* KERNEL_H_ */
+#endif KERNEL_H_ 
