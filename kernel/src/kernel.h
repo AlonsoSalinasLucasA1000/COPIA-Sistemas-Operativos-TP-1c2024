@@ -14,9 +14,13 @@ int fd_memoria;
 int fd_entradasalida;
 
 //colas y pid
+int procesos_en_new = 0;
+int procesos_fin = 0;
+
 int pid = 0;
 t_queue* cola_new;
 t_queue* cola_ready;
+t_queue* cola_blocked;
 
 t_log *kernel_logger; // LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config *kernel_config;
@@ -215,29 +219,49 @@ void iniciar_proceso(char* path)
 	//agrego el pcb a la cola new
 	queue_push(cola_new,pcb);
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW", pcb->PID);
+	
 	//sem_signal(&planificador);
 }
-/*
+
 void planificador_largo_plazo()
-{
-	while(1)
-	{
-	sem_wait(&planificador);
-	//CREACION DE PROCESO.
-	informar_memoria();
-	mover_procesos_ready();
-
-
-	//TODAVIA NO CONTEMPLO EL CASO DE FIN DE PROCESO
-	
-	}	
-}
-
-void mover_procesos_ready()
 {
     //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
     int grado_multiprogramacion = config_get_string_value(kernel.config, "GRADO_MULTIPROGRAMACION");
 
+	//pregunto constantemente
+	while(1)
+	{
+		//hay nuevos procesos en new?
+		if( procesos_en_new > 0 )
+		{
+			//avisar a memoria
+			//USAR QUEUE PEEK
+			informar_memoria_nuevo_proceso()			
+		}
+		else
+		{
+			//algun proceso terminó?
+			if(procesos_fin > 0 )
+			{
+				//
+			}
+		}
+		//luego de esto muevo los procesos a ready mientras pueda
+		mover_procesos_ready(grado_multiprogramacion);
+	}	
+}
+
+void planificador_corto_plazo()
+{
+	while(1)
+	{
+
+	}
+}
+
+void mover_procesos_ready(int grado_multiprogramacion)
+{
+	//CONSULTA. TENDREMOS QUE USAR SEMAFOROS?
     //Cantidad de procesos en las colas de NEW y READY
     int cantidad_procesos_new = queue_size(cola_new);
     int cantidad_procesos_ready = queue_size(cola_ready);
@@ -269,7 +293,7 @@ void mover_procesos_ready()
     }
 }
 
-void informar_memoria()
+void informar_memoria_nuevo_proceso()
 {
 
 }

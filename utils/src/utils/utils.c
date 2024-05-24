@@ -165,3 +165,5 @@ void cargar_string_al_buffer(t_buffer* un_buffer, char* un_string)
 
 	un_buffer->size +=  (strlen(un_string) + 1) + sizeof(int) ;
 }
+
+
