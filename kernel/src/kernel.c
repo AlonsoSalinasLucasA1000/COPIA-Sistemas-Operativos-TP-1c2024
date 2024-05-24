@@ -93,9 +93,19 @@ pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)kernel_escuchar_memoria, NULL);
 pthread_detach (hilo_memoria);
 
+// Creo la cola que voy a usar para guardar mis PCBs
+cola_new = queue_create();
+
+cola_ready = queue_create();
+
+kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
+	if (kernel_logs_obligatorios == NULL)
+	{
+		perror("Algo paso con el log_Obligatorio. No se pudo crear.");
+		exit(EXIT_FAILURE);
+	}
+
 consolaInteractiva();
-
-
 
 liberar_config(kernel_config);
 liberar_logger(kernel_logger);

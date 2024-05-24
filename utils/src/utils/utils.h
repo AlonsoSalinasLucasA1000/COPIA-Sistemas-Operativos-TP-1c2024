@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include<readline/readline.h>
 #include<commons/collections/queue.h>
+#include <semaphore.h>
 
 
 typedef enum
@@ -34,6 +35,14 @@ typedef struct
 	t_buffer* buffer;
 } t_paquete;
 
+typedef enum{
+	NEW,
+	READY,
+	BLOCKED,
+	EXEC,
+	EXIT
+} estado_proceso;
+
 typedef struct
 {
 	int AX;
@@ -47,7 +56,9 @@ typedef struct
 	int PID;
 	int PC;
 	int quantum;
-	RegistrosCPU r;
+	RegistrosCPU registro;
+	estado_proceso estado;
+	char* path;
 } PCB;
 
 int crear_conexion(char* ip, char* puerto,char* nameServ);

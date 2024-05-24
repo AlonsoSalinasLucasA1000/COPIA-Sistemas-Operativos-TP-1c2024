@@ -1,7 +1,5 @@
 #include <utils/utils.h>
 
-
-
 int crear_conexion(char *ip, char* puerto, char* nameServ)
 {
 	struct addrinfo hints;
@@ -36,7 +34,6 @@ int crear_conexion(char *ip, char* puerto, char* nameServ)
 
 	return socket_cliente;
 }
-
 
 int iniciar_servidor(char* puerto, t_log* un_log, char* msj_server)
 {
@@ -88,7 +85,6 @@ int esperar_cliente(int socket_servidor, t_log* un_log, char* msj)
 	return socket_cliente;
 }
 
-
 int recibir_operacion(int socket_cliente)
 {
 	int cod_op;
@@ -101,7 +97,8 @@ int recibir_operacion(int socket_cliente)
 	}
 }
 
-void handshakeClient(int fd_servidor, int32_t handshake){
+void handshakeClient(int fd_servidor, int32_t handshake)
+{
 	int result;
 
 	send(fd_servidor,&handshake,sizeof(int32_t),0);
@@ -113,7 +110,8 @@ void handshakeClient(int fd_servidor, int32_t handshake){
 		printf("Handshake Failure\n");
 }
 
-void handshakeServer(int fd_client){
+void handshakeServer(int fd_client)
+{
 	int32_t handshake;
 	int32_t resultOk = 0;
 	int32_t resultError = -1;
@@ -134,10 +132,12 @@ void handshakeServer(int fd_client){
 				break;
 	}
 }
+
 void liberar_conexion(int socket)
 {
     close(socket);
 }
+
 void liberar_logger(t_log* logger)
 {
 	log_destroy(logger);
