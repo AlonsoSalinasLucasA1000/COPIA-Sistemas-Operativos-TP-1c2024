@@ -5,7 +5,10 @@
 int main(int argc, char* argv[]) {
 
 sem_init(&sem, 0, 1); // EM en la cola new
-sem_init(&sem_Actividar_Planificador_LP,0,0);
+sem_init(&sem_Productor_Actividar_Planificador_LP,0,1); // el productor es el inicial_proceso
+sem_init(&sem_Consumidor_Actividar_Planificador_LP,0,0); // el consumidor es el planificador de largo plazo
+
+
 
 kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (kernel_logger == NULL)
@@ -101,11 +104,14 @@ cola_ready = queue_create();
 cola_blocked = queue_create();
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
-	if (kernel_logs_obligatorios == NULL)
-	{
-		perror("Algo paso con el log_Obligatorio. No se pudo crear.");
-		exit(EXIT_FAILURE);
-	}
+
+if (kernel_logs_obligatorios == NULL)
+{
+    perror("Algo paso con el log_Obligatorio. No se pudo crear.");
+	exit(EXIT_FAILURE);
+}
+
+
 
  pthread_t hilo_planificador_largo_plazo;
  pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);

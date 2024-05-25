@@ -172,7 +172,7 @@ void memoria_escuchar_kernel (){
 			free(paquete->buffer->stream);
 			free(paquete->buffer);
 			free(paquete);
-			cod_op = 0;
+			//cod_op = 0;
 		}
 }
 

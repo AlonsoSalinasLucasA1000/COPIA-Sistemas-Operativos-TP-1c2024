@@ -18,7 +18,8 @@ int procesos_en_new = 0;
 int procesos_fin = 0;
 
 sem_t sem;
-sem_t sem_Actividar_Planificador_LP;
+sem_t sem_Productor_Actividar_Planificador_LP;
+sem_t sem_Consumidor_Actividar_Planificador_LP;
 
 int pid = 0;
 t_queue* cola_new;
@@ -138,12 +139,16 @@ void iniciar_proceso(char* path)
     printf("Entrando en la sección crítica...\n");
 	queue_push(cola_new,pcb);
 	printf("Saliendo de la sección crítica...\n");
+	
     // Señalar (incrementar) el semáforo
     sem_post(&sem);
 
 	//procesos_en_new++;
-	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW\n", pcb->PID);
-	sem_post(&sem_Actividar_Planificador_LP);
+	
+	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW, funcion iniciar proceso\n", pcb->PID);
+
+	sem_post(&sem_Consumidor_Actividar_Planificador_LP);
+
 	//sem_signal(&planificador);
 }
 
@@ -353,12 +358,15 @@ void informar_memoria_nuevo_procesoNEW()
 	//proceso->path = malloc(sizeof(uint32_t));
 	//proceso->path = algo;
 
-	PCB* pcb = queue_pop(cola_new);//
+	PCB* pcb = queue_peek(cola_new);//
 	proceso->path = malloc(strlen(pcb->path)+1);
 	proceso->path = pcb->path;
 	proceso->PID = pcb->PID;
 	proceso->path_length = strlen(pcb->path)+1;
-
+	
+	// se agrego un sem 
+	sem_wait(&sem_Productor_Actividar_Planificador_LP);
+	
 	enviarProcesoMemoria(proceso,fd_memoria);
 
 	//crearBufferProcesoMemoria(&buffer,proceso);
@@ -427,8 +435,12 @@ void planificador_largo_plazo()
 
 		//if( queue_size(cola_new) > 0)
 		//{		
-		    sem_wait(&sem_Actividar_Planificador_LP);
+		    sem_wait(&sem_Consumidor_Actividar_Planificador_LP);   // mutex hace wait
+
 			informar_memoria_nuevo_procesoNEW();
+			
+			sem_post(&sem_Productor_Actividar_Planificador_LP);   // mutex hace signal
+			
 		//}
 
 	}			
