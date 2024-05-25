@@ -4,7 +4,9 @@
 
 int main(int argc, char* argv[]) {
 
-sem_init(&sem, 0, 1);
+sem_init(&sem, 0, 1); // EM en la cola new
+sem_init(&sem_Actividar_Planificador_LP,0,0);
+
 kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (kernel_logger == NULL)
 	{
@@ -13,7 +15,7 @@ kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	}
 
 //cambiar la ruta del archivo config a una abreviatura
-	t_config *kernel_config = config_create("src/kernel.config");
+	kernel_config = config_create("src/kernel.config");
 	if (kernel_config == NULL)
 	{
 		perror("Error al crear el config.");

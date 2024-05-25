@@ -18,6 +18,7 @@ int procesos_en_new = 0;
 int procesos_fin = 0;
 
 sem_t sem;
+sem_t sem_Actividar_Planificador_LP;
 
 int pid = 0;
 t_queue* cola_new;
@@ -128,7 +129,8 @@ void iniciar_proceso(char* path)
 	pcb->registro.CX = 0;
 	pcb->registro.DX = 0;
 	pcb->estado = NEW;
-	pcb->path = path;
+	pcb->path = string_duplicate(path);
+
 	printf("En INICIAR PROCESO en la PCB se guardo el sigueinte PATH:%s\n",pcb->path);
 	//agrego el pcb a la cola new
 	
@@ -141,7 +143,7 @@ void iniciar_proceso(char* path)
 
 	//procesos_en_new++;
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW\n", pcb->PID);
-	
+	sem_post(&sem_Actividar_Planificador_LP);
 	//sem_signal(&planificador);
 }
 
@@ -351,7 +353,7 @@ void informar_memoria_nuevo_procesoNEW()
 	//proceso->path = malloc(sizeof(uint32_t));
 	//proceso->path = algo;
 
-	PCB* pcb = queue_peek(cola_new);//
+	PCB* pcb = queue_pop(cola_new);//
 	proceso->path = malloc(strlen(pcb->path)+1);
 	proceso->path = pcb->path;
 	proceso->PID = pcb->PID;
@@ -386,8 +388,8 @@ void mover_procesos_ready(int grado_multiprogramacion)
         while (cantidad_procesos_new > 0 && cantidad_procesos_ready < grado_multiprogramacion)
         {
             // Seleccionar el primer proceso de la cola de NEW y los borramos de la cola
-            PCB* proceso_nuevo = queue_peek(cola_new);
-            queue_pop(cola_new);
+            PCB* proceso_nuevo = queue_pop(cola_new);
+           // queue_pop(cola_new);
 
             // Cambiar el estado del proceso a READY
             proceso_nuevo->estado = READY;
@@ -418,14 +420,17 @@ void planificador_largo_plazo()
 	// 	if( procesos_en_new > 0 )
 	// 	{
 	// 		//avisar a memoria
-	// 		//USAR QUEUE PEEK
+	// 		//USAR QUEUE Pop
 	while(1)
 	{
-		if( queue_size(cola_new) > 0)
-		{		
-	 		
+		//SEMAFOROS (PRODUCTOR-CONSUMIDOR)
+
+		//if( queue_size(cola_new) > 0)
+		//{		
+		    sem_wait(&sem_Actividar_Planificador_LP);
 			informar_memoria_nuevo_procesoNEW();
-		}
+		//}
+
 	}			
 	// 	}
 	// 	else
