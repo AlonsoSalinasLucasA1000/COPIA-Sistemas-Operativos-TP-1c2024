@@ -85,11 +85,14 @@ void* recibir_buffer(int* size, int socket_cliente);
 void* serializar_paquete(t_paquete* paquete, int bytes);
 t_paquete *crear_paquete(void);
 void paquete(int conexion,char* lo_que_se_desea_enviar);
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio);
+void agregar_a_paquete(t_paquete* paquete, void* valor, size_t tamanio);
 void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 t_list* recibir_paquete(int socket_cliente);
 void eliminar_paquete(t_paquete* paquete);
+
+//funciones propias para la serializacion
+
 
 //handshake y liberar conexiones
 void handshakeClient(int fd_servidor, int32_t handshake);

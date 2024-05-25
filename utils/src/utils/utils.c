@@ -139,15 +139,18 @@ t_paquete* crear_paquete(void)
 	return paquete;
 }
 
-void agregar_a_paquete(t_paquete* paquete, void* valor, int tamanio)
+void agregar_a_paquete(t_paquete* paquete, void* valor, size_t tamanio)
 {
+	printf("Realojar espacio de memoria?? ");
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio + sizeof(int));
+	printf("Realojar espacio de memoria?? ");
 
 	memcpy(paquete->buffer->stream + paquete->buffer->size, &tamanio, sizeof(int));
 	memcpy(paquete->buffer->stream + paquete->buffer->size + sizeof(int), valor, tamanio);
 
 	paquete->buffer->size += tamanio + sizeof(int);
 }
+
 
 void enviar_paquete(t_paquete* paquete, int socket_cliente)
 {

@@ -116,18 +116,20 @@ void iniciar_proceso(char* path)
 	{
 		printf("Error al crear pcb");
 	}
+
+	printf("En INICIAR PROCESO llego el siguiente PATH:%s\n",path);
 	//inicializo el PCB del proceso
 	pid++;
 	pcb->PID = pid;
 	pcb->PC = 0;
 	pcb->quantum = 0;
-	pcb->registro.AX = 0;
+	pcb->registro.AX = 123;
 	pcb->registro.BX = 0;
 	pcb->registro.CX = 0;
 	pcb->registro.DX = 0;
 	pcb->estado = NEW;
 	pcb->path = path;
-
+	printf("En INICIAR PROCESO en la PCB se guardo el sigueinte PATH:%s\n",pcb->path);
 	//agrego el pcb a la cola new
 	
 	sem_wait(&sem);
@@ -241,12 +243,19 @@ void informar_memoria_nuevo_proceso()
 	//creo paquete
 	t_paquete* to_memory = crear_paquete();
 
-	//saco al proceso de la cola de new
-	PCB* proceso_nuevo = queue_peek(cola_new);
+	//saco al proceso de la cola de new. Lee el primer elemento de la cola
+	PCB* proceso_nuevo = malloc(sizeof(PCB));
+	if( proceso_nuevo == NULL )
+	{
+		printf("Error crack");
+	}
+
+	proceso_nuevo = queue_peek(cola_new);
+
     
-//probamos que datos se van a enviar	
-	printf("El proceso extraído de la cola de new es %d",proceso_nuevo->PID);
-	printf("El proceso extraído de la cola de new tiene path %s",proceso_nuevo->path);
+	//probamos que datos se van a enviar	
+	printf("El proceso extraído de la cola de new es %d\n",proceso_nuevo->registro.AX);
+	printf("El proceso extraído de la cola de new tiene path %d\n",proceso_nuevo->PID);
 
 	sem_wait(&sem);
     printf("Entrando en la sección crítica...\n");
@@ -257,30 +266,39 @@ void informar_memoria_nuevo_proceso()
 
 
 	//declaro el proceso a enviar
-	ProcesoMemoria* proceso_a_memoria;
+	ProcesoMemoria* proceso_a_memoria = malloc(sizeof(ProcesoMemoria));
+	if( proceso_a_memoria == NULL )
+	{
+		printf("error");
+	}
+
 	proceso_a_memoria->PID = proceso_nuevo->PID;
 	proceso_a_memoria->path = proceso_nuevo->path;
 
-//probamos que datos se van a enviar
+	//probamos que datos se van a enviar
     printf("EL proceso que enviaremos a memoria tiene pid %d\n",proceso_a_memoria->PID);
 	printf("EL proceso que enviaremos a memoria tiene pid %s\n",proceso_a_memoria->path);
 
     //lo envio
-	agregar_a_paquete(to_memory,proceso_a_memoria,sizeof(ProcesoMemoria));
+	agregar_a_paquete(to_memory,proceso_a_memoria, sizeof(ProcesoMemoria));
 
-	char* contenidoPaquete = to_memory->buffer;
-	printf("El contenido del paquete es el siguiente: %s",contenidoPaquete);
+	//ProcesoMemoria* contenidoPaquete = to_memory->buffer->stream;
+	//printf("El contenido del paquete es el siguiente: %s\n",contenidoPaquete->path);
+	printf("LLega hasta acá?? 0");
 	
 	enviar_paquete(to_memory,fd_memoria);
 	eliminar_paquete(to_memory);
+	free(proceso_a_memoria);
+	printf("LLega hasta acá??");
 
     //meto el proceso a la cola de ready
 	queue_push(cola_ready,proceso_nuevo);
+	printf("LLega hasta acá?? 2");
+	
 }
 
 void finalizar_proceso ()
 {
-
 }
 
 void mover_procesos_ready(int grado_multiprogramacion)
@@ -334,9 +352,8 @@ void planificador_largo_plazo()
 	{
 		if( queue_size(cola_new) > 0)
 		{		
-	 		informar_memoria_nuevo_proceso();
-			printf("ESTOY INFORMANDO A MEMORIA DE UN NUEVO PROCESO\n");
-		    printf("%d\n",queue_size(cola_new));
+	 		
+			informar_memoria_nuevo_proceso();
 		}
 	}			
 	// 	}

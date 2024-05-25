@@ -123,19 +123,22 @@ void memoria_escuchar_kernel (){
 			t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
+			printf("Recibi codigo de operacion");
 			switch (cod_op) {
 			case MENSAJE:
 				//
+				printf("Ejecute este mensaje MENSAJE jaja");
 				break;
 			case PAQUETE:
 			//FUNCIONES PARA CUANDO RECIBAMOS PAQUETE
-				// lista = recibir_paquete(fd_kernel);
-				// log_info(memoria_logger, "Me llegaron los siguientes valores:\n");
-				// //list_iterate(lista, (void*) iterator);
+				//lista = recibir_paquete(fd_kernel);
+				//log_info(memoria_logger, "Me llegaron los siguientes valores:\n");
+				//list_iterate(lista, (void*) iterator);
 				// //extraigp el elemento lista y muestro sus parametros
 				// ProcesoMemoria* random = list_get(lista,0);
 				// printf("El pid recibido es %d", random->PID);
 				// printf("El path recibido es %s", random->path);
+			//crea conecccion cuando ingresamos INICIAR_PROCESO
 			//ABRIR ARCHIVO PSEUDOCODIGO
 			char* path = "archivopseudocodigo";
 			abrir_archivo(path);
