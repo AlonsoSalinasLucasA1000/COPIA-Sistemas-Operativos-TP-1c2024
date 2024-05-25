@@ -109,7 +109,7 @@ void abrir_archivo(char* path)
 	char* content = leerArchivo(file);
 	char** newContent = string_split(content,"\n");
 
-	for(int i=0; newContent[i] != '\0'; i++)
+	for(int i=0; newContent[i] != "\n"; i++)
 	{
 		printf("%s\n",newContent[i]);
 	}
@@ -120,7 +120,7 @@ void abrir_archivo(char* path)
 
 void memoria_escuchar_kernel (){
 		bool control_key = 1;
-			t_list* lista;
+			//t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 			printf("Recibi codigo de operacion\n");
@@ -155,8 +155,8 @@ void memoria_escuchar_kernel (){
 			//crea conecccion cuando ingresamos INICIAR_PROCESO
 			//ABRIR ARCHIVO PSEUDOCODIGO
 			ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
-			printf("El PID que recibi es: %d", nuevoProceso->PID);
-			printf("El PID que recibi es: %s", nuevoProceso->path);
+			printf("El PID que recibi es: %d\n", nuevoProceso->PID);
+			printf("El PATH que recibi es: %s\n", nuevoProceso->path);
 			      //char* path = "archivopseudocodigo";
 			      //abrir_archivo(path);
 			free(nuevoProceso);

@@ -17,9 +17,8 @@ int fd_entradasalida;
 int procesos_en_new = 0;
 int procesos_fin = 0;
 
-sem_t sem;
-sem_t sem_Productor_Actividar_Planificador_LP;
-sem_t sem_Consumidor_Actividar_Planificador_LP;
+sem_t sem; //semaforo mutex region critica cola new
+sem_t sem_cant; //semaforo cant de elementos en la cola
 
 int pid = 0;
 t_queue* cola_new;
@@ -42,8 +41,8 @@ char* RECURSOS;
 char* INSTANCIAS_RECURSOS;
 char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 
-//semaforos
-//sem_t planificador = 0;
+
+
 
 void kernel_escuchar_cpu ()
 {
@@ -119,7 +118,7 @@ void iniciar_proceso(char* path)
 		printf("Error al crear pcb");
 	}
 
-	printf("En INICIAR PROCESO llego el siguiente PATH:%s\n",path);
+	printf("En INICIAR PROCESO llego el siguiente PATH: %s\n",path);
 	//inicializo el PCB del proceso
 	pid++;
 	pcb->PID = pid;
@@ -132,7 +131,7 @@ void iniciar_proceso(char* path)
 	pcb->estado = NEW;
 	pcb->path = string_duplicate(path);
 
-	printf("En INICIAR PROCESO en la PCB se guardo el sigueinte PATH:%s\n",pcb->path);
+	printf("En INICIAR PROCESO en la PCB se guardo el sigueinte PATH: %s\n",pcb->path);
 	//agrego el pcb a la cola new
 	
 	sem_wait(&sem);
@@ -142,14 +141,13 @@ void iniciar_proceso(char* path)
 	
     // Señalar (incrementar) el semáforo
     sem_post(&sem);
+	sem_post(&sem_cant);
 
 	//procesos_en_new++;
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW, funcion iniciar proceso\n", pcb->PID);
 
-	sem_post(&sem_Consumidor_Actividar_Planificador_LP);
 
-	//sem_signal(&planificador);
 }
 
 void atender_instruccion (char* leido)
@@ -358,14 +356,12 @@ void informar_memoria_nuevo_procesoNEW()
 	//proceso->path = malloc(sizeof(uint32_t));
 	//proceso->path = algo;
 
-	PCB* pcb = queue_peek(cola_new);//
+	PCB* pcb = queue_pop(cola_new);//
 	proceso->path = malloc(strlen(pcb->path)+1);
 	proceso->path = pcb->path;
 	proceso->PID = pcb->PID;
 	proceso->path_length = strlen(pcb->path)+1;
 	
-	// se agrego un sem 
-	sem_wait(&sem_Productor_Actividar_Planificador_LP);
 	
 	enviarProcesoMemoria(proceso,fd_memoria);
 
@@ -431,15 +427,16 @@ void planificador_largo_plazo()
 	// 		//USAR QUEUE Pop
 	while(1)
 	{
-		//SEMAFOROS (PRODUCTOR-CONSUMIDOR)
+		//SEMAFOROS (PRODUCTOR-CONSUMIDOR)  consumidor de la cola de NEW
 
 		//if( queue_size(cola_new) > 0)
-		//{		
-		    sem_wait(&sem_Consumidor_Actividar_Planificador_LP);   // mutex hace wait
+		//{	
+		    sem_wait(&sem_cant);   // mutex hace wait
+		    sem_wait(&sem);   // mutex hace wait
 
 			informar_memoria_nuevo_procesoNEW();
 			
-			sem_post(&sem_Productor_Actividar_Planificador_LP);   // mutex hace signal
+			sem_post(&sem);   // mutex hace signal
 			
 		//}
 

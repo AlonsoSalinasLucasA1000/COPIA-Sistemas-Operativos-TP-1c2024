@@ -5,8 +5,7 @@
 int main(int argc, char* argv[]) {
 
 sem_init(&sem, 0, 1); // EM en la cola new
-sem_init(&sem_Productor_Actividar_Planificador_LP,0,1); // el productor es el inicial_proceso
-sem_init(&sem_Consumidor_Actividar_Planificador_LP,0,0); // el consumidor es el planificador de largo plazo
+sem_init(&sem_cant,0,0); // el productor es el inicial_proceso
 
 
 
