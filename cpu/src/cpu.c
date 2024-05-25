@@ -57,8 +57,6 @@ pthread_t hilo_kernel;
 pthread_create (&hilo_kernel, NULL, (void*)cpu_escuchar_kernel, NULL);
 pthread_detach (hilo_kernel);
 
-
-
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)cpu_escuchar_memoria, NULL);

@@ -53,7 +53,7 @@ int iniciar_servidor(char *puerto, t_log *un_log, char *msj_server)
 	int resultado = getaddrinfo(NULL, puerto, &hints, &servinfo);
 	if (resultado != 0)
 	{
-		log_error(un_log, "Error en getaddrinfo: %s", gai_strerror(resultado));
+		log_error(un_log, "Error en getaddrinfo: %s.\n", gai_strerror(resultado));
 		exit(-1);
 	}
 
@@ -66,7 +66,7 @@ int iniciar_servidor(char *puerto, t_log *un_log, char *msj_server)
 	int bind_resultado = bind(socket_servidor, servinfo->ai_addr, servinfo->ai_addrlen);
 	if (bind_resultado != 0)
 	{
-		herror("Fallo el bind");
+		herror("Fallo el bind\n");
 		exit(-3);
 	}
 
@@ -197,6 +197,40 @@ ProcesoMemoria *deserializar_proceso_memoria(t_newBuffer *buffer)
 
 	return to_return;
 }
+
+
+PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
+{
+	PCB *to_return = malloc(sizeof(PCB));
+
+	void *stream = buffer->stream;
+
+	// deserializamos los campos del buffer, primero el pid y luego el tamanio del path
+	memcpy(&(to_return->PID), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(to_return->PC), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(to_return->quantum), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(to_return->AX), stream, sizeof(uint8_t));
+	stream += sizeof(uint8_t);
+	memcpy(&(to_return->BX), stream, sizeof(uint8_t));
+	stream += sizeof(uint8_t);
+	memcpy(&(to_return->CX), stream, sizeof(uint8_t));
+	stream += sizeof(uint8_t);
+	memcpy(&(to_return->DX), stream, sizeof(uint8_t));
+	stream += sizeof(uint8_t);
+	memcpy(&(to_return->estado), stream, sizeof(estado_proceso));
+	stream += sizeof(estado_proceso);
+	memcpy(&(to_return->path_length), stream, sizeof(int));
+	stream += sizeof(uint8_t);
+	// deserailizamos el path como tal
+	to_return->path = malloc(to_return->path_length);
+	memcpy(to_return->path, stream, to_return->path_length);
+
+	return to_return;
+}
+
 
 void *recibir_buffer(int *size, int socket_cliente)
 {

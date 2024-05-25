@@ -15,12 +15,14 @@
 #include<readline/readline.h>
 #include<commons/collections/queue.h>
 #include <semaphore.h>
+#include<commons/collections/list.h> 
 
 
 typedef enum
 {
 	MENSAJE,
-	PAQUETE
+	PAQUETE,
+	PROCESO
 }op_code;
 
 /*typedef struct
@@ -72,11 +74,16 @@ typedef struct
 
 typedef struct
 {
-	int PID;
-	int PC;
-	int quantum;
-	RegistrosCPU registro;
+	uint32_t PID;
+	uint32_t PC;
+	uint32_t quantum;
+	//RegistrosCPU registro;
+	uint8_t AX;
+	uint8_t BX;
+	uint8_t CX;
+	uint8_t DX;
 	estado_proceso estado;
+	uint32_t path_length;
 	char* path;
 } PCB;
 

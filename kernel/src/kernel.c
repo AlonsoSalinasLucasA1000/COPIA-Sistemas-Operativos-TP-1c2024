@@ -5,7 +5,9 @@
 int main(int argc, char* argv[]) {
 
 sem_init(&sem, 0, 1); // EM en la cola new
+sem_init(&sem_ready, 0, 1);
 sem_init(&sem_cant,0,0); // el productor es el inicial_proceso
+sem_init(&sem_cant_ready,0,0);
 
 
 
@@ -110,11 +112,16 @@ if (kernel_logs_obligatorios == NULL)
 	exit(EXIT_FAILURE);
 }
 
-
+ pthread_t hilo_planificador_corto_plazo;
+ pthread_create (&hilo_planificador_corto_plazo, NULL, (void*)planificador_corto_plazo, NULL);
+ pthread_detach (hilo_planificador_corto_plazo);
 
  pthread_t hilo_planificador_largo_plazo;
  pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
  pthread_detach (hilo_planificador_largo_plazo);
+
+
+
 
 consolaInteractiva();
 
@@ -131,6 +138,7 @@ liberar_conexion(fd_cpu_dispach);
 liberar_conexion(fd_kernel);
 liberar_conexion(fd_entradasalida);
 sem_destroy(&sem);
+sem_destroy(&sem_cant);
 
 return (EXIT_SUCCESS);
 }

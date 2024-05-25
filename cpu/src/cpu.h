@@ -28,6 +28,19 @@ void cpu_escuchar_kernel (){
 		bool control_key = 1;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
+
+			printf("Recibi codigo de op. del kernel\n");
+			//debemos extraer el resto, primero el tamaño y luego el contenido
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+
+			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
+			printf("Recibimos tamaño\n");
+			
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
+			printf("Recibi stream\n");
+
 			switch (cod_op) {
 			case MENSAJE:
 				//
@@ -35,13 +48,38 @@ void cpu_escuchar_kernel (){
 			case PAQUETE:
 				//
 				break;
+			case PROCESO:
+
+			    printf("Voy a atender un proceso\n");
+				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
+
+				if(proceso != NULL){ 
+					printf("El PID que recibi es: %d\n", proceso->PID);
+					printf("El PC que recibi es: %d\n", proceso->PC);
+					printf("El QUANTUM que recibi es: %d\n", proceso->quantum);
+					printf("El AX que recibi es: %d\n", proceso->AX);
+					printf("El BX que recibi es: %d\n", proceso->BX);
+					printf("El CX que recibi es: %d\n", proceso->CX);
+					printf("El DX que recibi es: %d\n", proceso->DX);
+					printf("EL ESTADO que recibi: %d\n",proceso->estado);
+					printf("EL tamaño de path que recibi: %d\n",proceso->path_length);
+					printf("EL path que recibi: %s\n",proceso->path);
+				} else{
+					printf("No se pudo deserializar\n");
+				}
+				free(proceso);
+			    break;
 			case -1:
-				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor");
+				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor\n");
 				control_key = 0;
 			default:
-				log_warning(cpu_logger,"Operacion desconocida. No quieras meter la pata");
+				log_warning(cpu_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
+
 		}
 }
 

@@ -21,7 +21,7 @@ int TAM_MEMORIA;
 int TAM_PAGINA;
 char* PATH_INSTRUCCIONES;
 int RETARDO_RESPUESTA;
-
+//t_list *listProcesos = list_create(); 
 
 
 void memoria_escuchar_cpu (){
@@ -45,7 +45,6 @@ void memoria_escuchar_cpu (){
 		}
 }
 
-
 void memoria_escuchar_entradasalida (){
 		bool control_key = 1;
 	while (control_key) {
@@ -58,10 +57,10 @@ void memoria_escuchar_entradasalida (){
 				//
 				break;
 			case -1:
-				log_error(memoria_logger, "El cliente EntradaSalida se desconecto. Terminando servidor");
+				log_error(memoria_logger, "El cliente EntradaSalida se desconecto. Terminando servidor\n");
 				control_key = 0;
 			default:
-				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata");
+				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
 		}
@@ -83,14 +82,14 @@ char* leerArchivo(FILE* file)
 	char* contenido = malloc((tamanioArchivo + 1) * sizeof(char) );
 	if( contenido == NULL )
 	{
-		printf("Error al intentar reservar memoria");
+		printf("Error al intentar reservar memoria\n");
 		return NULL;
 	}
 
 	size_t leidos = fread(contenido, sizeof(char), tamanioArchivo, file);
 	if( leidos < tamanioArchivo )
 	{
-		printf("No se pudo leer el contenido del archivo");
+		printf("No se pudo leer el contenido del archivo\n");
 		free(contenido);
 		return NULL;
 	}
@@ -104,7 +103,7 @@ void abrir_archivo(char* path)
 	FILE* file = fopen(path,"r");
 	if( file == NULL )
 	{
-		printf("Error al abrir archivo, sorry");
+		printf("Error al abrir archivo, sorry\n");
 	}
 	char* content = leerArchivo(file);
 	char** newContent = string_split(content,"\n");
@@ -120,29 +119,28 @@ void abrir_archivo(char* path)
 
 void memoria_escuchar_kernel (){
 		bool control_key = 1;
+		t_list *listProcesos = list_create(); 
 			//t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 			printf("Recibi codigo de operacion\n");
+
 			//debemos extraer el resto, primero el tamaño y luego el contenido
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-			
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 
 			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
 			printf("Recibimos tamaño\n");
 			
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-
 			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
-
-			printf("recibi stream\n");
+			printf("Recibi stream\n");
 			
 			switch (cod_op) {
-			case MENSAJE:
+				case MENSAJE:
 				//
-				printf("Ejecute este mensaje MENSAJE jaja");
-				break;
+					printf("Ejecute este mensaje MENSAJE jaja\n");
+					break;
 			case PAQUETE:
 			//FUNCIONES PARA CUANDO RECIBAMOS PAQUETE
 				//lista = recibir_paquete(fd_kernel);
@@ -154,18 +152,26 @@ void memoria_escuchar_kernel (){
 				// printf("El path recibido es %s", random->path);
 			//crea conecccion cuando ingresamos INICIAR_PROCESO
 			//ABRIR ARCHIVO PSEUDOCODIGO
-			ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
-			printf("El PID que recibi es: %d\n", nuevoProceso->PID);
-			printf("El PATH que recibi es: %s\n", nuevoProceso->path);
+				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
+				if(nuevoProceso != NULL){ 
+					list_add(listProcesos, nuevoProceso);
+					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
+					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
+				} else{
+					printf("No se pudo deserializar\n");
+				}
+
 			      //char* path = "archivopseudocodigo";
-			      //abrir_archivo(path);
-			free(nuevoProceso);
+			      //abrir_archivo(path);  
+				free(nuevoProceso);
 			break;
+
 			case -1:
-				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor");
+				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor\n");
 				control_key = 0;
+
 			default:
-				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata");
+				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
 			//liberar memoria
@@ -174,6 +180,10 @@ void memoria_escuchar_kernel (){
 			free(paquete);
 			//cod_op = 0;
 		}
+
+		//consultar
+	//list_destroy_and_destroy_elements(t_list*, void(*element_destroyer)(void*));
+	//list_destroy_and_destroy_elements(listProcesos*, void(*element_destroyer)(void*));
 }
 
 

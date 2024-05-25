@@ -18,7 +18,9 @@ int procesos_en_new = 0;
 int procesos_fin = 0;
 
 sem_t sem; //semaforo mutex region critica cola new
+sem_t sem_ready; 
 sem_t sem_cant; //semaforo cant de elementos en la cola
+sem_t sem_cant_ready;
 
 int pid = 0;
 t_queue* cola_new;
@@ -124,10 +126,10 @@ void iniciar_proceso(char* path)
 	pcb->PID = pid;
 	pcb->PC = 0;
 	pcb->quantum = 0;
-	pcb->registro.AX = 123;
-	pcb->registro.BX = 0;
-	pcb->registro.CX = 0;
-	pcb->registro.DX = 0;
+	pcb->AX = 123;
+	pcb->BX = 0;
+	pcb->CX = 0;
+	pcb->DX = 0;
 	pcb->estado = NEW;
 	pcb->path = string_duplicate(path);
 
@@ -345,6 +347,73 @@ void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
     free(paquete);
 }
 
+
+void enviarProcesoCpu (PCB* proceso, int socket_servidor)
+{
+    //Creamos un Buffer
+    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+    buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + proceso->path_length +1;
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, &proceso->PID, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->PC, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->quantum, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->AX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->BX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->CX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->DX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->estado, sizeof(uint8_t));
+    buffer->offset += sizeof(estado_proceso);
+
+
+    // Para el nombre primero mandamos el tamaño y luego el texto en sí:
+    memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
+    
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = PROCESO;
+    paquete->buffer = buffer;
+
+    //Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(socket_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
+
 void informar_memoria_nuevo_procesoNEW()
 {
 	//CREAMOS BUFFER
@@ -364,7 +433,15 @@ void informar_memoria_nuevo_procesoNEW()
 	
 	
 	enviarProcesoMemoria(proceso,fd_memoria);
-
+	
+	sem_wait(&sem_ready);   // mutex hace wait
+	
+	queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
+	
+    sem_post(&sem_ready); 
+	sem_post(&sem_cant_ready);  // mutex hace wait
+	
+	
 	//crearBufferProcesoMemoria(&buffer,proceso);
 	//free(proceso->path);
 	//free(proceso);
@@ -399,8 +476,13 @@ void mover_procesos_ready(int grado_multiprogramacion)
             proceso_nuevo->estado = READY;
 
             // Agregar el proceso a la cola de READY
-            queue_push(cola_ready, proceso_nuevo);
+		
+
+			queue_push(cola_ready, proceso_nuevo);
             cantidad_procesos_ready++;
+			
+		
+           
 
             // Reducir la cantidad de procesos en la cola de NEW
             cantidad_procesos_new--;
@@ -437,6 +519,8 @@ void planificador_largo_plazo()
 			informar_memoria_nuevo_procesoNEW();
 			
 			sem_post(&sem);   // mutex hace signal
+
+			//sem_post(&sem_cant_ready); //avisamos al planificador que hay un nuevo proceso listo
 			
 		//}
 
@@ -456,5 +540,45 @@ void planificador_largo_plazo()
 	// 	sleep(1);
 	//}	
 }
+
+void enviar_pcb_a_cpu()
+{
+	//Reservo memoria para enviarla
+	PCB* to_send = malloc(sizeof(PCB));
+
+	sem_wait(&sem_cant_ready);   // mutex hace wait
+	sem_wait(&sem_ready);   // mutex hace wait
+
+	PCB* pcb_cola = queue_pop(cola_ready); //saca el proceso de la cola de ready
+			
+	sem_post(&sem_ready); // mutex hace signal
+	
+
+	to_send->PID = pcb_cola->PID;
+	to_send->PC = pcb_cola->PC;
+	to_send->quantum = pcb_cola->quantum;
+	to_send->estado = EXEC;
+	to_send->AX = pcb_cola->AX;
+	to_send->BX = pcb_cola->BX;
+	to_send->CX = pcb_cola->CX;
+	to_send->CX = pcb_cola->CX;
+	to_send->path = string_duplicate( pcb_cola->path);
+
+	enviarProcesoCpu(to_send, fd_cpu_interrupt);
+}
+
+void planificador_corto_plazo()
+{
+
+	while(1)
+		{
+			//usamos semaforo para avisar
+			//enviamos la pcb a la cpu
+			enviar_pcb_a_cpu();
+			//esperamos respuesta de la cpu
+			//algun receive
+		}
+}
+	
 
 #endif KERNEL_H_ 
