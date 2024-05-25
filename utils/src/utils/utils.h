@@ -23,17 +23,30 @@ typedef enum
 	PAQUETE
 }op_code;
 
-typedef struct
+/*typedef struct
 {
 	int size;
 	void* stream;
 } t_buffer;
-
+*/
 typedef struct
+{
+	uint32_t size; // Tamaño del payload
+	uint32_t offset; // Desplazamiento dentro del payload
+	void* stream; // Payload
+} t_newBuffer;
+
+typedef struct 
+{
+	op_code codigo_operacion;//paquete
+	t_newBuffer* buffer;//buffer serializado
+} t_newPaquete;//paquete que queremos enviar
+
+/*typedef struct
 {
 	op_code codigo_operacion;
 	t_buffer* buffer;
-} t_paquete;
+} t_paquete;*/
 
 typedef enum{
 	NEW,
@@ -69,7 +82,8 @@ typedef struct
 
 typedef struct
 {
-	int PID;
+	uint32_t PID;
+	uint32_t path_length;
 	char* path;
 } ProcesoMemoria;
 
@@ -80,16 +94,21 @@ int esperar_cliente(int socket_servidor, t_log* un_log, char* msj);
 int recibir_operacion(int socket_cliente);
 
 //funciones de paquetes, buffers y envios de mensajes
-void crear_buffer(t_paquete* paquete);
+//void crear_buffer(t_paquete* paquete);
+void crear_newBuffer(t_newBuffer* paquete);
+void crearBufferProcesoMemoria(t_newBuffer* buffer, ProcesoMemoria* proceso);
+void rellenarPaqueteConNewBuffer(t_newPaquete* paquete, t_newBuffer* buffer);
+void enviarPaqueteConNewBuffer(t_newPaquete* paquete, int socket);
+ProcesoMemoria* deserializar_proceso_memoria(t_newBuffer* buffer);
 void* recibir_buffer(int* size, int socket_cliente);
-void* serializar_paquete(t_paquete* paquete, int bytes);
-t_paquete *crear_paquete(void);
+//void* serializar_paquete(t_paquete* paquete, int bytes);
+//t_paquete *crear_paquete(void);
 void paquete(int conexion,char* lo_que_se_desea_enviar);
-void agregar_a_paquete(t_paquete* paquete, void* valor, size_t tamanio);
-void enviar_paquete(t_paquete* paquete, int socket_cliente);
+//void agregar_a_paquete(t_paquete* paquete, void* valor, size_t tamanio);
+//void enviar_paquete(t_paquete* paquete, int socket_cliente);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 t_list* recibir_paquete(int socket_cliente);
-void eliminar_paquete(t_paquete* paquete);
+//void eliminar_paquete(t_paquete* paquete);
 
 //funciones propias para la serializacion
 

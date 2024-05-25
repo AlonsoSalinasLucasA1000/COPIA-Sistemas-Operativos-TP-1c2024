@@ -123,7 +123,21 @@ void memoria_escuchar_kernel (){
 			t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
-			printf("Recibi codigo de operacion");
+			printf("Recibi codigo de operacion\n");
+			//debemos extraer el resto, primero el tamaño y luego el contenido
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+
+			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
+			printf("Recibimos tamaño\n");
+			
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+
+			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
+
+			printf("recibi stream\n");
+			
 			switch (cod_op) {
 			case MENSAJE:
 				//
@@ -140,8 +154,12 @@ void memoria_escuchar_kernel (){
 				// printf("El path recibido es %s", random->path);
 			//crea conecccion cuando ingresamos INICIAR_PROCESO
 			//ABRIR ARCHIVO PSEUDOCODIGO
-			char* path = "archivopseudocodigo";
-			abrir_archivo(path);
+			ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
+			printf("El PID que recibi es: %d", nuevoProceso->PID);
+			printf("El PID que recibi es: %s", nuevoProceso->path);
+			      //char* path = "archivopseudocodigo";
+			      //abrir_archivo(path);
+			free(nuevoProceso);
 			break;
 			case -1:
 				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor");
@@ -150,6 +168,11 @@ void memoria_escuchar_kernel (){
 				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata");
 				break;
 			}
+			//liberar memoria
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
+			cod_op = 0;
 		}
 }
 

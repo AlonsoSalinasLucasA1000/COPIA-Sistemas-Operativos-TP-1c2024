@@ -139,8 +139,8 @@ void iniciar_proceso(char* path)
     // Señalar (incrementar) el semáforo
     sem_post(&sem);
 
-	procesos_en_new++;
-	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW", pcb->PID);
+	//procesos_en_new++;
+	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW\n", pcb->PID);
 	
 	//sem_signal(&planificador);
 }
@@ -236,7 +236,7 @@ void consolaInteractiva()
 }
 
 //NOS FALTA SERIALIZAR
-void informar_memoria_nuevo_proceso()
+/*void informar_memoria_nuevo_proceso()
 {
 	//deberemos informarle a la memoria de un nuevo proceso intentaremos enviarle un mensaje random
 
@@ -295,7 +295,78 @@ void informar_memoria_nuevo_proceso()
 	queue_push(cola_ready,proceso_nuevo);
 	printf("LLega hasta acá?? 2");
 	
+}*/
+
+void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
+{
+    //Creamos un Buffer
+    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+    buffer->size = sizeof(uint32_t)*2 + proceso->path_length +1;
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, &proceso->PID, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+    // Para el nombre primero mandamos el tamaño y luego el texto en sí:
+    memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
+    
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = PAQUETE;
+    paquete->buffer = buffer;
+
+    //Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(socket_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
 }
+
+void informar_memoria_nuevo_procesoNEW()
+{
+	//CREAMOS BUFFER
+	//POR EL MOMENTO ESTAMOS HARCODEANDO para intentar mandar algo a memoria
+	ProcesoMemoria* proceso = malloc(sizeof(ProcesoMemoria));
+	/*char* algo = "Holis jajajaja";
+	proceso->PID = 120;
+	proceso->path_length = strlen(algo)+1;*/
+	//proceso->path = malloc(sizeof(uint32_t));
+	//proceso->path = algo;
+
+	PCB* pcb = queue_peek(cola_new);//
+	proceso->path = malloc(strlen(pcb->path)+1);
+	proceso->path = pcb->path;
+	proceso->PID = pcb->PID;
+	proceso->path_length = strlen(pcb->path)+1;
+
+	enviarProcesoMemoria(proceso,fd_memoria);
+
+	//crearBufferProcesoMemoria(&buffer,proceso);
+	//free(proceso->path);
+	//free(proceso);
+	//t_newPaquete* paquete;
+	//rellenarPaqueteConNewBuffer(paquete,&buffer);//debria ir & en buffer?
+	//enviarPaqueteConNewBuffer(paquete, fd_memoria);
+}
+
 
 void finalizar_proceso ()
 {
@@ -353,7 +424,7 @@ void planificador_largo_plazo()
 		if( queue_size(cola_new) > 0)
 		{		
 	 		
-			informar_memoria_nuevo_proceso();
+			informar_memoria_nuevo_procesoNEW();
 		}
 	}			
 	// 	}
