@@ -13,12 +13,12 @@ cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	}
 
 //cambiar la ruta del archivo config a una abreviatura
-	t_config *cpu_config = config_create("src/cpu.config");
-	if (cpu_config == NULL)
-	{
-		perror("Error al crear el config.");
-		exit(EXIT_FAILURE);
-	}
+t_config *cpu_config = config_create("src/cpu.config");
+if (cpu_config == NULL)
+{
+	perror("Error al crear el config.");
+	exit(EXIT_FAILURE);
+}
 
     
 
@@ -29,7 +29,7 @@ cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
     CANTIDAD_ENTRADAS_TLB = config_get_int_value (cpu_config , "CANTIDAD_ENTRADAS_TLB" );
     ALGORITMO_TLB = config_get_string_value (cpu_config , "ALGORITMO_TLB" );
     
-    log_info(cpu_logger, "Leí la ip: %s y puerto: %s\n", IP_MEMORIA, PUERTO_MEMORIA);
+log_info(cpu_logger, "Leí la ip: %s y puerto: %s\n", IP_MEMORIA, PUERTO_MEMORIA);
 
 //inicia servidor cpu   SE DEBE INICIAR EL SERVIDOR DEL OTRO PUERTO DE CPU, EL PUERTO INTERRUPT!!!
 fd_cpu_dispach = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU");

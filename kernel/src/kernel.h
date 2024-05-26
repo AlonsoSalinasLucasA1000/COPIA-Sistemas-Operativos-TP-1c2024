@@ -348,7 +348,7 @@ void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
 }
 
 
-void enviarProcesoCpu (PCB* proceso, int socket_servidor)
+/*void enviarPCB (PCB* proceso, int socket_servidor)
 {
     //Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
@@ -411,7 +411,7 @@ void enviarProcesoCpu (PCB* proceso, int socket_servidor)
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
-}
+}*/
 
 
 void informar_memoria_nuevo_procesoNEW()
@@ -564,7 +564,7 @@ void enviar_pcb_a_cpu()
 	to_send->CX = pcb_cola->CX;
 	to_send->path = string_duplicate( pcb_cola->path);
 
-	enviarProcesoCpu(to_send, fd_cpu_interrupt);
+	enviarPCB(to_send, fd_cpu_interrupt);
 }
 
 void planificador_corto_plazo()

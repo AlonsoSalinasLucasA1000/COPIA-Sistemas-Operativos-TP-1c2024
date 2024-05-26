@@ -12,25 +12,83 @@ int fd_kernel;
 int fd_cpu;
 int fd_entradasalida;
 
-
 t_log* memoria_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config* memoria_config;
+t_list* listProcesos; 
 
 char* PUERTO_ESCUCHA;
 int TAM_MEMORIA;
 int TAM_PAGINA;
 char* PATH_INSTRUCCIONES;
 int RETARDO_RESPUESTA;
-//t_list *listProcesos = list_create(); 
 
+char* abrir_archivo(char* path, int PC);
+
+bool comparacion(void* elemento, int pid)
+{
+	PCB* pcb = (PCB*)elemento;
+	return pcb->PID == pid;
+}
+
+ProcesoMemoria* encontrarDeLista(t_list* lista, uint32_t pid)
+{
+	ProcesoMemoria* ret;
+	t_list_iterator* iterador = list_iterator_create(lista);
+	int i = 0;
+	while( i < list_size(lista))
+	{
+		ProcesoMemoria* got = list_iterator_next(iterador);
+		if( got->PID == pid )
+		{
+			ret = got;
+		}
+	}
+	return ret;
+}
 
 void memoria_escuchar_cpu (){
 		bool control_key = 1;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_cpu);
+			printf("recibi el código de operacion de cpu\n");
+			
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(fd_cpu,&(paquete->buffer->size),sizeof(uint32_t),0);
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(fd_cpu,paquete->buffer->stream, paquete->buffer->size,0);
+			printf("Pude obtener el paquete\n");
 			switch (cod_op) {
-			case MENSAJE:
+			case MENSAJE: 
 				//
+				break;
+			case PROCESO:
+				//
+				printf("Ejecute este mensaje PROCESO jaja\n");
+				//desearializamos lo recibido
+				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
+				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
+				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
+				//abrimos el archivo asociado al proceso
+				//ProcesoMemoria* datos = encontrarDeLista(listProcesos,proceso->PID);
+				if (list_size(listProcesos) > 0) {
+				printf("Lista no vacia\n");
+				int tamanioLista = list_size(listProcesos);
+				printf("Tiene %d elementos\n", tamanioLista);
+				} else {
+    			printf("Lista vacia\n");
+				}
+				
+				ProcesoMemoria* datos = list_get(listProcesos,0);
+
+				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
+				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
+				//leemos la linea indicada por el PC
+			    char* instruccion = abrir_archivo(datos->path, proceso->PID); 
+				printf("Enviaremos a la cpu: %s\n",instruccion); 
+				//enviamos
+				enviar_mensaje_cpu_memoria(instruccion,fd_cpu);
+
 				break;
 			case PAQUETE:
 				//
@@ -73,7 +131,7 @@ void iterator(char* value)
 
 char* leerArchivo(FILE* file)
 {
-	fseek(file,0,SEEK_END);
+	fseek(file,0,SEEK_END); //
 
 	int tamanioArchivo = ftell(file);
 
@@ -98,7 +156,7 @@ char* leerArchivo(FILE* file)
 	return contenido;
 }
 
-void abrir_archivo(char* path)
+char* abrir_archivo(char* path, int PC)
 {
 	FILE* file = fopen(path,"r");
 	if( file == NULL )
@@ -108,18 +166,18 @@ void abrir_archivo(char* path)
 	char* content = leerArchivo(file);
 	char** newContent = string_split(content,"\n");
 
-	for(int i=0; newContent[i] != "\n"; i++)
-	{
-		printf("%s\n",newContent[i]);
-	}
+	char* to_ret = malloc(strlen(newContent[PC])+1);
+	to_ret = newContent[PC];
 
     free(content);
 	fclose(file);
+	return to_ret;
 }
 
 void memoria_escuchar_kernel (){
 		bool control_key = 1;
-		t_list *listProcesos = list_create(); 
+		
+		
 			//t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
@@ -137,10 +195,11 @@ void memoria_escuchar_kernel (){
 			printf("Recibi stream\n");
 			
 			switch (cod_op) {
-				case MENSAJE:
+			case MENSAJE:
 				//
 					printf("Ejecute este mensaje MENSAJE jaja\n");
 					break;
+			
 			case PAQUETE:
 			//FUNCIONES PARA CUANDO RECIBAMOS PAQUETE
 				//lista = recibir_paquete(fd_kernel);
@@ -154,6 +213,7 @@ void memoria_escuchar_kernel (){
 			//ABRIR ARCHIVO PSEUDOCODIGO
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
 				if(nuevoProceso != NULL){ 
+					//list proceso no se aniade correctamente a la lista
 					list_add(listProcesos, nuevoProceso);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
@@ -161,11 +221,9 @@ void memoria_escuchar_kernel (){
 					printf("No se pudo deserializar\n");
 				}
 
-			      //char* path = "archivopseudocodigo";
-			      //abrir_archivo(path);  
-				free(nuevoProceso);
-			break;
 
+				//free(nuevoProceso);
+			break;
 			case -1:
 				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor\n");
 				control_key = 0;
@@ -181,9 +239,6 @@ void memoria_escuchar_kernel (){
 			//cod_op = 0;
 		}
 
-		//consultar
-	//list_destroy_and_destroy_elements(t_list*, void(*element_destroyer)(void*));
-	//list_destroy_and_destroy_elements(listProcesos*, void(*element_destroyer)(void*));
 }
 
 

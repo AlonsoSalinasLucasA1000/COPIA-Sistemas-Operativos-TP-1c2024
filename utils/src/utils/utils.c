@@ -223,7 +223,7 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	memcpy(&(to_return->estado), stream, sizeof(estado_proceso));
 	stream += sizeof(estado_proceso);
 	memcpy(&(to_return->path_length), stream, sizeof(int));
-	stream += sizeof(uint8_t);
+	stream += sizeof(uint32_t);
 	// deserailizamos el path como tal
 	to_return->path = malloc(to_return->path_length);
 	memcpy(to_return->path, stream, to_return->path_length);
@@ -288,12 +288,27 @@ void *recibir_buffer(int *size, int socket_cliente)
 	free(a_enviar);
 }*/
 
-/*void enviar_mensaje(char* mensaje, int socket_cliente)
+void* serializar_paquete(t_newPaquete* paquete, int bytes)
 {
-	t_paquete* paquete = malloc(sizeof(t_paquete));
+	void * magic = malloc(bytes);
+	int desplazamiento = 0;
+
+	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
+	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
+	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
+	desplazamiento+= paquete->buffer->size;
+
+	return magic;
+}
+
+void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente)
+{
+	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 
 	paquete->codigo_operacion = MENSAJE;
-	paquete->buffer = malloc(sizeof(t_buffer));
+	paquete->buffer = malloc(sizeof(t_newBuffer));
 	paquete->buffer->size = strlen(mensaje) + 1;
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
@@ -306,7 +321,7 @@ void *recibir_buffer(int *size, int socket_cliente)
 
 	free(a_enviar);
 	eliminar_paquete(paquete);
-}*/
+}
 
 t_list *recibir_paquete(int socket_cliente)
 {
@@ -329,13 +344,12 @@ t_list *recibir_paquete(int socket_cliente)
 	free(buffer);
 	return valores;
 }
-
-/*void eliminar_paquete(t_paquete* paquete)
+void eliminar_paquete(t_newPaquete* paquete)
 {
 	free(paquete->buffer->stream);
 	free(paquete->buffer);
 	free(paquete);
-}*/
+}
 
 void handshakeClient(int fd_servidor, int32_t handshake)
 {
@@ -406,3 +420,67 @@ void liberar_config(t_config *config)
 
 // 	un_buffer->size +=  (strlen(un_string) + 1) + sizeof(int) ;
 // }
+void enviarPCB (PCB* proceso, int socket_servidor)
+{
+    //Creamos un Buffer
+    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+    buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + proceso->path_length +1;
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, &proceso->PID, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->PC, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->quantum, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->AX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->BX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->CX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->DX, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+
+	memcpy(buffer->stream + buffer->offset, &proceso->estado, sizeof(uint8_t));
+    buffer->offset += sizeof(estado_proceso);
+
+
+    // Para el nombre primero mandamos el tamaño y luego el texto en sí:
+    memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
+    
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = PROCESO;
+    paquete->buffer = buffer;
+
+    //Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(socket_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
