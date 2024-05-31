@@ -71,58 +71,31 @@ void ejecutar_proceso(PCB* proceso)
 	
 		char** instruccion_split = string_split (instruccion, " ");
 		printf("%s\n",instruccion_split[0]);
-		//hasta aca anda bien
-			if (instruccion_split[0] == "SET"){ 
-				printf("llegue hasta el primer if\n");
-				if(instruccion_split [1] == "AX"){
-					int dato = atoi(instruccion_split[2]); 
-					proceso->AX = dato; 
-					printf("Ejecuta instruccion SET PARA AX, $d \n", proceso->AX);
-				} else if(instruccion_split [1] == "BX"){
-					printf("llegue hasta el verificar el bx if\n");
-					int dato = atoi(&instruccion_split [2]); 
-					proceso->BX = dato;
-					printf("Ejecuta instruccion SET PARA BX, $d \n", proceso->BX);
-				} else{
-					printf("error en la instruccion SET\n");
-				}
-			} 
-			else 
+		
+		if(strcmp(instruccion_split[0], "SET") == 0)
+		{
+			if(strcmp(instruccion_split[1], "AX") == 0)
 			{
-				printf("No ingreśe al if\n");
+				int dato = atoi(instruccion_split[2]); 
+				proceso->AX = dato; 
+				printf("Ejecuta instruccion SET PARA AX, el AX = %d \n", proceso->AX);
+			} 
+			else
+			{
+				if(strcmp(instruccion_split[1], "BX") == 0)
+				{
+					printf("llegue hasta el verificar el bx if\n");
+					int dato = atoi(instruccion_split [2]); 
+					proceso->BX = dato;
+					printf("Ejecuta instruccion SET PARA BX, el BX = %d \n", proceso->BX);
+				}
+				else
+				{
+					printf("Nada, por ahora\n");
+				}
 			}
-			
-			
-			/*
-			if (instruccion_split[0] == "SUM")
-			{ 
+		}
 
-			} 
-			else if (instruccion_split[0] == "SUB"){
-				
-			} else if (instruccion_split[0] == "JNZ"){
-				
-			} else if (instruccion_split[0] == "IO_GEN_SLEEP"){
-				
-			} 
-			
-			
-			/*switch (instruccion_split[0]) {
-			case SET:
-			printf("El valor de AX %d ", )
-
-				instruccion_split [1] = instruccion_split [2];
-				break; 
-			case SUM
-				break;
-			case SUB
-				break;
-			case JNZ
-				break;
-			case IO_GEN_SLEEP
-				break;
-			}*/
-		//ejecuto la instruccion
 
 		proceso->PC++;
 		//pido de vuelta

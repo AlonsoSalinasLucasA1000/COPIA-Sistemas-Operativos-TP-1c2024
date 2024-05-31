@@ -85,7 +85,7 @@ void memoria_escuchar_cpu (){
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
 				//leemos la linea indicada por el PC
-			    char* instruccion = abrir_archivo(datos->path, proceso->PID); 
+			    char* instruccion = abrir_archivo(datos->path, proceso->PC); 
 				printf("Enviaremos a la cpu: %s\n",instruccion); 
 				//enviamos
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu);
@@ -168,6 +168,13 @@ char* abrir_archivo(char* path, int PC)
 	char** newContent = string_split(content,"\n");
 
 	char* to_ret = malloc(strlen(newContent[PC])+1);
+	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[0]);
+	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[1]);
+	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[2]);
+	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[3]);
+	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[4]);
+	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[5]);
+	printf("El PC que tengo es: %d\n", PC);
 	to_ret = newContent[PC];
 
     free(content);
