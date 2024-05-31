@@ -293,10 +293,10 @@ void* serializar_paquete(t_newPaquete* paquete, int bytes)
 	void * magic = malloc(bytes);
 	int desplazamiento = 0;
 
-	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
-	desplazamiento+= sizeof(int);
-	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(int));
-	desplazamiento+= sizeof(int);
+	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(op_code));
+	desplazamiento+= sizeof(op_code);
+	memcpy(magic + desplazamiento, &(paquete->buffer->size), sizeof(uint32_t));
+	desplazamiento+= sizeof(uint32_t);
 	memcpy(magic + desplazamiento, paquete->buffer->stream, paquete->buffer->size);
 	desplazamiento+= paquete->buffer->size;
 
@@ -313,7 +313,7 @@ void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente)
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	memcpy(paquete->buffer->stream, mensaje, paquete->buffer->size);
 
-	int bytes = paquete->buffer->size + 2*sizeof(int);
+	int bytes = paquete->buffer->size + 2*sizeof(uint32_t) + sizeof(op_code);
 
 	void* a_enviar = serializar_paquete(paquete, bytes);
 

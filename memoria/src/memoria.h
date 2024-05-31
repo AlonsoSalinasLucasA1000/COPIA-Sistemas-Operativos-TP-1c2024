@@ -71,12 +71,13 @@ void memoria_escuchar_cpu (){
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				//abrimos el archivo asociado al proceso
 				//ProcesoMemoria* datos = encontrarDeLista(listProcesos,proceso->PID);
-				if (list_size(listProcesos) > 0) {
-				printf("Lista no vacia\n");
-				int tamanioLista = list_size(listProcesos);
-				printf("Tiene %d elementos\n", tamanioLista);
+				if (list_size(listProcesos) > 0) 
+				{
+						printf("Lista no vacia\n");
+						int tamanioLista = list_size(listProcesos);
+						printf("Tiene %d elementos\n", tamanioLista);
 				} else {
-    			printf("Lista vacia\n");
+						printf("Lista vacia\n");
 				}
 				
 				ProcesoMemoria* datos = list_get(listProcesos,0);

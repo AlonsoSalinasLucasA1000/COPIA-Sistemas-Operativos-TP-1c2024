@@ -12,9 +12,13 @@ int fd_cpu_interrupt; //luego se dividira en dos fd un dispach y un interrupt, p
 int fd_memoria;
 int fd_kernel;
 
+sem_t sem_exe;
+
 
 t_log* cpu_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config* cpu_config;
+//creemos una variable global de instruccion actual
+char* instruccionActual;
 char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
 char* PUERTO_ESCUCHA_DISPATCH;
@@ -32,6 +36,7 @@ char* recibir_instruccion_cpu(int PID, int PC)
 	enviarPCB (to_send, fd_memoria);
 	printf("pude enviar la pcb\n");
 
+/*
 	//esperar recibir mensaje de memoria
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 	paquete->buffer = malloc(sizeof(t_newBuffer));
@@ -48,7 +53,8 @@ char* recibir_instruccion_cpu(int PID, int PC)
 	char* ret = malloc(paquete->buffer->size);
 	memcpy(ret, stream, paquete->buffer->size);
 	printf("deserialice el paquete correctamente\n");
-
+*/
+    char* ret = NULL;
 	return ret;
 }
 
@@ -57,23 +63,42 @@ void ejecutar_proceso(PCB* proceso)
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 
 	char* instruccion = recibir_instruccion_cpu(proceso->PID,proceso->PC);
+	//necesita esperar un semaforo
+	sem_wait(&sem_exe);
+	instruccion = instruccionActual;
+	//necesito saber que la instrucción recibida es la correcta
+	printf("%s\n",instruccion);
 	
 		char** instruccion_split = string_split (instruccion, " ");
+		printf("%s\n",instruccion_split[0]);
+		//hasta aca anda bien
 			if (instruccion_split[0] == "SET"){ 
+				printf("llegue hasta el primer if\n");
 				if(instruccion_split [1] == "AX"){
 					int dato = atoi(instruccion_split[2]); 
 					proceso->AX = dato; 
 					printf("Ejecuta instruccion SET PARA AX, $d \n", proceso->AX);
 				} else if(instruccion_split [1] == "BX"){
+					printf("llegue hasta el verificar el bx if\n");
 					int dato = atoi(&instruccion_split [2]); 
 					proceso->BX = dato;
 					printf("Ejecuta instruccion SET PARA BX, $d \n", proceso->BX);
 				} else{
 					printf("error en la instruccion SET\n");
 				}
-			} else if (instruccion_split[0] == "SUM"){ 
+			} 
+			else 
+			{
+				printf("No ingreśe al if\n");
+			}
+			
+			
+			/*
+			if (instruccion_split[0] == "SUM")
+			{ 
 
-			} else if (instruccion_split[0] == "SUB"){
+			} 
+			else if (instruccion_split[0] == "SUB"){
 				
 			} else if (instruccion_split[0] == "JNZ"){
 				
@@ -81,7 +106,7 @@ void ejecutar_proceso(PCB* proceso)
 				
 			} 
 			
-
+			
 			/*switch (instruccion_split[0]) {
 			case SET:
 			printf("El valor de AX %d ", )
@@ -133,6 +158,7 @@ void cpu_escuchar_kernel (){
 			    printf("Voy a atender un proceso\n");
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				ejecutar_proceso(proceso);
+				/*
 				if(proceso != NULL){
 					printf("------------------------\n");
 					printf("El PID que recibi es: %d\n", proceso->PID);
@@ -149,6 +175,7 @@ void cpu_escuchar_kernel (){
 				} else{
 					printf("No se pudo deserializar\n");
 				}
+				*/
 				free(proceso);
 			    break;
 			case -1:
@@ -168,10 +195,29 @@ void cpu_escuchar_kernel (){
 void cpu_escuchar_memoria (){
 	bool control_key = 1;
 	while (control_key) {
+
+//recibimos operacion y mensaje
 			int cod_op = recibir_operacion(fd_memoria);
+
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+
+			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(fd_memoria,paquete->buffer->stream, paquete->buffer->size,0);
+//asignamos el stream al paquete
+			//void *stream = paquete->buffer->stream;
+			//memcpy(stream, &(paquete->buffer->size), sizeof(uint32_t));
+			//stream += sizeof(uint32_t);
+			// deserializamos el path como tal
+			//char* ret = malloc(paquete->buffer->size);
+			//memcpy(ret, stream, paquete->buffer->size);
+
 			switch (cod_op) {
 			case MENSAJE:
 				printf("Instruccion de la memoria recibida con exito\n");
+				instruccionActual = paquete->buffer->stream;
+				sem_post(&sem_exe);
 				break;
 			case PAQUETE:
 				//
