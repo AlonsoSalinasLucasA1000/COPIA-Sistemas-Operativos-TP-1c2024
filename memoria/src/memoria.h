@@ -30,7 +30,7 @@ bool comparacion(void* elemento, int pid)
 	return pcb->PID == pid;
 }
 
-ProcesoMemoria* encontrarDeLista(t_list* lista, uint32_t pid)
+ProcesoMemoria* encontrarDeLista(t_list* lista, uint32_t pid)//PROTOTIPO PARA RECORRER LA LISTA
 {
 	ProcesoMemoria* ret;
 	t_list_iterator* iterador = list_iterator_create(lista);
@@ -69,23 +69,12 @@ void memoria_escuchar_cpu (){
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
-				//abrimos el archivo asociado al proceso
-				//ProcesoMemoria* datos = encontrarDeLista(listProcesos,proceso->PID);
-				/*
-				if (list_size(listProcesos) > 0) 
-				{
-						printf("Lista no vacia\n");
-						int tamanioLista = list_size(listProcesos);
-						printf("Tiene %d elementos\n", tamanioLista);
-				} else {
-						printf("Lista vacia\n");
-				}
-				*/
 				
+				//REVISAR, PORQUE SOLO RETORNA EL PRIMER ELEMENTO DE LA LISTA. DE TENER VARIOS PROCESOS DENTRO DE ELLA, ESTARÍA REGRESANDO SIEMPRE EL MISMO.
 				ProcesoMemoria* datos = list_get(listProcesos,0);
-
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
+
 				//leemos la linea indicada por el PC
 			    char* instruccion = abrir_archivo(datos->path, proceso->PC); 
 				printf("Enviaremos a la cpu: %s\n",instruccion); 
@@ -171,13 +160,7 @@ char* abrir_archivo(char* path, int PC)
 	char** newContent = string_split(content,"\n");
 
 	char* to_ret = malloc(strlen(newContent[PC])+1);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[0]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[1]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[2]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[3]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[4]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[5]);
-	printf("El PC que tengo es: %d\n", PC);
+	//PUEDE PROVOCAR UN ERROR
 	to_ret = newContent[PC];
 
     free(content);
@@ -212,16 +195,6 @@ void memoria_escuchar_kernel (){
 					break;
 			
 			case PAQUETE:
-			//FUNCIONES PARA CUANDO RECIBAMOS PAQUETE
-				//lista = recibir_paquete(fd_kernel);
-				//log_info(memoria_logger, "Me llegaron los siguientes valores:\n");
-				//list_iterate(lista, (void*) iterator);
-				// //extraigp el elemento lista y muestro sus parametros
-				// ProcesoMemoria* random = list_get(lista,0);
-				// printf("El pid recibido es %d", random->PID);
-				// printf("El path recibido es %s", random->path);
-			//crea conecccion cuando ingresamos INICIAR_PROCESO
-			//ABRIR ARCHIVO PSEUDOCODIGO
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
 				if(nuevoProceso != NULL){ 
 					//list proceso no se aniade correctamente a la lista

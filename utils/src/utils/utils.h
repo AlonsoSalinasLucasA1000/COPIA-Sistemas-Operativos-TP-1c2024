@@ -22,7 +22,8 @@ typedef enum
 {
 	MENSAJE,
 	PAQUETE,
-	PROCESO
+	PROCESO,
+	GOKU
 }op_code;
 
 /*typedef struct

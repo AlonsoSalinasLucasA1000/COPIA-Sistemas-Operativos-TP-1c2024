@@ -28,13 +28,11 @@ char* ALGORITMO_TLB;
 
 void recibir_instruccion_cpu(int PID, int PC)
 { 
-	printf("Llegue a la instruccion recibir instruccion cpu\n");
 	//enviar pcb
 	PCB* to_send = malloc(sizeof(PCB));
 	to_send->PC = PC;
 	to_send->PID = PID;
 	enviarPCB (to_send, fd_memoria);
-	printf("pude enviar la pcb\n");
 
 /*
 	//esperar recibir mensaje de memoria
@@ -62,19 +60,16 @@ void ejecutar_proceso(PCB* proceso)
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 
 	recibir_instruccion_cpu(proceso->PID,proceso->PC);
-	int i = 5;
+	//POSIBLES PROBLEMAS
+	int i = 6;
 	while( i > 0 )
 	{
 		//necesita esperar un semaforo
 		sem_wait(&sem_exe);
+		//obtengo instruccion actual
 		char* instruccion = string_duplicate(instruccionActual);
-		//necesito saber que la instrucción recibida es la correcta
-		printf("%s\n",instruccion);
-		
-		/*
+		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
 		char** instruccion_split = string_split (instruccion, " ");
-		printf("%s\n",instruccion_split[0]);
-		
 		if(strcmp(instruccion_split[0], "SET") == 0)
 		{
 			if(strcmp(instruccion_split[1], "AX") == 0)
@@ -97,13 +92,101 @@ void ejecutar_proceso(PCB* proceso)
 					printf("Nada, por ahora\n");
 				}
 			}
+			//
+		}else if (strcmp(instruccion_split[0], "SUM") == 0){
+
+			if(strcmp(instruccion_split[1], "AX") == 0)
+			{
+				
+				if(strcmp(instruccion_split[2], "BX") == 0)
+				{
+					
+					proceso->AX +=+ proceso->BX;
+
+					printf("Ejecuta instruccion SUM PARA AX + BX, el AX = %d \n", proceso->AX);
+				}
+				else
+				{
+					printf("Error, registro no implementado.\n");
+				}
+			} 
+			else
+			{
+				if(strcmp(instruccion_split[1], "BX") == 0)
+				{
+					if(strcmp(instruccion_split[2], "AX") == 0)
+					{
+					proceso->BX += proceso->BX;
+
+					printf("Ejecuta instruccion SUM PARA BX + AX, el BX = %d \n", proceso->BX);
+					}else{
+					printf("Error, registro no implementado.\n");
+					}
+				}
+			}
+		}else if (strcmp(instruccion_split[0], "SUB") == 0){
+
+			if(strcmp(instruccion_split[1], "AX") == 0)
+			{
+				
+				if(strcmp(instruccion_split[2], "BX") == 0)
+				{
+					
+					proceso->AX -= proceso->BX;
+
+					printf("Ejecuta instruccion SUB PARA AX - BX, el AX = %d \n", proceso->AX);
+				}
+				else
+				{
+					printf("Error, registro no implementado.\n");
+				}
+			} 
+			else
+			{
+				if(strcmp(instruccion_split[1], "BX") == 0)
+				{
+					if(strcmp(instruccion_split[2], "AX") == 0)
+					{
+					proceso->BX -= proceso->BX;
+
+					printf("Ejecuta instruccion SUM PARA BX - AX, el BX = %d \n", proceso->BX);
+					}else{
+					printf("Error, registro no implementado.\n");
+					}
+				}
+			}
+		}else if (strcmp(instruccion_split[0], "JNZ") == 0){
+
+			if(strcmp(instruccion_split[1], "AX") == 0)
+			{
+				if (proceso->AX != 0)
+				{
+					
+					proceso->PC = atoi(instruccion_split [2])-1;
+					printf("Ejecuta instruccion JNZ PARA AX, program counter = %d \n", proceso->PC);
+				}else{
+					printf("Error en la ejecucion de JNZ\n");
+				}
+			}else
+			{
+				if(strcmp(instruccion_split[1], "BX") == 0)
+				{
+					if (proceso->BX != 0)
+					{
+						proceso->PC = atoi(instruccion_split [2])-1;
+						printf("Ejecuta instruccion JNZ PARA BX, program counter = %d \n", proceso->PC);
+
+					}else{
+						printf("Error en la ejecucion de JNZ\n");
+					}
+				}
+			}
 		}
-		*/
         i--;
 		proceso->PC++;
 			//pido de vuelta
 		recibir_instruccion_cpu(proceso->PID,proceso->PC);
-		}
+	}
 }
 
 
@@ -112,19 +195,15 @@ void cpu_escuchar_kernel (){
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 
-			printf("Recibi codigo de op. del kernel\n");
 			//debemos extraer el resto, primero el tamaño y luego el contenido
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-
 			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
-			printf("Recibimos tamaño\n");
-			
+				
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
-			printf("Recibi stream\n");
-
-			switch (cod_op) {
+			
+		    switch (cod_op) {
 			case MENSAJE:
 				//
 				break;
@@ -132,28 +211,8 @@ void cpu_escuchar_kernel (){
 				//
 				break;
 			case PROCESO:
-
-			    printf("Voy a atender un proceso\n");
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				ejecutar_proceso(proceso);
-				/*
-				if(proceso != NULL){
-					printf("------------------------\n");
-					printf("El PID que recibi es: %d\n", proceso->PID);
-					printf("El PC que recibi es: %d\n", proceso->PC);
-					printf("El QUANTUM que recibi es: %d\n", proceso->quantum);
-					printf("El AX que recibi es: %d\n", proceso->AX);
-					printf("El BX que recibi es: %d\n", proceso->BX);
-					printf("El CX que recibi es: %d\n", proceso->CX);
-					printf("El DX que recibi es: %d\n", proceso->DX);
-					printf("EL ESTADO que recibi: %d\n",proceso->estado);
-					printf("EL tamaño de path que recibi: %d\n",proceso->path_length);
-					printf("EL path que recibi: %s\n",proceso->path);
-					printf("------------------------\n");
-				} else{
-					printf("No se pudo deserializar\n");
-				}
-				*/
 				free(proceso);
 			    break;
 			case -1:
@@ -171,32 +230,27 @@ void cpu_escuchar_kernel (){
 }
 
 void cpu_escuchar_memoria (){
-	bool control_key = 1;
+		bool control_key = 1;
 	while (control_key) {
-
-//recibimos operacion y mensaje
+            //recibimos operacion y mensaje
 			int cod_op = recibir_operacion(fd_memoria);
 
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-
+            //deserializamos el mensaje, primero el tamaño del buffer, luego el offset
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			recv(fd_memoria,paquete->buffer->stream,paquete->buffer->size,0);
-//asignamos el stream al paquete
-			//void *stream = paquete->buffer->stream;
-			//memcpy(stream, &(paquete->buffer->size), sizeof(uint32_t));
-			//stream += sizeof(uint32_t);
-			// deserializamos el path como tal
-			//char* ret = malloc(paquete->buffer->size);
-			//memcpy(ret, stream, paquete->buffer->size);
+			
 
 			switch (cod_op) {
 			case MENSAJE:
 				printf("Instruccion de la memoria recibida con exito\n");
+				//variable global con 
 				instruccionActual = malloc(paquete->buffer->size);
 				instruccionActual = paquete->buffer->stream;
+				printf("------------------------------\n");
 				printf("La instruccion que llego fue: %s\n",instruccionActual);
 				//instruccionActual = paquete->buffer->stream;
 				sem_post(&sem_exe);

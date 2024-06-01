@@ -68,6 +68,7 @@ void kernel_escuchar_cpu ()
 		}	
 }
 
+
 void kernel_escuchar_entradasalida ()
 {
 	bool control_key = 1;
@@ -242,67 +243,6 @@ void consolaInteractiva()
 	}
 }
 
-//NOS FALTA SERIALIZAR
-/*void informar_memoria_nuevo_proceso()
-{
-	//deberemos informarle a la memoria de un nuevo proceso intentaremos enviarle un mensaje random
-
-	//creo paquete
-	t_paquete* to_memory = crear_paquete();
-
-	//saco al proceso de la cola de new. Lee el primer elemento de la cola
-	PCB* proceso_nuevo = malloc(sizeof(PCB));
-	if( proceso_nuevo == NULL )
-	{
-		printf("Error crack");
-	}
-
-	proceso_nuevo = queue_peek(cola_new);
-
-    
-	//probamos que datos se van a enviar	
-	printf("El proceso extraído de la cola de new es %d\n",proceso_nuevo->registro.AX);
-	printf("El proceso extraído de la cola de new tiene path %d\n",proceso_nuevo->PID);
-
-	sem_wait(&sem);
-    printf("Entrando en la sección crítica...\n");
-	queue_pop(cola_new);
-	printf("Saliendo de la sección crítica...\n");
-    // Señalar (incrementar) el semáforo
-    sem_post(&sem);
-
-
-	//declaro el proceso a enviar
-	ProcesoMemoria* proceso_a_memoria = malloc(sizeof(ProcesoMemoria));
-	if( proceso_a_memoria == NULL )
-	{
-		printf("error");
-	}
-
-	proceso_a_memoria->PID = proceso_nuevo->PID;
-	proceso_a_memoria->path = proceso_nuevo->path;
-
-	//probamos que datos se van a enviar
-    printf("EL proceso que enviaremos a memoria tiene pid %d\n",proceso_a_memoria->PID);
-	printf("EL proceso que enviaremos a memoria tiene pid %s\n",proceso_a_memoria->path);
-
-    //lo envio
-	agregar_a_paquete(to_memory,proceso_a_memoria, sizeof(ProcesoMemoria));
-
-	//ProcesoMemoria* contenidoPaquete = to_memory->buffer->stream;
-	//printf("El contenido del paquete es el siguiente: %s\n",contenidoPaquete->path);
-	printf("LLega hasta acá?? 0");
-	
-	enviar_paquete(to_memory,fd_memoria);
-	eliminar_paquete(to_memory);
-	free(proceso_a_memoria);
-	printf("LLega hasta acá??");
-
-    //meto el proceso a la cola de ready
-	queue_push(cola_ready,proceso_nuevo);
-	printf("LLega hasta acá?? 2");
-	
-}*/
 
 void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
 {
@@ -348,82 +288,12 @@ void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
 }
 
 
-/*void enviarPCB (PCB* proceso, int socket_servidor)
-{
-    //Creamos un Buffer
-    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-
-    //Calculamos su tamaño
-    buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + proceso->path_length +1;
-    buffer->offset = 0;
-    buffer->stream = malloc(buffer->size);
-	
-    //Movemos los valores al buffer
-    memcpy(buffer->stream + buffer->offset, &proceso->PID, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->PC, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->quantum, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->AX, sizeof(uint8_t));
-    buffer->offset += sizeof(uint8_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->BX, sizeof(uint8_t));
-    buffer->offset += sizeof(uint8_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->CX, sizeof(uint8_t));
-    buffer->offset += sizeof(uint8_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->DX, sizeof(uint8_t));
-    buffer->offset += sizeof(uint8_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->estado, sizeof(uint8_t));
-    buffer->offset += sizeof(estado_proceso);
-
-
-    // Para el nombre primero mandamos el tamaño y luego el texto en sí:
-    memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
-    
-	//Creamos un Paquete
-    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = PROCESO;
-    paquete->buffer = buffer;
-
-    //Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(socket_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}*/
-
 
 void informar_memoria_nuevo_procesoNEW()
 {
 	//CREAMOS BUFFER
 	//POR EL MOMENTO ESTAMOS HARCODEANDO para intentar mandar algo a memoria
 	ProcesoMemoria* proceso = malloc(sizeof(ProcesoMemoria));
-	/*char* algo = "Holis jajajaja";
-	proceso->PID = 120;
-	proceso->path_length = strlen(algo)+1;*/
-	//proceso->path = malloc(sizeof(uint32_t));
-	//proceso->path = algo;
 
 	PCB* pcb = queue_pop(cola_new);//
 	proceso->path = malloc(strlen(pcb->path)+1);
@@ -435,19 +305,10 @@ void informar_memoria_nuevo_procesoNEW()
 	enviarProcesoMemoria(proceso,fd_memoria);
 	
 	sem_wait(&sem_ready);   // mutex hace wait
-	
 	queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
-	
     sem_post(&sem_ready); 
 	sem_post(&sem_cant_ready);  // mutex hace wait
 	
-	
-	//crearBufferProcesoMemoria(&buffer,proceso);
-	//free(proceso->path);
-	//free(proceso);
-	//t_newPaquete* paquete;
-	//rellenarPaqueteConNewBuffer(paquete,&buffer);//debria ir & en buffer?
-	//enviarPaqueteConNewBuffer(paquete, fd_memoria);
 }
 
 
