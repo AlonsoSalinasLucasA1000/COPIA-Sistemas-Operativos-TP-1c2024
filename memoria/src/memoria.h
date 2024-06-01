@@ -50,40 +50,29 @@ void memoria_escuchar_cpu (){
 		bool control_key = 1;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_cpu);
-			printf("recibi el código de operacion de cpu\n");
 			
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 			recv(fd_cpu,&(paquete->buffer->size),sizeof(uint32_t),0);
 			paquete->buffer->stream = malloc(paquete->buffer->size);
+			//recv(fd_cpu,&(paquete->buffer->offset),sizeof(uint32_t),0);// prueba. ERROR!
 			recv(fd_cpu,paquete->buffer->stream, paquete->buffer->size,0);
-			printf("Pude obtener el paquete\n");
+
 			switch (cod_op) {
 			case MENSAJE: 
 				//
 				break;
 			case PROCESO:
 				//
-				printf("Ejecute este mensaje PROCESO jaja\n");
 				//desearializamos lo recibido
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				//abrimos el archivo asociado al proceso
 				//ProcesoMemoria* datos = encontrarDeLista(listProcesos,proceso->PID);
-				if (list_size(listProcesos) > 0) 
-				{
-						printf("Lista no vacia\n");
-						int tamanioLista = list_size(listProcesos);
-						printf("Tiene %d elementos\n", tamanioLista);
-				} else {
-						printf("Lista vacia\n");
-				}
 				
 				ProcesoMemoria* datos = list_get(listProcesos,0);
 
-				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
-				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
 				//leemos la linea indicada por el PC
 			    char* instruccion = abrir_archivo(datos->path, proceso->PC); 
 				printf("Enviaremos a la cpu: %s\n",instruccion); 
@@ -168,13 +157,6 @@ char* abrir_archivo(char* path, int PC)
 	char** newContent = string_split(content,"\n");
 
 	char* to_ret = malloc(strlen(newContent[PC])+1);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[0]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[1]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[2]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[3]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[4]);
-	printf("Quiero ver qué cosa leyó la memoria: %s\n", newContent[5]);
-	printf("El PC que tengo es: %d\n", PC);
 	to_ret = newContent[PC];
 
     free(content);
