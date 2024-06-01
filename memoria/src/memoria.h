@@ -71,6 +71,7 @@ void memoria_escuchar_cpu (){
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				//abrimos el archivo asociado al proceso
 				//ProcesoMemoria* datos = encontrarDeLista(listProcesos,proceso->PID);
+				/*
 				if (list_size(listProcesos) > 0) 
 				{
 						printf("Lista no vacia\n");
@@ -79,6 +80,7 @@ void memoria_escuchar_cpu (){
 				} else {
 						printf("Lista vacia\n");
 				}
+				*/
 				
 				ProcesoMemoria* datos = list_get(listProcesos,0);
 
@@ -138,7 +140,7 @@ char* leerArchivo(FILE* file)
 
 	rewind(file);
 
-	char* contenido = malloc((tamanioArchivo + 1) * sizeof(char) );
+	char* contenido = malloc((tamanioArchivo + 1) * sizeof(char) );  
 	if( contenido == NULL )
 	{
 		printf("Error al intentar reservar memoria\n");
@@ -154,6 +156,7 @@ char* leerArchivo(FILE* file)
 	}
 
 	contenido[tamanioArchivo] = '\0';
+
 	return contenido;
 }
 

@@ -131,7 +131,7 @@ void iniciar_proceso(char* path)
 	pcb->CX = 0;
 	pcb->DX = 0;
 	pcb->estado = NEW;
-	pcb->path = string_duplicate(path);
+	pcb->path = string_duplicate(path); //consejo
 
 	printf("En INICIAR PROCESO en la PCB se guardo el sigueinte PATH: %s\n",pcb->path);
 	//agrego el pcb a la cola new

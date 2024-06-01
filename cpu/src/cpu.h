@@ -26,7 +26,7 @@ char* PUERTO_ESCUCHA_INTERRUPT;
 int CANTIDAD_ENTRADAS_TLB;
 char* ALGORITMO_TLB;
 
-char* recibir_instruccion_cpu(int PID, int PC)
+void recibir_instruccion_cpu(int PID, int PC)
 { 
 	printf("Llegue a la instruccion recibir instruccion cpu\n");
 	//enviar pcb
@@ -54,21 +54,24 @@ char* recibir_instruccion_cpu(int PID, int PC)
 	memcpy(ret, stream, paquete->buffer->size);
 	printf("deserialice el paquete correctamente\n");
 */
-    char* ret = NULL;
-	return ret;
+
 }
 
 void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 
-	char* instruccion = recibir_instruccion_cpu(proceso->PID,proceso->PC);
-	//necesita esperar un semaforo
-	sem_wait(&sem_exe);
-	instruccion = instruccionActual;
-	//necesito saber que la instrucción recibida es la correcta
-	printf("%s\n",instruccion);
-	
+	recibir_instruccion_cpu(proceso->PID,proceso->PC);
+	int i = 5;
+	while( i > 0 )
+	{
+		//necesita esperar un semaforo
+		sem_wait(&sem_exe);
+		char* instruccion = string_duplicate(instruccionActual);
+		//necesito saber que la instrucción recibida es la correcta
+		printf("%s\n",instruccion);
+		
+		/*
 		char** instruccion_split = string_split (instruccion, " ");
 		printf("%s\n",instruccion_split[0]);
 		
@@ -95,10 +98,12 @@ void ejecutar_proceso(PCB* proceso)
 				}
 			}
 		}
-
-
+		*/
+        i--;
 		proceso->PC++;
-		//pido de vuelta
+			//pido de vuelta
+		recibir_instruccion_cpu(proceso->PID,proceso->PC);
+		}
 }
 
 
@@ -177,7 +182,8 @@ void cpu_escuchar_memoria (){
 
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_memoria,paquete->buffer->stream, paquete->buffer->size,0);
+			recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
+			recv(fd_memoria,paquete->buffer->stream,paquete->buffer->size,0);
 //asignamos el stream al paquete
 			//void *stream = paquete->buffer->stream;
 			//memcpy(stream, &(paquete->buffer->size), sizeof(uint32_t));
@@ -189,17 +195,20 @@ void cpu_escuchar_memoria (){
 			switch (cod_op) {
 			case MENSAJE:
 				printf("Instruccion de la memoria recibida con exito\n");
+				instruccionActual = malloc(paquete->buffer->size);
 				instruccionActual = paquete->buffer->stream;
+				printf("La instruccion que llego fue: %s\n",instruccionActual);
+				//instruccionActual = paquete->buffer->stream;
 				sem_post(&sem_exe);
 				break;
 			case PAQUETE:
 				//
 				break;
 			case -1:
-				log_error(cpu_logger, "Desconexion de memoria.");
+				log_error(cpu_logger, "Desconexion de memoria.\n");
 				control_key = 0;
 			default:
-				log_warning(cpu_logger,"Operacion desconocida. No quieras meter la pata");
+				log_warning(cpu_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
 		}	
