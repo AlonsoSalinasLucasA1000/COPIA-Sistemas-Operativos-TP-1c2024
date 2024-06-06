@@ -46,6 +46,26 @@ ProcesoMemoria* encontrarDeLista(t_list* lista, uint32_t pid)//PROTOTIPO PARA RE
 	return ret;
 }
 
+ProcesoMemoria* encontrarProceso(t_list* lista, uint32_t pid)
+{
+	printf("Checkpoint 1\n");
+	ProcesoMemoria* ret;
+	int i = 0;
+	while( i < list_size(lista) )
+	{
+		printf("Checkpoint 2\n");
+		ProcesoMemoria* got = list_get(lista,i);
+		if( got->PID == pid)
+		{
+			printf("Checkpoint 3\n");
+			ret = got;
+		}
+		i++;
+	}
+	printf("Checkpoint 4\n");
+	return ret;
+}
+
 void memoria_escuchar_cpu (){
 		bool control_key = 1;
 	while (control_key) {
@@ -71,7 +91,8 @@ void memoria_escuchar_cpu (){
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				
 				//REVISAR, PORQUE SOLO RETORNA EL PRIMER ELEMENTO DE LA LISTA. DE TENER VARIOS PROCESOS DENTRO DE ELLA, ESTARÍA REGRESANDO SIEMPRE EL MISMO.
-				ProcesoMemoria* datos = list_get(listProcesos,0);
+				//ProcesoMemoria* datos = list_get(listProcesos,0);
+				ProcesoMemoria* datos = encontrarProceso(listProcesos,proceso->PID);
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
 

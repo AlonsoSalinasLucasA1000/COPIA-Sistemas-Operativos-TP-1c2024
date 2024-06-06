@@ -187,6 +187,7 @@ void ejecutar_proceso(PCB* proceso)
 			//pido de vuelta
 		recibir_instruccion_cpu(proceso->PID,proceso->PC);
 	}
+	//debemos devolver la pcb al kernel
 }
 
 
