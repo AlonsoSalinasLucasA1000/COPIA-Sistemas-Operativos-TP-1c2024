@@ -24,28 +24,6 @@ int RETARDO_RESPUESTA;
 
 char* abrir_archivo(char* path, int PC);
 
-bool comparacion(void* elemento, int pid)
-{
-	PCB* pcb = (PCB*)elemento;
-	return pcb->PID == pid;
-}
-
-ProcesoMemoria* encontrarDeLista(t_list* lista, uint32_t pid)//PROTOTIPO PARA RECORRER LA LISTA
-{
-	ProcesoMemoria* ret;
-	t_list_iterator* iterador = list_iterator_create(lista);
-	int i = 0;
-	while( i < list_size(lista))
-	{
-		ProcesoMemoria* got = list_iterator_next(iterador);
-		if( got->PID == pid )
-		{
-			ret = got;
-		}
-	}
-	return ret;
-}
-
 ProcesoMemoria* encontrarProceso(t_list* lista, uint32_t pid)
 {
 	printf("Checkpoint 1\n");
