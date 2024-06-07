@@ -50,8 +50,31 @@ void kernel_escuchar_cpu ()
 {
 	bool control_key = 1;
 	while (control_key) {
-			int cod_op = recibir_operacion(fd_cpu_dispach);
+	//recibimos operacion y guardamos todo en un paquete
+			int cod_op = recibir_operacion(fd_cpu_interrupt);
+
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(fd_cpu_interrupt,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(fd_cpu_interrupt,paquete->buffer->stream, paquete->buffer->size,0);
+
 			switch (cod_op) {
+			case PROCESOFIN:
+			//recibo el proceso de la CPU
+			    PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
+				proceso->estado = EXIT;
+				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
+				printf("Recibimos el proceso con el AX: %d\n",proceso->AX);
+				printf("Recibimos el proceso con el BX: %d\n",proceso->BX);
+				printf("Recibimos el proceso con el CX: %d\n",proceso->CX);
+				printf("Recibimos el proceso con el DX: %d\n",proceso->DX);
+				printf("Este proceso ha terminado\n");
+				enviarPCB(proceso,fd_memoria,PROCESOFIN);
+				free(proceso->path);
+				free(proceso);
+			//	
+                break;
 			case MENSAJE:
 				//
 				break;
@@ -121,27 +144,22 @@ void iniciar_proceso(char* path)
 		printf("Error al crear pcb");
 	}
 
-	printf("En INICIAR PROCESO llego el siguiente PATH: %s\n",path);
 	//inicializo el PCB del proceso
 	pid++;
 	pcb->PID = pid;
 	pcb->PC = 0;
 	pcb->quantum = 0;
-	pcb->AX = 123;
+	pcb->AX = 0;
 	pcb->BX = 0;
 	pcb->CX = 0;
 	pcb->DX = 0;
 	pcb->estado = NEW;
 	pcb->path = string_duplicate(path); //consejo
 
-	printf("En INICIAR PROCESO en la PCB se guardo el sigueinte PATH: %s\n",pcb->path);
 	//agrego el pcb a la cola new
 	
 	sem_wait(&sem);
-    printf("Entrando en la sección crítica...\n");
-	queue_push(cola_new,pcb);
-	printf("Saliendo de la sección crítica...\n");
-	
+	queue_push(cola_new,pcb);	
     // Señalar (incrementar) el semáforo
     sem_post(&sem);
 	sem_post(&sem_cant);
@@ -425,7 +443,7 @@ void enviar_pcb_a_cpu()
 	to_send->CX = pcb_cola->CX;
 	to_send->path = string_duplicate( pcb_cola->path);
 
-	enviarPCB(to_send, fd_cpu_interrupt);
+	enviarPCB(to_send, fd_cpu_interrupt,PROCESO);
 }
 
 void planificador_corto_plazo()
@@ -436,8 +454,7 @@ void planificador_corto_plazo()
 			//usamos semaforo para avisar
 			//enviamos la pcb a la cpu
 			enviar_pcb_a_cpu();
-			//esperamos respuesta de la cpu
-			//algun receive
+			//SEMAFORO CON UNA ESPERA PARA RECIBIR EL PROCESO NUEVAMENTE
 		}
 }
 	

@@ -32,7 +32,7 @@ void recibir_instruccion_cpu(int PID, int PC)
 	PCB* to_send = malloc(sizeof(PCB));
 	to_send->PC = PC;
 	to_send->PID = PID;
-	enviarPCB (to_send, fd_memoria);
+	enviarPCB (to_send, fd_memoria,PROCESO);
 
 /*
 	//esperar recibir mensaje de memoria
@@ -187,7 +187,8 @@ void ejecutar_proceso(PCB* proceso)
 			//pido de vuelta
 		recibir_instruccion_cpu(proceso->PID,proceso->PC);
 	}
-	//debemos devolver la pcb al kernel
+	//debemos devolver la pcb al kernel, llegado a este punto el proceso terminó
+	enviarPCB(proceso,fd_kernel,PROCESOFIN);
 }
 
 
@@ -214,7 +215,6 @@ void cpu_escuchar_kernel (){
 			case PROCESO:
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				ejecutar_proceso(proceso);
-				free(proceso);
 			    break;
 			case -1:
 				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor\n");

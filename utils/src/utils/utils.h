@@ -23,6 +23,7 @@ typedef enum
 	MENSAJE,
 	PAQUETE,
 	PROCESO,
+	PROCESOFIN,
 	GOKU
 }op_code;
 
@@ -130,7 +131,7 @@ void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente);
 void eliminar_paquete(t_newPaquete* paquete);
 
 //funciones propias para la serializacion
-void enviarPCB (PCB* proceso, int socket_servidor);
+void enviarPCB (PCB* proceso, int socket_servidor, op_code codigo);
 
 //handshake y liberar conexiones
 void handshakeClient(int fd_servidor, int32_t handshake);

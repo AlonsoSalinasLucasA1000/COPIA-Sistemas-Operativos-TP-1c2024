@@ -26,21 +26,17 @@ char* abrir_archivo(char* path, int PC);
 
 ProcesoMemoria* encontrarProceso(t_list* lista, uint32_t pid)
 {
-	printf("Checkpoint 1\n");
 	ProcesoMemoria* ret;
 	int i = 0;
 	while( i < list_size(lista) )
 	{
-		printf("Checkpoint 2\n");
 		ProcesoMemoria* got = list_get(lista,i);
 		if( got->PID == pid)
 		{
-			printf("Checkpoint 3\n");
 			ret = got;
 		}
 		i++;
 	}
-	printf("Checkpoint 4\n");
 	return ret;
 }
 
@@ -48,21 +44,21 @@ void memoria_escuchar_cpu (){
 		bool control_key = 1;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_cpu);
-			printf("recibi el código de operacion de cpu\n");
+
 			
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 			recv(fd_cpu,&(paquete->buffer->size),sizeof(uint32_t),0);
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(fd_cpu,paquete->buffer->stream, paquete->buffer->size,0);
-			printf("Pude obtener el paquete\n");
+
 			switch (cod_op) {
 			case MENSAJE: 
 				//
 				break;
 			case PROCESO:
 				//
-				printf("Ejecute este mensaje PROCESO jaja\n");
+				printf("------------------------------\n");
 				//desearializamos lo recibido
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
@@ -174,25 +170,32 @@ void memoria_escuchar_kernel (){
 			//t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
-			printf("Recibi codigo de operacion\n");
 
 			//debemos extraer el resto, primero el tamaño y luego el contenido
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-
-			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
-			printf("Recibimos tamaño\n");
-			
+			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);			
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
-			printf("Recibi stream\n");
-			
+
 			switch (cod_op) {
 			case MENSAJE:
 				//
-					printf("Ejecute este mensaje MENSAJE jaja\n");
+					printf("Hemos recibido un mensaje del kernel\n");
 					break;
-			
+			case PROCESOFIN:
+			//recibimos la instruccion de finalizar un proceso
+		            printf("Hemos recibido la orden de eliminar un proceso que ha finalizado\n");
+					PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
+					
+					printf("Borraremos el proceso con pid: %d\n",proceso->PID);
+
+					ProcesoMemoria* dato = encontrarProceso(listProcesos,proceso->PID);
+					printf("Borraremos [CONFIRMADO] el proceso con pid: %d\n", dato->PID);
+					free(dato->path);
+					free(dato);
+					printf("Proceso borrado con exito\n");
+					break;
 			case PAQUETE:
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
 				if(nuevoProceso != NULL){ 
@@ -203,9 +206,6 @@ void memoria_escuchar_kernel (){
 				} else{
 					printf("No se pudo deserializar\n");
 				}
-
-
-				//free(nuevoProceso);
 			break;
 			case -1:
 				log_error(memoria_logger, "El cliente kernel se desconecto. Terminando servidor\n");

@@ -422,7 +422,7 @@ void liberar_config(t_config *config)
 
 // 	un_buffer->size +=  (strlen(un_string) + 1) + sizeof(int) ;
 // }
-void enviarPCB (PCB* proceso, int socket_servidor)
+void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 {
     //Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
@@ -466,7 +466,7 @@ void enviarPCB (PCB* proceso, int socket_servidor)
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
     //Podemos usar una constante por operación
-    paquete->codigo_operacion = PROCESO;
+    paquete->codigo_operacion = codigo;
     paquete->buffer = buffer;
 
     //Empaquetamos el Buffer
