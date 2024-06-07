@@ -144,6 +144,21 @@ char* leerArchivo(FILE* file)
 	return contenido;
 }
 
+int calcularCantidadDeInstrucciones(char* content)
+{
+	int i = 0;
+	int cantInstrucciones = 0;
+	while( i < strlen(content) )
+	{
+		if( content[i] == '\n' )
+		{
+			cantInstrucciones++;
+		}
+		i++;
+	}
+	return cantInstrucciones;
+}
+
 char* abrir_archivo(char* path, int PC)
 {
 	FILE* file = fopen(path,"r");
@@ -153,6 +168,9 @@ char* abrir_archivo(char* path, int PC)
 	}
 	char* content = leerArchivo(file);
 	char** newContent = string_split(content,"\n");
+
+	int cantInstrucciones = calcularCantidadDeInstrucciones(content);
+	printf("La cantidad de instrucciones que tiene es: %d\n", cantInstrucciones);
 
 	char* to_ret = malloc(strlen(newContent[PC])+1);
 	//PUEDE PROVOCAR UN ERROR

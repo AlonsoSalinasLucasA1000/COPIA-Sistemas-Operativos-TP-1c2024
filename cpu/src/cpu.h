@@ -61,7 +61,7 @@ void ejecutar_proceso(PCB* proceso)
 
 	recibir_instruccion_cpu(proceso->PID,proceso->PC);
 	//POSIBLES PROBLEMAS
-	int i = 6;
+	int i = 7;
 	while( i > 0 )
 	{
 		//necesita esperar un semaforo
@@ -101,7 +101,7 @@ void ejecutar_proceso(PCB* proceso)
 				if(strcmp(instruccion_split[2], "BX") == 0)
 				{
 					
-					proceso->AX +=+ proceso->BX;
+					proceso->AX += proceso->BX;
 
 					printf("Ejecuta instruccion SUM PARA AX + BX, el AX = %d \n", proceso->AX);
 				}
@@ -116,7 +116,7 @@ void ejecutar_proceso(PCB* proceso)
 				{
 					if(strcmp(instruccion_split[2], "AX") == 0)
 					{
-					proceso->BX += proceso->BX;
+					proceso->BX += proceso->AX;
 
 					printf("Ejecuta instruccion SUM PARA BX + AX, el BX = %d \n", proceso->BX);
 					}else{
@@ -147,7 +147,7 @@ void ejecutar_proceso(PCB* proceso)
 				{
 					if(strcmp(instruccion_split[2], "AX") == 0)
 					{
-					proceso->BX -= proceso->BX;
+					proceso->BX -= proceso->AX;
 
 					printf("Ejecuta instruccion SUM PARA BX - AX, el BX = %d \n", proceso->BX);
 					}else{
@@ -186,7 +186,9 @@ void ejecutar_proceso(PCB* proceso)
 		proceso->PC++;
 			//pido de vuelta
 		recibir_instruccion_cpu(proceso->PID,proceso->PC);
+		printf("------------------------------\n");
 	}
+	//reiniciamos el semaforo
 	//debemos devolver la pcb al kernel, llegado a este punto el proceso terminó
 	enviarPCB(proceso,fd_kernel,PROCESOFIN);
 }
@@ -214,6 +216,12 @@ void cpu_escuchar_kernel (){
 				break;
 			case PROCESO:
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
+				printf("Recibi el siguiente proceso:\n");
+				printf("Su PID es: %d\n",proceso->PID);
+				printf("Su AX es: %d\n",proceso->AX);
+				printf("Su BX es: %d\n",proceso->BX);
+				printf("Su CX es: %d\n",proceso->CX);
+				printf("Su DX es: %d\n",proceso->DX);
 				ejecutar_proceso(proceso);
 			    break;
 			case -1:
@@ -251,7 +259,6 @@ void cpu_escuchar_memoria (){
 				//variable global con 
 				instruccionActual = malloc(paquete->buffer->size);
 				instruccionActual = paquete->buffer->stream;
-				printf("------------------------------\n");
 				printf("La instruccion que llego fue: %s\n",instruccionActual);
 				//instruccionActual = paquete->buffer->stream;
 				sem_post(&sem_exe);
