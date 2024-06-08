@@ -88,6 +88,10 @@ void memoria_escuchar_cpu (){
 				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata");
 				break;
 			}
+			//Liberando los paquetes solucionamos los errores presentados anteriormente
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
 		}
 }
 

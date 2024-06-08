@@ -27,7 +27,7 @@ char* PUERTO_ESCUCHA_INTERRUPT;
 int CANTIDAD_ENTRADAS_TLB;
 char* ALGORITMO_TLB;
 
-void recibir_instruccion_cpu(int PID, int PC)
+void enviar_pcb_memoria(int PID, int PC)
 { 
 	//enviar pcb
 	PCB* to_send = malloc(sizeof(PCB));
@@ -68,7 +68,7 @@ void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 	instruccionActual = "Goku";
-	recibir_instruccion_cpu(proceso->PID,proceso->PC);
+	enviar_pcb_memoria(proceso->PID,proceso->PC);
 	//POSIBLES PROBLEMAS
 	//int i = 7;
 	sem_wait(&sem_exe_b);
@@ -195,7 +195,7 @@ void ejecutar_proceso(PCB* proceso)
         //i--;
 		proceso->PC++;
 		//pido de vuelta
-		recibir_instruccion_cpu(proceso->PID,proceso->PC);
+		enviar_pcb_memoria(proceso->PID,proceso->PC);
 		printf("------------------------------\n");
 		sem_post(&sem_exe_a);
 		sem_wait(&sem_exe_b);
@@ -274,7 +274,8 @@ void cpu_escuchar_memoria (){
 				printf("Instruccion de la memoria recibida con exito\n");
 				//variable global con 
 				instruccionActual = malloc(paquete->buffer->size);
-				instruccionActual = paquete->buffer->stream;
+				char* instruccionQueLlego = paquete->buffer->stream;
+				instruccionActual = string_duplicate(instruccionQueLlego);
 				printf("La instruccion que llego fue: %s\n",instruccionActual);
 				//instruccionActual = paquete->buffer->stream;
 				sem_post(&sem_exe_b);
@@ -289,6 +290,10 @@ void cpu_escuchar_memoria (){
 				log_warning(cpu_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
+			//liberamos todo para evitar los errores pasados
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
 		}	
 }
 

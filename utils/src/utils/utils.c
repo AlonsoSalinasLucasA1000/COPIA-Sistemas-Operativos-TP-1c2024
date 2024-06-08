@@ -226,7 +226,7 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	stream += sizeof(uint32_t);
 	// deserailizamos el path como tal
 	to_return->path = malloc(to_return->path_length);
-	memcpy(to_return->path, stream, to_return->path_length);
+	memcpy(to_return->path, stream, to_return->path_length);//ERROR AL 3 INTENTO
 
 	return to_return;
 }
@@ -428,7 +428,7 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-    buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + proceso->path_length +1;
+    buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + (proceso->path_length+1);
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
