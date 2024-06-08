@@ -9,7 +9,7 @@
 //file descriptors de kernel y los modulos que se conectaran con ella
 int fd_kernel;
 int fd_cpu_interrupt; 
-int fd_cpu_dispach; //luego se dividira en dos fd, un dispach y un interrupt, por ahora nos es suficiente con este
+int fd_cpu_dispatch; //luego se dividira en dos fd, un dispach y un interrupt, por ahora nos es suficiente con este
 int fd_memoria;
 int fd_entradasalida;
 
@@ -51,13 +51,13 @@ void kernel_escuchar_cpu ()
 	bool control_key = 1;
 	while (control_key) {
 	//recibimos operacion y guardamos todo en un paquete
-			int cod_op = recibir_operacion(fd_cpu_interrupt);
+			int cod_op = recibir_operacion(fd_cpu_dispatch);
 
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-			recv(fd_cpu_interrupt,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			recv(fd_cpu_dispatch,&(paquete->buffer->size),sizeof(uint32_t),0);	
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_cpu_interrupt,paquete->buffer->stream, paquete->buffer->size,0);
+			recv(fd_cpu_dispatch,paquete->buffer->stream, paquete->buffer->size,0);
 
 			switch (cod_op) {
 			case PROCESOFIN:
@@ -443,7 +443,8 @@ void enviar_pcb_a_cpu()
 	to_send->CX = pcb_cola->CX;
 	to_send->path = string_duplicate( pcb_cola->path);
 
-	enviarPCB(to_send, fd_cpu_interrupt,PROCESO);
+	//ACÁ SI MANDO POR FD_CPU_DISPATCH, NO ENVIA NADA
+	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
 }
 
 void planificador_corto_plazo()

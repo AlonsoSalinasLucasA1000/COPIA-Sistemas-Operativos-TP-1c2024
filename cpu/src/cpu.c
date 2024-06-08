@@ -36,7 +36,7 @@ if (cpu_config == NULL)
 log_info(cpu_logger, "Leí la ip: %s y puerto: %s\n", IP_MEMORIA, PUERTO_MEMORIA);
 
 //inicia servidor cpu   SE DEBE INICIAR EL SERVIDOR DEL OTRO PUERTO DE CPU, EL PUERTO INTERRUPT!!!
-fd_cpu_dispach = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU");
+fd_cpu_dispatch = iniciar_servidor (PUERTO_ESCUCHA_DISPATCH, cpu_logger, "INICIADO EL CPU");
 
 fd_cpu_interrupt = iniciar_servidor (PUERTO_ESCUCHA_INTERRUPT, cpu_logger, "INICIADO EL CPU");
 
@@ -49,17 +49,21 @@ handshakeClient(fd_memoria, 1);
 
 //esperar conexion de kernel
 log_info (cpu_logger, "Esperando a conectar con Kernel.");
-fd_kernel = esperar_cliente (fd_cpu_dispach, cpu_logger, "KERNEL");
-handshakeServer(fd_kernel);
+fd_kernel_dispatch = esperar_cliente (fd_cpu_dispatch, cpu_logger, "KERNEL");
+handshakeServer(fd_kernel_dispatch);
 
 log_info (cpu_logger, "Esperando a conectar con Kernel.");
-fd_kernel = esperar_cliente (fd_cpu_interrupt, cpu_logger, "KERNEL");
-handshakeServer(fd_kernel);
+fd_kernel_interrupt = esperar_cliente (fd_cpu_interrupt, cpu_logger, "KERNEL");
+handshakeServer(fd_kernel_interrupt);
 
 //escuchar mensajes de Kernel
-pthread_t hilo_kernel;
-pthread_create (&hilo_kernel, NULL, (void*)cpu_escuchar_kernel, NULL);
-pthread_detach (hilo_kernel);
+pthread_t hilo_kernel_dispatch; 
+pthread_create (&hilo_kernel_dispatch, NULL, (void*)cpu_escuchar_kernel_dispatch, NULL);
+pthread_detach (hilo_kernel_dispatch);
+
+pthread_t hilo_kernel_interrupt;
+pthread_create (&hilo_kernel_interrupt, NULL, (void*)cpu_escuchar_kernel_dispatch, NULL);
+pthread_detach (hilo_kernel_interrupt);
 
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;
@@ -70,9 +74,8 @@ pthread_join (hilo_memoria, NULL);
 liberar_config(cpu_config);
 liberar_logger(cpu_logger);
 liberar_conexion(fd_cpu_interrupt);
-liberar_conexion(fd_cpu_dispach);
+liberar_conexion(fd_kernel_dispatch);
 liberar_conexion(fd_memoria);
-liberar_conexion(fd_kernel);
 
 return (EXIT_SUCCESS);
 }

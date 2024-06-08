@@ -7,10 +7,11 @@
 #include <utils/utils.c>
 
 //file descriptors de CPU y los modulos que se conectaran con el
-int fd_cpu_dispach;
-int fd_cpu_interrupt; //luego se dividira en dos fd un dispach y un interrupt, por ahora nos es suficiente con este
+int fd_cpu_dispatch;
+int fd_cpu_interrupt; //luego se dividira en dos fd un dispatch y un interrupt, por ahora nos es suficiente con este
 int fd_memoria;
-int fd_kernel;
+int fd_kernel_dispatch;
+int fd_kernel_interrupt;
 
 sem_t sem_exe_a;
 sem_t sem_exe_b;
@@ -64,6 +65,19 @@ void enviar_pcb_memoria(int PID, int PC)
 
 }
 
+//UNA POSIBLE SOLUCION Y LOS CASOS.
+void* obtener_registro(char* registro, PCB* proceso)
+{
+	if( strcmp(registro,"AX") == 0 )
+	{
+		return proceso->AX;
+	}
+	else
+	{
+
+	}
+}
+
 void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
@@ -80,8 +94,11 @@ void ejecutar_proceso(PCB* proceso)
 		char* instruccion = string_duplicate(instruccionActual);
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
 		char** instruccion_split = string_split (instruccion, " ");
+
+		//CÓMO HACEMOS ESTO MÁS EFICIENTEMENTE
 		if(strcmp(instruccion_split[0], "SET") == 0)
 		{
+			
 			if(strcmp(instruccion_split[1], "AX") == 0)
 			{
 				int dato = atoi(instruccion_split[2]); 
@@ -203,22 +220,22 @@ void ejecutar_proceso(PCB* proceso)
 	}
 	//reiniciamos el semaforo
 	//debemos devolver la pcb al kernel, llegado a este punto el proceso terminó
-	enviarPCB(proceso,fd_kernel,PROCESOFIN);
+	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
 }
 
 
-void cpu_escuchar_kernel (){
+void cpu_escuchar_kernel_dispatch (){
 		bool control_key = 1;
 	while (control_key) {
-			int cod_op = recibir_operacion(fd_kernel);
+			int cod_op = recibir_operacion(fd_kernel_dispatch);
 
 			//debemos extraer el resto, primero el tamaño y luego el contenido
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
+			recv(fd_kernel_dispatch,&(paquete->buffer->size),sizeof(uint32_t),0);
 				
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
+			recv(fd_kernel_dispatch,paquete->buffer->stream, paquete->buffer->size,0);
 			
 		    switch (cod_op) {
 			case MENSAJE:
@@ -238,6 +255,43 @@ void cpu_escuchar_kernel (){
 				ejecutar_proceso(proceso);
 				sem_init(&sem_exe_a,0,1);
                 sem_init(&sem_exe_b,0,0);
+			    break;
+			case -1:
+				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor\n");
+				control_key = 0;
+			default:
+				log_warning(cpu_logger,"Operacion desconocida. No quieras meter la pata\n");
+				break;
+			}
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
+
+		}
+}
+
+void cpu_escuchar_kernel_interrupt (){
+		bool control_key = 1;
+	while (control_key) {
+			int cod_op = recibir_operacion(fd_kernel_interrupt);
+
+			//debemos extraer el resto, primero el tamaño y luego el contenido
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(fd_kernel_interrupt,&(paquete->buffer->size),sizeof(uint32_t),0);
+				
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(fd_kernel_interrupt,paquete->buffer->stream, paquete->buffer->size,0);
+			
+		    switch (cod_op) {
+			case MENSAJE:
+				//
+				break;
+			case PAQUETE:
+				//
+				break;
+			case PROCESO:
+				printf("Hola recibi algo por interrupt\n");
 			    break;
 			case -1:
 				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor\n");

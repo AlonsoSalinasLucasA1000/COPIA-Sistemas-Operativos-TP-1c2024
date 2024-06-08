@@ -61,11 +61,11 @@ fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
 //log_info (kernel_logger, "Conectado a memoria exitosamente.");
 handshakeClient(fd_memoria, 2);
 
-//conestarse a cpu como cliente DISPACH
+//conestarse a cpu como cliente DISPATCH
 log_info (kernel_logger, "Intentando conexion a CPU");
-fd_cpu_dispach = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH,"CPU");
+fd_cpu_dispatch = crear_conexion (IP_CPU, PUERTO_CPU_DISPATCH,"CPU");
 log_info (kernel_logger, "Conectado a cpu exitosamente por dispach.");
-handshakeClient(fd_cpu_dispach, 2);
+handshakeClient(fd_cpu_dispatch, 2);
 
 //conestarse a cpu como cliente INTERRUPT
 log_info (kernel_logger, "Intentando conexion a CPU");
@@ -112,13 +112,13 @@ if (kernel_logs_obligatorios == NULL)
 	exit(EXIT_FAILURE);
 }
 
- pthread_t hilo_planificador_corto_plazo;
- pthread_create (&hilo_planificador_corto_plazo, NULL, (void*)planificador_corto_plazo, NULL);
- pthread_detach (hilo_planificador_corto_plazo);
+pthread_t hilo_planificador_corto_plazo;
+pthread_create (&hilo_planificador_corto_plazo, NULL, (void*)planificador_corto_plazo, NULL);
+pthread_detach (hilo_planificador_corto_plazo);
 
- pthread_t hilo_planificador_largo_plazo;
- pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
- pthread_detach (hilo_planificador_largo_plazo);
+pthread_t hilo_planificador_largo_plazo;
+pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
+pthread_detach (hilo_planificador_largo_plazo);
 
 
 
@@ -134,7 +134,7 @@ liberar_config(kernel_config);
 liberar_logger(kernel_logger);
 liberar_conexion(fd_memoria);
 liberar_conexion(fd_cpu_interrupt);
-liberar_conexion(fd_cpu_dispach);
+liberar_conexion(fd_cpu_dispatch);
 liberar_conexion(fd_kernel);
 liberar_conexion(fd_entradasalida);
 sem_destroy(&sem);
