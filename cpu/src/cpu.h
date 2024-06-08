@@ -12,7 +12,8 @@ int fd_cpu_interrupt; //luego se dividira en dos fd un dispach y un interrupt, p
 int fd_memoria;
 int fd_kernel;
 
-sem_t sem_exe;
+sem_t sem_exe_a;
+sem_t sem_exe_b;
 
 
 t_log* cpu_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
@@ -32,6 +33,14 @@ void recibir_instruccion_cpu(int PID, int PC)
 	PCB* to_send = malloc(sizeof(PCB));
 	to_send->PC = PC;
 	to_send->PID = PID;
+	to_send->quantum = 0;
+	to_send->AX = 0;
+	to_send->BX = 0;
+	to_send->CX = 0;
+	to_send->DX = 0;
+	to_send->estado = NEW;
+	to_send->path_length = 1;
+	to_send->path = "";
 	enviarPCB (to_send, fd_memoria,PROCESO);
 
 /*
@@ -58,14 +67,15 @@ void recibir_instruccion_cpu(int PID, int PC)
 void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
-
+	instruccionActual = "Goku";
 	recibir_instruccion_cpu(proceso->PID,proceso->PC);
 	//POSIBLES PROBLEMAS
-	int i = 7;
-	while( i > 0 )
+	//int i = 7;
+	sem_wait(&sem_exe_b);
+	while( strcmp(instruccionActual,"") != 0 )
 	{
 		//necesita esperar un semaforo
-		sem_wait(&sem_exe);
+		
 		//obtengo instruccion actual
 		char* instruccion = string_duplicate(instruccionActual);
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
@@ -182,11 +192,14 @@ void ejecutar_proceso(PCB* proceso)
 				}
 			}
 		}
-        i--;
+        //i--;
 		proceso->PC++;
-			//pido de vuelta
+		//pido de vuelta
 		recibir_instruccion_cpu(proceso->PID,proceso->PC);
 		printf("------------------------------\n");
+		sem_post(&sem_exe_a);
+		sem_wait(&sem_exe_b);
+		//sem_wait(&sem_exe);
 	}
 	//reiniciamos el semaforo
 	//debemos devolver la pcb al kernel, llegado a este punto el proceso terminó
@@ -223,6 +236,8 @@ void cpu_escuchar_kernel (){
 				printf("Su CX es: %d\n",proceso->CX);
 				printf("Su DX es: %d\n",proceso->DX);
 				ejecutar_proceso(proceso);
+				sem_init(&sem_exe_a,0,1);
+                sem_init(&sem_exe_b,0,0);
 			    break;
 			case -1:
 				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor\n");
@@ -255,13 +270,14 @@ void cpu_escuchar_memoria (){
 
 			switch (cod_op) {
 			case MENSAJE:
+			    sem_wait(&sem_exe_a);
 				printf("Instruccion de la memoria recibida con exito\n");
 				//variable global con 
 				instruccionActual = malloc(paquete->buffer->size);
 				instruccionActual = paquete->buffer->stream;
 				printf("La instruccion que llego fue: %s\n",instruccionActual);
 				//instruccionActual = paquete->buffer->stream;
-				sem_post(&sem_exe);
+				sem_post(&sem_exe_b);
 				break;
 			case PAQUETE:
 				//

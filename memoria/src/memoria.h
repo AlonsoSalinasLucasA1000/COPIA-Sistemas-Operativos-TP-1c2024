@@ -60,6 +60,7 @@ void memoria_escuchar_cpu (){
 				//
 				printf("------------------------------\n");
 				//desearializamos lo recibido
+				
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
@@ -156,7 +157,7 @@ int calcularCantidadDeInstrucciones(char* content)
 		}
 		i++;
 	}
-	return cantInstrucciones;
+	return cantInstrucciones+1;
 }
 
 char* abrir_archivo(char* path, int PC)
@@ -172,9 +173,17 @@ char* abrir_archivo(char* path, int PC)
 	int cantInstrucciones = calcularCantidadDeInstrucciones(content);
 	printf("La cantidad de instrucciones que tiene es: %d\n", cantInstrucciones);
 
-	char* to_ret = malloc(strlen(newContent[PC])+1);
-	//PUEDE PROVOCAR UN ERROR
-	to_ret = newContent[PC];
+	char* to_ret;
+
+	if( PC < cantInstrucciones )
+	{
+		to_ret = malloc(strlen(newContent[PC])+1);
+		to_ret = newContent[PC];
+	}
+	else
+	{
+		to_ret = "";
+	}
 
     free(content);
 	fclose(file);

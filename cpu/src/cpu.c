@@ -4,7 +4,11 @@
 
 int main(int argc, char* argv[]) {
 
-sem_init(&sem_exe,0,0);
+sem_init(&sem_exe_a,0,1);
+sem_init(&sem_exe_b,0,0);
+
+
+
 cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (cpu_logger == NULL)
 	{
