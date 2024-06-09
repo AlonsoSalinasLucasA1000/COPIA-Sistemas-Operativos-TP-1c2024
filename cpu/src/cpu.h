@@ -66,15 +66,38 @@ void enviar_pcb_memoria(int PID, int PC)
 }
 
 //UNA POSIBLE SOLUCION Y LOS CASOS.
+//UNA POSIBLE SOLUCION Y LOS CASOS.
 void* obtener_registro(char* registro, PCB* proceso)
 {
 	if( strcmp(registro,"AX") == 0 )
 	{
-		return proceso->AX;
+		//return *proceso->AX;// 
+		return (void*)&(proceso->AX); // Devuelve un puntero al valor de AX
 	}
 	else
 	{
-
+		if( strcmp(registro,"BX") == 0 )
+		{
+		return (void*)&(proceso->BX); // Devuelve un puntero al valor de BX
+		}
+		else
+		{
+			if( strcmp(registro,"CX") == 0 )
+			{
+				return (void*)&(proceso->CX); // Devuelve un puntero al valor de CX
+			}
+			else
+			{
+				if( strcmp(registro,"DX") == 0 )
+				{
+				return (void*)&(proceso->DX); // Devuelve un puntero al valor de DX
+				}
+				else
+				{
+					printf("ERROR, NO SE ENCONTRO REGISTRO\n");
+				}
+			}
+		}
 	}
 }
 
@@ -98,7 +121,17 @@ void ejecutar_proceso(PCB* proceso)
 		//CÓMO HACEMOS ESTO MÁS EFICIENTEMENTE
 		if(strcmp(instruccion_split[0], "SET") == 0)
 		{
-			
+
+			int *valor_registro = (int *)obtener_registro(instruccion_split[1], proceso);
+			if (valor_registro != NULL) {
+				int dato = atoi(instruccion_split[2]);
+				*valor_registro = dato; // Asigna el valor a través del puntero
+				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro);
+			} else {
+				printf("El registro no se encontró en el proceso.\n");
+			}
+
+			/*
 			if(strcmp(instruccion_split[1], "AX") == 0)
 			{
 				int dato = atoi(instruccion_split[2]); 
@@ -119,7 +152,7 @@ void ejecutar_proceso(PCB* proceso)
 					printf("Nada, por ahora\n");
 				}
 			}
-			//
+			*/
 		}else if (strcmp(instruccion_split[0], "SUM") == 0){
 
 			if(strcmp(instruccion_split[1], "AX") == 0)
