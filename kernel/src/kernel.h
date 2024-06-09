@@ -88,6 +88,9 @@ void kernel_escuchar_cpu ()
 				log_warning(kernel_logger,"Operacion desconocida. No quieras meter la pata");
 				break;
 			}
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
 		}	
 }
 

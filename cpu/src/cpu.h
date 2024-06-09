@@ -99,6 +99,38 @@ void* obtener_registro(char* registro, PCB* proceso)
 			}
 		}
 	}
+	return NULL;
+}
+
+bool esRegistroUint8(char* registro)
+{
+	bool to_ret = false;
+	if( strcmp(registro, "AX") == 0 )
+	{
+		to_ret = true;
+	}
+	else
+	{
+		if( strcmp(registro, "BX") == 0 )
+		{
+			to_ret = true;
+		}
+		else
+		{
+			if( strcmp(registro, "CX") == 0 )
+			{
+				to_ret = true;
+			}
+			else
+			{
+				if( strcmp(registro, "CX") == 0 )
+				{
+					to_ret = true;
+				}
+			}
+		}
+	}
+	return to_ret;
 }
 
 void ejecutar_proceso(PCB* proceso)
@@ -106,153 +138,168 @@ void ejecutar_proceso(PCB* proceso)
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 	instruccionActual = "Goku";
 	enviar_pcb_memoria(proceso->PID,proceso->PC);
-	//POSIBLES PROBLEMAS
-	//int i = 7;
+
 	sem_wait(&sem_exe_b);
 	while( strcmp(instruccionActual,"") != 0 )
 	{
-		//necesita esperar un semaforo
-		
 		//obtengo instruccion actual
 		char* instruccion = string_duplicate(instruccionActual);
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
 		char** instruccion_split = string_split (instruccion, " ");
 
-		//CÓMO HACEMOS ESTO MÁS EFICIENTEMENTE
+		//CASO DE TENER UNA INSTRUCCION SET
 		if(strcmp(instruccion_split[0], "SET") == 0)
 		{
-
+			if( esRegistroUint8(instruccion_split[1]))
+			{
+				uint8_t* valor_registro = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
+				if( valor_registro != NULL )
+				{
+					int dato = atoi(instruccion_split[2]);
+					*valor_registro = dato;
+					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro);
+				}
+				else
+				{
+					printf("El registro no se encontró en el proceso.\n");
+				}
+			}
+			else
+			{
+				printf("El registro no se encontró en el proceso.\n");
+			}
+			/*
 			int *valor_registro = (int *)obtener_registro(instruccion_split[1], proceso);
-			if (valor_registro != NULL) {
+			if (valor_registro != NULL) 
+			{
 				int dato = atoi(instruccion_split[2]);
 				*valor_registro = dato; // Asigna el valor a través del puntero
 				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro);
-			} else {
+			} 
+			else 
+			{
 				printf("El registro no se encontró en el proceso.\n");
 			}
-
-			/*
-			if(strcmp(instruccion_split[1], "AX") == 0)
+			*/
+		}
+		//CASO DE TENER UNA INSTRUCCION SUM
+		if (strcmp(instruccion_split[0], "SUM") == 0)
+		{
+			if( esRegistroUint8(instruccion_split[1]) )
 			{
-				int dato = atoi(instruccion_split[2]); 
-				proceso->AX = dato; 
-				printf("Ejecuta instruccion SET PARA AX, el AX = %d \n", proceso->AX);
-			} 
+				//si es un registro de 8 bits, tenemos que interpretarlo como tal
+				uint8_t* valor_registro1 = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
+				uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
+				if (valor_registro1 != NULL && valor_registro2 != NULL) 
+				{
+					*valor_registro1 = *valor_registro1 + *valor_registro2; // Asigna el valor a través del puntero
+					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+				} 
+				else 
+				{
+					printf("El registro no se encontró en el proceso.\n");
+				}
+			}
 			else
 			{
-				if(strcmp(instruccion_split[1], "BX") == 0)
-				{
-					printf("llegue hasta el verificar el bx if\n");
-					int dato = atoi(instruccion_split [2]); 
-					proceso->BX = dato;
-					printf("Ejecuta instruccion SET PARA BX, el BX = %d \n", proceso->BX);
-				}
-				else
-				{
-					printf("Nada, por ahora\n");
-				}
+				printf("Todavia no implementado registros de 32 bits o tuviste algún error");
+			}
+			/*
+			int *valor_registro1 = (int *)obtener_registro(instruccion_split[1], proceso);
+			int *valor_registro2 = (int *)obtener_registro(instruccion_split[2], proceso);
+			if (valor_registro1 != NULL && valor_registro2 != NULL) 
+			{
+				*valor_registro1 = *valor_registro1 + *valor_registro2; // Asigna el valor a través del puntero
+				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+			} 
+			else 
+			{
+				printf("El registro no se encontró en el proceso.\n");
 			}
 			*/
-		}else if (strcmp(instruccion_split[0], "SUM") == 0){
-
-			if(strcmp(instruccion_split[1], "AX") == 0)
-			{
-				
-				if(strcmp(instruccion_split[2], "BX") == 0)
-				{
-					
-					proceso->AX += proceso->BX;
-
-					printf("Ejecuta instruccion SUM PARA AX + BX, el AX = %d \n", proceso->AX);
-				}
-				else
-				{
-					printf("Error, registro no implementado.\n");
-				}
-			} 
-			else
-			{
-				if(strcmp(instruccion_split[1], "BX") == 0)
-				{
-					if(strcmp(instruccion_split[2], "AX") == 0)
-					{
-					proceso->BX += proceso->AX;
-
-					printf("Ejecuta instruccion SUM PARA BX + AX, el BX = %d \n", proceso->BX);
-					}else{
-					printf("Error, registro no implementado.\n");
-					}
-				}
-			}
-		}else if (strcmp(instruccion_split[0], "SUB") == 0){
-
-			if(strcmp(instruccion_split[1], "AX") == 0)
-			{
-				
-				if(strcmp(instruccion_split[2], "BX") == 0)
-				{
-					
-					proceso->AX -= proceso->BX;
-
-					printf("Ejecuta instruccion SUB PARA AX - BX, el AX = %d \n", proceso->AX);
-				}
-				else
-				{
-					printf("Error, registro no implementado.\n");
-				}
-			} 
-			else
-			{
-				if(strcmp(instruccion_split[1], "BX") == 0)
-				{
-					if(strcmp(instruccion_split[2], "AX") == 0)
-					{
-					proceso->BX -= proceso->AX;
-
-					printf("Ejecuta instruccion SUM PARA BX - AX, el BX = %d \n", proceso->BX);
-					}else{
-					printf("Error, registro no implementado.\n");
-					}
-				}
-			}
-		}else if (strcmp(instruccion_split[0], "JNZ") == 0){
-
-			if(strcmp(instruccion_split[1], "AX") == 0)
-			{
-				if (proceso->AX != 0)
-				{
-					
-					proceso->PC = atoi(instruccion_split [2])-1;
-					printf("Ejecuta instruccion JNZ PARA AX, program counter = %d \n", proceso->PC);
-				}else{
-					printf("Error en la ejecucion de JNZ\n");
-				}
-			}else
-			{
-				if(strcmp(instruccion_split[1], "BX") == 0)
-				{
-					if (proceso->BX != 0)
-					{
-						proceso->PC = atoi(instruccion_split [2])-1;
-						printf("Ejecuta instruccion JNZ PARA BX, program counter = %d \n", proceso->PC);
-
-					}else{
-						printf("Error en la ejecucion de JNZ\n");
-					}
-				}
-			}
 		}
-        //i--;
+		//CASO DE TENER UNA INSTRUCCION SUB
+		if (strcmp(instruccion_split[0], "SUB") == 0)
+		{
+			//TENEMOS QUE APRECIAR LOS CASOS DONDE OBTENGAMOS AX, BX, CX o DX y los casos donde tengamos EAX, EBX, ECX, EDX, SI o DI. ASUMIENDO QUE NO SE INTENTA SUMAR UN AX con EAX
+			if( esRegistroUint8(instruccion_split[1]) )
+			{
+				//si es un registro de 8 bits, tenemos que interpretarlo como tal
+				uint8_t* valor_registro1 = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
+				uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
+				if (valor_registro1 != NULL && valor_registro2 != NULL) 
+				{
+					*valor_registro1 = *valor_registro1 - *valor_registro2; // Asigna el valor a través del puntero
+					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+				} 
+				else 
+				{
+					printf("El registro no se encontró en el proceso.\n");
+				}
+			}
+			else
+			{
+				printf("Todavia no implementado registros de 32 bits o tuviste algún error");
+			}
+			/*
+			int *valor_registro1 = (int *)obtener_registro(instruccion_split[1], proceso);
+			int *valor_registro2 = (int *)obtener_registro(instruccion_split[2], proceso);
+			if (valor_registro1 != NULL && valor_registro2 != NULL) 
+			{
+				*valor_registro1 = *valor_registro1 - *valor_registro2; // Asigna el valor a través del puntero
+				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+			} 
+			else 
+			{
+				printf("El registro no se encontró en el proceso.\n");
+			}
+			*/
+		}
+		//CASO DE TENER UNA INSTRUCCION JNZ
+		if (strcmp(instruccion_split[0], "JNZ") == 0)
+		{
+			if( esRegistroUint8(instruccion_split[1]))
+			{
+				uint8_t* valor_registro = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
+				if( valor_registro != NULL )
+				{
+					if( *valor_registro != 0 )
+					{
+						proceso->PC = atoi(instruccion_split[2]);
+						printf("El registro PC ha sido modificado a: %d", proceso->PC);
+					}
+				}
+				else
+				{
+					printf("El registro no se encontró en el proceso.\n");
+				}
+			}
+			else
+			{
+				printf("El registro no se encontró en el proceso.\n");
+			}
+			/*
+			int *valor_registro = (int *)obtener_registro(instruccion_split[1], proceso);
+			if (valor_registro != NULL) 
+			{
+				if( *valor_registro != 0 )
+				{
+					proceso->PC = atoi(instruccion_split[2]);
+				}
+			} 
+			else 
+			{
+				printf("El registro no se encontró en el proceso.\n");
+			}
+			*/
+		}
+		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 		proceso->PC++;
-		//pido de vuelta
 		enviar_pcb_memoria(proceso->PID,proceso->PC);
 		printf("------------------------------\n");
 		sem_post(&sem_exe_a);
 		sem_wait(&sem_exe_b);
-		//sem_wait(&sem_exe);
 	}
-	//reiniciamos el semaforo
-	//debemos devolver la pcb al kernel, llegado a este punto el proceso terminó
 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
 }
 
