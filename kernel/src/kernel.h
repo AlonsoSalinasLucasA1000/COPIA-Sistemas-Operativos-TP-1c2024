@@ -69,6 +69,12 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el BX: %d\n",proceso->registro.BX);//cambios
 				printf("Recibimos el proceso con el CX: %d\n",proceso->registro.CX);//cambios
 				printf("Recibimos el proceso con el DX: %d\n",proceso->registro.DX);//cambios
+				printf("Recibimos el proceso con el EAX: %d\n",proceso->registro.EAX);//cambios
+				printf("Recibimos el proceso con el EBX: %d\n",proceso->registro.EBX);//cambios
+				printf("Recibimos el proceso con el ECX: %d\n",proceso->registro.ECX);//cambios
+				printf("Recibimos el proceso con el EDX: %d\n",proceso->registro.EDX);//cambios
+				printf("Recibimos el proceso con el SI: %d\n",proceso->registro.SI);//cambios
+				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
 				printf("Este proceso ha terminado\n");
 
 				enviarPCB(proceso,fd_memoria,PROCESOFIN);
@@ -158,6 +164,12 @@ void iniciar_proceso(char* path)
 	pcb->registro.BX = 0;//cambios
 	pcb->registro.CX = 0;//cambios
 	pcb->registro.DX = 0;//cambios
+	pcb->registro.EAX = 0;//cambios
+	pcb->registro.EBX = 0;//cambios
+	pcb->registro.ECX = 0;//cambios
+	pcb->registro.EDX = 0;//cambios
+	pcb->registro.DI = 0;//cambios
+	pcb->registro.SI = 0;//cambios
 	pcb->estado = NEW;
 	pcb->path = string_duplicate(path); //consejo
 
@@ -442,10 +454,10 @@ void enviar_pcb_a_cpu()
 	to_send->PC = pcb_cola->PC;
 	to_send->quantum = pcb_cola->quantum;
 	to_send->estado = EXEC;
-	to_send->registro.AX = pcb_cola->registro.AX;//cambios
-	to_send->registro.BX = pcb_cola->registro.BX;//cambios
+	to_send->registro = pcb_cola->registro;//cambios
+	/*to_send->registro.BX = pcb_cola->registro.BX;//cambios
 	to_send->registro.CX = pcb_cola->registro.CX;//cambios
-	to_send->registro.DX = pcb_cola->registro.DX;//cambios
+	to_send->registro.DX = pcb_cola->registro.DX;//cambios*/
 
 	to_send->path = string_duplicate( pcb_cola->path);
 
