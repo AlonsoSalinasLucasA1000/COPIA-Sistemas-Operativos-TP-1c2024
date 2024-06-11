@@ -212,17 +212,19 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	stream += sizeof(uint32_t);
 	memcpy(&(to_return->quantum), stream, sizeof(uint32_t));
 	stream += sizeof(uint32_t);
-	memcpy(&(to_return->AX), stream, sizeof(uint8_t));
+	memcpy(&(to_return->registro), stream, sizeof(RegistrosCPU)); // Cambio en el tipo de este campo
+    stream += sizeof(RegistrosCPU);//cambios
+	/*memcpy(&(to_return->AX), stream, sizeof(uint8_t));
 	stream += sizeof(uint8_t);
 	memcpy(&(to_return->BX), stream, sizeof(uint8_t));
 	stream += sizeof(uint8_t);
 	memcpy(&(to_return->CX), stream, sizeof(uint8_t));
 	stream += sizeof(uint8_t);
 	memcpy(&(to_return->DX), stream, sizeof(uint8_t));
-	stream += sizeof(uint8_t);
+	stream += sizeof(uint8_t);*/
 	memcpy(&(to_return->estado), stream, sizeof(estado_proceso));
 	stream += sizeof(estado_proceso);
-	memcpy(&(to_return->path_length), stream, sizeof(int));
+	memcpy(&(to_return->path_length), stream, sizeof(uint32_t));
 	stream += sizeof(uint32_t);
 	// deserailizamos el path como tal
 	to_return->path = malloc(to_return->path_length);
@@ -428,7 +430,8 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-    buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + (proceso->path_length+1);
+    //buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + (proceso->path_length+1);
+	buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(estado_proceso) + sizeof(RegistrosCPU) + (proceso->path_length+1);//cambios
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
@@ -442,6 +445,9 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 	memcpy(buffer->stream + buffer->offset, &proceso->quantum, sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
 
+	memcpy(buffer->stream + buffer->offset, &(proceso->registro), sizeof(RegistrosCPU));//cambios
+    buffer->offset += sizeof(RegistrosCPU);
+	/*
 	memcpy(buffer->stream + buffer->offset, &proceso->AX, sizeof(uint8_t));
     buffer->offset += sizeof(uint8_t);
 
@@ -452,9 +458,9 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
     buffer->offset += sizeof(uint8_t);
 
 	memcpy(buffer->stream + buffer->offset, &proceso->DX, sizeof(uint8_t));
-    buffer->offset += sizeof(uint8_t);
+    buffer->offset += sizeof(uint8_t);*/
 
-	memcpy(buffer->stream + buffer->offset, &proceso->estado, sizeof(uint8_t));
+	memcpy(buffer->stream + buffer->offset, &proceso->estado, sizeof(estado_proceso));
     buffer->offset += sizeof(estado_proceso);
 
 

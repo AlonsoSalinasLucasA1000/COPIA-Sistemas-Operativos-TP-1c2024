@@ -79,11 +79,11 @@ typedef struct
 	uint32_t PID;
 	uint32_t PC;
 	uint32_t quantum;
-	//RegistrosCPU registro;
-	uint8_t AX;
+	RegistrosCPU registro;//descomente para implementarlo
+	/*uint8_t AX;
 	uint8_t BX;
 	uint8_t CX;
-	uint8_t DX;
+	uint8_t DX;*/
 	estado_proceso estado;
 	uint32_t path_length;
 	char* path;

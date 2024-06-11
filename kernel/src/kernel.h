@@ -65,12 +65,14 @@ void kernel_escuchar_cpu ()
 			    PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				proceso->estado = EXIT;
 				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
-				printf("Recibimos el proceso con el AX: %d\n",proceso->AX);
-				printf("Recibimos el proceso con el BX: %d\n",proceso->BX);
-				printf("Recibimos el proceso con el CX: %d\n",proceso->CX);
-				printf("Recibimos el proceso con el DX: %d\n",proceso->DX);
+				printf("Recibimos el proceso con el AX: %d\n",proceso->registro.AX);//cambios
+				printf("Recibimos el proceso con el BX: %d\n",proceso->registro.BX);//cambios
+				printf("Recibimos el proceso con el CX: %d\n",proceso->registro.CX);//cambios
+				printf("Recibimos el proceso con el DX: %d\n",proceso->registro.DX);//cambios
 				printf("Este proceso ha terminado\n");
+
 				enviarPCB(proceso,fd_memoria,PROCESOFIN);
+
 				free(proceso->path);
 				free(proceso);
 			//	
@@ -152,10 +154,10 @@ void iniciar_proceso(char* path)
 	pcb->PID = pid;
 	pcb->PC = 0;
 	pcb->quantum = 0;
-	pcb->AX = 0;
-	pcb->BX = 0;
-	pcb->CX = 0;
-	pcb->DX = 0;
+	pcb->registro.AX = 0;//cambios
+	pcb->registro.BX = 0;//cambios
+	pcb->registro.CX = 0;//cambios
+	pcb->registro.DX = 0;//cambios
 	pcb->estado = NEW;
 	pcb->path = string_duplicate(path); //consejo
 
@@ -440,10 +442,11 @@ void enviar_pcb_a_cpu()
 	to_send->PC = pcb_cola->PC;
 	to_send->quantum = pcb_cola->quantum;
 	to_send->estado = EXEC;
-	to_send->AX = pcb_cola->AX;
-	to_send->BX = pcb_cola->BX;
-	to_send->CX = pcb_cola->CX;
-	to_send->CX = pcb_cola->CX;
+	to_send->registro.AX = pcb_cola->registro.AX;//cambios
+	to_send->registro.BX = pcb_cola->registro.BX;//cambios
+	to_send->registro.CX = pcb_cola->registro.CX;//cambios
+	to_send->registro.DX = pcb_cola->registro.DX;//cambios
+
 	to_send->path = string_duplicate( pcb_cola->path);
 
 	//ACÁ SI MANDO POR FD_CPU_DISPATCH, NO ENVIA NADA
