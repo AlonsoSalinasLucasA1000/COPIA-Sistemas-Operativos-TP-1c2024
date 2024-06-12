@@ -3,6 +3,15 @@
 #include <entradasalida.h>
 
 int main(int argc, char* argv[]) {
+	/*
+    if (argc < 2) {
+        fprintf(stderr, "Uso: %s <ruta_archivo_configuracion>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+//resto del TP0 de antes
+t_config* config = crear_config(argv[1]);
+*/
 
 //Ingresamos por consola los parametros iniciales NOMBRE y path del config
 char* datosIniciales;
@@ -70,6 +79,9 @@ log_info (entradasalida_logger, "Intentado conexion a kernel.");
 fd_kernel = crear_conexion (IP_KERNEL, PUERTO_KERNEL,"kernel");
 //log_info (entradasalida_logger, "Conectado a kernel exitosamente.");
 handshakeClient(fd_kernel, 3);
+
+//enviar datos al kernel
+enviarDatosKernel(fd_kernel,datosInicialesPartidos,TIPO_INTERFAZ);
 
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;

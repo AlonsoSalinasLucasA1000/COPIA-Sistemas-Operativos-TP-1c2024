@@ -109,14 +109,23 @@ void kernel_escuchar_entradasalida ()
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_entradasalida);
 			switch (cod_op) {
-			case MENSAJE:
+			case GENERICA:
 				//
+				printf("Recibi algo de una interfaz generica, vas bien\n");
 				break;
-			case PAQUETE:
+			case STDIN:
 				//
+				printf("Recibi algo de una interfaz stdin, vas bien\n");
+				break;
+			case STDOUT:
+				//
+				printf("Recibi algo de una interfaz stdout, vas bien\n");
+				break;
+			case DIALFS:
+				//
+				printf("Recibi algo de una interfaz dialfs, vas bien\n");
 				break;
 			case -1:
-				log_error(kernel_logger, "El cliente EntradaSalida se desconecto. Terminando servidor");
 				control_key = 0;
 			default:
 				log_warning(kernel_logger,"Operacion desconocida. No quieras meter la pata");
@@ -126,26 +135,48 @@ void kernel_escuchar_entradasalida ()
 }
 
 //No definido que hara
-void atender_entrada_salida_kernel(int fd_cliente_entrada_salida)
+void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 {
+	printf("Ha llegado un IO\n");
 	bool control_key = 1;
-	while (control_key) {
-			int cod_op = recibir_operacion(fd_cliente_entrada_salida);
-			switch (cod_op) {
-			case MENSAJE:
+	while (control_key) 
+	{
+			int cod_op = recibir_operacion(*fd_cliente_entrada_salida);
+			printf("Hemos recibido el codigo de operacion\n");
+			//desempaquete
+			printf("El codigo de operacion es: %d\n",cod_op);
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(*fd_cliente_entrada_salida,&(paquete->buffer->size),sizeof(uint32_t),0);
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(*fd_cliente_entrada_salida,paquete->buffer->stream, paquete->buffer->size,0);
+					
+			switch (cod_op) 
+			{
+			case GENERICA:
 				//
+				printf("Recibi algo de una interfaz generica, vas bien\n");
 				break;
-			case PAQUETE:
+			case STDIN:
 				//
+				printf("Recibi algo de una interfaz stdin, vas bien\n");
+				break;
+			case STDOUT:
+				//
+				printf("Recibi algo de una interfaz stdout, vas bien\n");
+				break;
+			case DIALFS:
+				//
+				printf("Recibi algo de una interfaz dialfs, vas bien\n");
 				break;
 			case -1:
-				printf("Nada, por ahora.\n");
+			    printf("ERROR\n");
 				control_key = 0;
 			default:
-				printf("Nada, por ahora.\n");
+				printf("Esto no funciona\n");
 				break;
 			}
-		}
+	}
 }
 
 //creo un hilo por cada entrada salida que llegue

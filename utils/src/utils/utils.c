@@ -92,9 +92,13 @@ int recibir_operacion(int socket_cliente)
 {
 	int cod_op;
 	if (recv(socket_cliente, &cod_op, sizeof(int), MSG_WAITALL) > 0)
+	{
+		printf("Recibi el codigo correctamente: %d\n",cod_op);
 		return cod_op;
+	}
 	else
 	{
+		printf("SORRY No recibi el codigo correctamente\n");
 		close(socket_cliente);
 		return -1;
 	}

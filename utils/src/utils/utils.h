@@ -24,6 +24,11 @@ typedef enum
 	PAQUETE,
 	PROCESO,
 	PROCESOFIN,
+	GENERICA,
+	STDIN,
+	STDOUT,
+	DIALFS,
+	WRONG,
 	GOKU
 }op_code;
 
@@ -95,6 +100,15 @@ typedef struct
 	uint32_t path_length;
 	char* path;
 } ProcesoMemoria;
+
+typedef struct 
+{
+	int fd_cliente;
+	uint32_t nombre_length;
+	char* nombre;
+	uint32_t path_length;
+	char* path;
+} EntradaSalida;
 
 //funciones crear conexion
 int crear_conexion(char* ip, char* puerto,char* nameServ);
