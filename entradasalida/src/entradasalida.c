@@ -4,6 +4,12 @@
 
 int main(int argc, char* argv[]) {
 
+//Ingresamos por consola los parametros iniciales NOMBRE y path del config
+char* datosIniciales;
+datosIniciales = readline("> "); //
+printf("%s\n",datosIniciales);
+
+char** datosInicialesPartidos = string_split(datosIniciales," ");
 
 entradasalida_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (entradasalida_logger == NULL)
@@ -12,8 +18,9 @@ entradasalida_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_IN
 		exit(EXIT_FAILURE);
 	}
 
+free(datosIniciales);
 //cambiar la ruta del archivo config a una abreviatura
-	t_config *entradasalida_config = config_create("src/entradasalida.config");
+	t_config *entradasalida_config = config_create(datosInicialesPartidos[1]); //cambie el path hardoceado por el espeficiado en los datos iniciales
 	if (entradasalida_config == NULL)
 	{
 		perror("Error al crear el config.");
@@ -46,6 +53,11 @@ entradasalida_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_IN
 
 
 
+//¿QUIÉN ES ESTA INTERFAZ?
+printf("Hola, soy un proceso de E/S cuyo nombre es: %s\n",datosInicialesPartidos[0]);
+printf("Mi path es el siguiente: %s\n",datosInicialesPartidos[1]);
+printf("Mi interfaz es: %s\n",TIPO_INTERFAZ);
+
 //conestarse a memoria como cliente
 log_info(entradasalida_logger,"Intentando conexion a memoria");
 fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
@@ -64,7 +76,6 @@ pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)entradasalida_escuchar_memoria, NULL);
 pthread_join (hilo_memoria, NULL);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
-
 
 //escuchar mensajes de kernel
 pthread_t hilo_kernel;

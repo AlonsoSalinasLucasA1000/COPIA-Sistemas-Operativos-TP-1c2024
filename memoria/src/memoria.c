@@ -4,6 +4,7 @@
 
 int main(int argc, char* argv[]) {
 
+
 listProcesos = list_create();
 
 memoria_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);

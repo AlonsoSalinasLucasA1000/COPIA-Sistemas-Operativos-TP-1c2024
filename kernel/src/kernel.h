@@ -157,8 +157,10 @@ void esperar_entrada_salida_kernel()
      int *fd_conexion_ptr = malloc(sizeof(int));
      *fd_conexion_ptr = accept(fd_kernel, NULL, NULL);
 	 handshakeServer(*fd_conexion_ptr);
+	
      pthread_create(&thread,NULL,(void*)atender_entrada_salida_kernel,fd_conexion_ptr);
      pthread_detach(thread);
+
     }
 }
 
