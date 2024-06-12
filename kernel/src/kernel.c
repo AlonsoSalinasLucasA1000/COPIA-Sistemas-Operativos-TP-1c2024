@@ -121,10 +121,9 @@ pthread_t hilo_planificador_largo_plazo;
 pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
 pthread_detach (hilo_planificador_largo_plazo);
 
+//escuchar a las instancias de entrada_salida
 pthread_t escuchar_instancias_entrada_salida;
-int* fd_copy_kernel = malloc(sizeof(int));
-*fd_copy_kernel = fd_kernel;
-pthread_create(&escuchar_instancias_entrada_salida,NULL,(void*)atender_entrada_salida,fd_copy_kernel);
+pthread_create(&escuchar_instancias_entrada_salida,NULL,(void*)esperar_entrada_salida_kernel,NULL);
 pthread_detach(escuchar_instancias_entrada_salida);
 
 consolaInteractiva();

@@ -102,7 +102,7 @@ void kernel_escuchar_cpu ()
 		}	
 }
 
-
+//funcion vieja
 void kernel_escuchar_entradasalida ()
 {
 	bool control_key = 1;
@@ -125,6 +125,42 @@ void kernel_escuchar_entradasalida ()
 		}	
 }
 
+//No definido que hara
+void atender_entrada_salida_kernel(int fd_cliente_entrada_salida)
+{
+	bool control_key = 1;
+	while (control_key) {
+			int cod_op = recibir_operacion(fd_cliente_entrada_salida);
+			switch (cod_op) {
+			case MENSAJE:
+				//
+				break;
+			case PAQUETE:
+				//
+				break;
+			case -1:
+				printf("Nada, por ahora.\n");
+				control_key = 0;
+			default:
+				printf("Nada, por ahora.\n");
+				break;
+			}
+		}
+}
+
+//creo un hilo por cada entrada salida que llegue
+void esperar_entrada_salida_kernel()
+{
+	while (1) 
+	{
+     pthread_t thread;
+     int *fd_conexion_ptr = malloc(sizeof(int));
+     *fd_conexion_ptr = accept(fd_kernel, NULL, NULL);
+	 handshakeServer(*fd_conexion_ptr);
+     pthread_create(&thread,NULL,(void*)atender_entrada_salida_kernel,fd_conexion_ptr);
+     pthread_detach(thread);
+    }
+}
 
 void kernel_escuchar_memoria ()
 {

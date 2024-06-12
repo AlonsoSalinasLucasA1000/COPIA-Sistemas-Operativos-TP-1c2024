@@ -116,6 +116,43 @@ void memoria_escuchar_entradasalida (){
 		}
 }
 
+//No definido exactamente
+void atender_entrada_salida_memoria(int fd_cliente_entrada_salida)
+{
+	bool control_key = 1;
+	while (control_key) {
+			int cod_op = recibir_operacion(fd_cliente_entrada_salida);
+			switch (cod_op) {
+			case MENSAJE:
+				//
+				break;
+			case PAQUETE:
+				//
+				break;
+			case -1:
+				printf("Nada, por ahora.\n");
+				control_key = 0;
+			default:
+				printf("Nada, por ahora.\n");
+				break;
+			}
+		}
+}
+
+//creo un hilo por cada conexion nueva de E/S
+void esperar_entrada_salida_memoria()
+{
+	while (1) 
+	{
+     pthread_t thread;
+     int *fd_conexion_ptr = malloc(sizeof(int));
+     *fd_conexion_ptr = accept(fd_memoria, NULL, NULL);
+	 handshakeServer(*fd_conexion_ptr);
+     pthread_create(&thread,NULL,(void*)atender_entrada_salida_memoria,fd_conexion_ptr);
+     pthread_detach(thread);
+    }
+}
+
 void iterator(char* value) 
 {
 	log_info(memoria_logger,"%s", value);

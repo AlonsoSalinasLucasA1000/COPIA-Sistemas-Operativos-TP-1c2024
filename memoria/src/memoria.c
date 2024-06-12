@@ -71,9 +71,7 @@ pthread_detach (hilo_entradasalida);
 */
 
 pthread_t escuchar_instancias_entrada_salida;
-int* fd_copy_memoria = malloc(sizeof(int));
-*fd_copy_memoria = fd_memoria;
-pthread_create(&escuchar_instancias_entrada_salida,NULL,(void*)atender_entrada_salida,fd_copy_memoria);
+pthread_create(&escuchar_instancias_entrada_salida,NULL,(void*)esperar_entrada_salida_memoria,NULL);
 pthread_detach(escuchar_instancias_entrada_salida);
 
 //escuchar mensajes de kernel
