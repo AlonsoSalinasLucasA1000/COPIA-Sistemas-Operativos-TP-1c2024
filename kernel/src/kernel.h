@@ -125,6 +125,7 @@ void kernel_escuchar_entradasalida ()
 		}	
 }
 
+
 void kernel_escuchar_memoria ()
 {
 	bool control_key = 1;

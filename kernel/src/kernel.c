@@ -74,18 +74,19 @@ log_info (kernel_logger, "Conectado a cpu exitosamente por interrupt.");
 handshakeClient(fd_cpu_interrupt, 2);
 
 
-
+/*
 //esperar conexion de entradasalida
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_kernel, kernel_logger, "ENTRADASALIDA");
 handshakeServer(fd_entradasalida);
+*/
 
-
-
+/*
 //escuchar mensajes de entradasalida
 pthread_t hilo_entradasalida;
 pthread_create (&hilo_entradasalida, NULL, (void*)kernel_escuchar_entradasalida, NULL);
 pthread_detach (hilo_entradasalida);
+*/
 
 
 //escuchar mensajes de cpu
@@ -120,8 +121,11 @@ pthread_t hilo_planificador_largo_plazo;
 pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
 pthread_detach (hilo_planificador_largo_plazo);
 
-
-
+pthread_t escuchar_instancias_entrada_salida;
+int* fd_copy_kernel = malloc(sizeof(int));
+*fd_copy_kernel = fd_kernel;
+pthread_create(&escuchar_instancias_entrada_salida,NULL,(void*)atender_entrada_salida,fd_copy_kernel);
+pthread_detach(escuchar_instancias_entrada_salida);
 
 consolaInteractiva();
 

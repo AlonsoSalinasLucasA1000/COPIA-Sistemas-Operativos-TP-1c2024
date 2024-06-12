@@ -392,6 +392,44 @@ void handshakeServer(int fd_client)
 	}
 }
 
+void atender_cliente(int fd_cliente_entrada_salida)
+{
+	bool control_key = 1;
+	while (control_key) {
+			int cod_op = recibir_operacion(fd_cliente_entrada_salida);
+			printf("Chekpoint2\n");
+			switch (cod_op) {
+			case MENSAJE:
+				//
+				break;
+			case PAQUETE:
+				//
+				break;
+			case -1:
+				printf("Nada, por ahora.\n");
+				control_key = 0;
+			default:
+				printf("Nada, por ahora.\n");
+				break;
+			}
+		}
+}
+
+void atender_entrada_salida(int* fd_server)
+{
+	while (1) 
+	{
+	 printf("Chekpoint1\n");
+     pthread_t thread;
+     int *fd_conexion_ptr = malloc(sizeof(int));
+     *fd_conexion_ptr = accept(*fd_server, NULL, NULL);
+	 handshakeServer(*fd_conexion_ptr);
+     pthread_create(&thread,NULL,(void*) atender_cliente,fd_conexion_ptr);
+     pthread_detach(thread);
+	 printf("Chekpoint3\n");
+    }
+}
+
 void liberar_conexion(int socket)
 {
 	close(socket);

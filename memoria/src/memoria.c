@@ -50,11 +50,12 @@ log_info (memoria_logger, "Esperando a conectar con Kernel.");
 fd_kernel = esperar_cliente (fd_memoria, memoria_logger, "KERNEL");
 handshakeServer(fd_kernel);
 
+/*
 //espero conexion entradasalida
 log_info (memoria_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_memoria, memoria_logger, "ENTRADASALIDA");
 handshakeServer(fd_entradasalida);
-
+*/
 
 
 //escuchar mensajes de cpu
@@ -62,12 +63,18 @@ pthread_t hilo_cpu;
 pthread_create (&hilo_cpu, NULL, (void*)memoria_escuchar_cpu, NULL);
 pthread_detach (hilo_cpu);
 
-
+/*
 //escuchar mensajes de entradasalida
 pthread_t hilo_entradasalida;
 pthread_create (&hilo_entradasalida, NULL, (void*)memoria_escuchar_entradasalida, NULL);
 pthread_detach (hilo_entradasalida);
+*/
 
+pthread_t escuchar_instancias_entrada_salida;
+int* fd_copy_memoria = malloc(sizeof(int));
+*fd_copy_memoria = fd_memoria;
+pthread_create(&escuchar_instancias_entrada_salida,NULL,(void*)atender_entrada_salida,fd_copy_memoria);
+pthread_detach(escuchar_instancias_entrada_salida);
 
 //escuchar mensajes de kernel
 pthread_t hilo_kernel;
