@@ -237,11 +237,12 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	return to_return;
 }
 
-EntradaSalida* deserializar_entrada_salida(t_newBuffer buffer)
+/*
+EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer)
 {
 	EntradaSalida* to_return = malloc(sizeof(EntradaSalida));
 
-	void* stream = buffer.stream;
+	void* stream = buffer->stream;
 
 	//deserializamos los campos del buffer
 	memcpy(&(to_return->fd_cliente), stream, sizeof(int));
@@ -253,13 +254,14 @@ EntradaSalida* deserializar_entrada_salida(t_newBuffer buffer)
 	memcpy(to_return->nombre,stream,to_return->nombre_length+1);
 	stream += sizeof(to_return->nombre_length+1);
 
-	memcpy(to_return->path_length,stream,sizeof(uint32_t));
+	memcpy(&(to_return->path_length),stream,sizeof(uint32_t));
 	stream += sizeof(uint32_t);
 	to_return->path = malloc(sizeof(to_return->nombre_length+1));
 	memcpy(to_return->path,stream,to_return->path_length+1);
 
 	return to_return;
 }
+*/
 
 
 void *recibir_buffer(int *size, int socket_cliente)
@@ -459,7 +461,7 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 
     //Calculamos su tamaño
     //buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(op_code) + (proceso->path_length+1);//sacar los uint8_t
-	buffer->size = sizeof(uint32_t)*3 + sizeof(uint8_t)*4 + sizeof(estado_proceso) + sizeof(RegistrosCPU) + (proceso->path_length+1);//cambios
+	buffer->size = sizeof(uint32_t)*3 + sizeof(estado_proceso) + sizeof(RegistrosCPU) + (proceso->path_length+1);//cambios
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	

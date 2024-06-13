@@ -169,26 +169,27 @@ void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 			{
 			case GENERICA:
 				//
+				/*
 				printf("Recibi algo de una interfaz generica, vas bien\n");
 				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				printf("Ha llegado la siguiente entrada salida: %s",new_io->nombre);
 				printf("Ha llegado la siguiente entrada salida: %s",new_io->path);
-				
+				*/
 				break;
 			case STDIN:
 				//
 				printf("Recibi algo de una interfaz stdin, vas bien\n");
-				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
+				//EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
 			case STDOUT:
 				//
 				printf("Recibi algo de una interfaz stdout, vas bien\n");
-				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
+				//EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
 			case DIALFS:
 				//
 				printf("Recibi algo de una interfaz dialfs, vas bien\n");
-				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
+				//EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
 			case -1:
 			    printf("ERROR\n");
