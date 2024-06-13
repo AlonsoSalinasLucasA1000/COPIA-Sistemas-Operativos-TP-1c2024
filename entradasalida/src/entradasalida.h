@@ -134,7 +134,7 @@ void enviarDatosKernel(int fd_kernel, char** datos, char* tipo_interfaz)
 	
 	memcpy(buffer->stream + buffer->offset, &to_send->path_length, sizeof(uint32_t));
 	buffer->offset += sizeof(uint32_t);
-	memcpy(buffer->stream + buffer->offset, &to_send->path, sizeof(to_send->nombre_length+1));
+	memcpy(buffer->stream + buffer->offset, &to_send->path, sizeof(to_send->nombre_length+1));//no seria (to_send->path_length+1) ???
 
 	//creamos el paquete
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -277,7 +277,7 @@ void enviarDatosMemoria(int fd_memoria, char** datos, char* tipo_interfaz)
 	}
 	
 	paquete->buffer = buffer;
-	if (paquete->codigo_operacion != GENERICA){
+	if (paquete->codigo_operacion != GENERICA && paquete->codigo_operacion != WRONG ){
 		//Empaquetamos el Buffer
 		void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
 		int offset = 0;

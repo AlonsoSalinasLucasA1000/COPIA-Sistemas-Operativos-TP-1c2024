@@ -26,6 +26,10 @@ int pid = 0;
 t_queue* cola_new;
 t_queue* cola_ready;
 t_queue* cola_blocked;
+t_list* entradasSalidas_genericas;
+t_list* entradasSalidas_stdin;
+t_list* entradasSalidas_stdout;
+t_list* entradasSalidas_dialfs;
 
 t_log *kernel_logger; // LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config *kernel_config;
@@ -89,6 +93,16 @@ void kernel_escuchar_cpu ()
 			case PAQUETE:
 				//
 				break;
+			case IO_GEN_SLEEP:
+				//
+				break;
+			
+			case IO_STDIN_READ:
+				//
+				break;
+			case IO_STDOUT_WRITE:
+				//
+				break;
 			case -1:
 				log_error(kernel_logger, "Desconexion de cpu.");
 				control_key = 0;
@@ -150,24 +164,31 @@ void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 			recv(*fd_cliente_entrada_salida,&(paquete->buffer->size),sizeof(uint32_t),0);
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(*fd_cliente_entrada_salida,paquete->buffer->stream, paquete->buffer->size,0);
-					
+				
 			switch (cod_op) 
 			{
 			case GENERICA:
 				//
 				printf("Recibi algo de una interfaz generica, vas bien\n");
+				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
+				printf("Ha llegado la siguiente entrada salida: %s",new_io->nombre);
+				printf("Ha llegado la siguiente entrada salida: %s",new_io->path);
+				
 				break;
 			case STDIN:
 				//
 				printf("Recibi algo de una interfaz stdin, vas bien\n");
+				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
 			case STDOUT:
 				//
 				printf("Recibi algo de una interfaz stdout, vas bien\n");
+				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
 			case DIALFS:
 				//
 				printf("Recibi algo de una interfaz dialfs, vas bien\n");
+				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
 			case -1:
 			    printf("ERROR\n");

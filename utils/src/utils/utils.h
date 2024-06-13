@@ -28,9 +28,13 @@ typedef enum
 	STDIN,
 	STDOUT,
 	DIALFS,
+	IO_GEN_SLEEP,
+	IO_STDIN_READ,
+	IO_STDOUT_WRITE,
 	WRONG,
 	GOKU
 }op_code;
+
 
 /*typedef struct
 {
@@ -109,6 +113,9 @@ typedef struct
 	uint32_t path_length;
 	char* path;
 } EntradaSalida;
+
+
+
 
 //funciones crear conexion
 int crear_conexion(char* ip, char* puerto,char* nameServ);

@@ -62,7 +62,7 @@ pthread_create (&hilo_kernel_dispatch, NULL, (void*)cpu_escuchar_kernel_dispatch
 pthread_detach (hilo_kernel_dispatch);
 
 pthread_t hilo_kernel_interrupt;
-pthread_create (&hilo_kernel_interrupt, NULL, (void*)cpu_escuchar_kernel_dispatch, NULL);
+pthread_create (&hilo_kernel_interrupt, NULL, (void*)cpu_escuchar_kernel_dispatch, NULL); 
 pthread_detach (hilo_kernel_interrupt);
 
 //escuchar mensajes de memoria
