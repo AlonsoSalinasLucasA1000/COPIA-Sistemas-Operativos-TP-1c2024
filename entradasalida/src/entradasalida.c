@@ -83,6 +83,8 @@ handshakeClient(fd_kernel, 3);
 //enviar datos al kernel
 enviarDatosKernel(fd_kernel,datosInicialesPartidos,TIPO_INTERFAZ);
 
+enviarDatosMemoria(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
+
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)entradasalida_escuchar_memoria, NULL);

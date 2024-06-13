@@ -117,17 +117,32 @@ void memoria_escuchar_entradasalida (){
 }
 
 //No definido exactamente
-void atender_entrada_salida_memoria(int fd_cliente_entrada_salida)
+void atender_entrada_salida_memoria(int* fd_cliente_entrada_salida)
 {
 	bool control_key = 1;
 	while (control_key) {
-			int cod_op = recibir_operacion(fd_cliente_entrada_salida);
+			int cod_op = recibir_operacion(*fd_cliente_entrada_salida);
+			printf("Hemos recibido el codigo de operacion\n");
+			//desempaquete
+			printf("El codigo de operacion es: %d\n",cod_op);
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(*fd_cliente_entrada_salida,&(paquete->buffer->size),sizeof(uint32_t),0);
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(*fd_cliente_entrada_salida,paquete->buffer->stream, paquete->buffer->size,0);
+					
 			switch (cod_op) {
-			case MENSAJE:
+			case STDIN:
 				//
+				printf("Recibi algo de una interfaz stdin, vas bien\n");
 				break;
-			case PAQUETE:
+			case STDOUT:
 				//
+				printf("Recibi algo de una interfaz stdout, vas bien\n");
+				break;
+			case DIALFS:
+				//
+				printf("Recibi algo de una interfaz dialfs, vas bien\n");
 				break;
 			case -1:
 				printf("Nada, por ahora.\n");
