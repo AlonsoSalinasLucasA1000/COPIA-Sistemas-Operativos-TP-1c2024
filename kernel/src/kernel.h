@@ -21,6 +21,7 @@ sem_t sem; //semaforo mutex region critica cola new
 sem_t sem_ready; 
 sem_t sem_cant; //semaforo cant de elementos en la cola
 sem_t sem_cant_ready;
+sem_t sem_mutex_plani_corto; //semaforo oara planificacion FIFO
 
 int pid = 0;
 t_queue* cola_new;
@@ -184,8 +185,6 @@ void iniciar_proceso(char* path)
 	//procesos_en_new++;
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW, funcion iniciar proceso\n", pcb->PID);
-
-
 }
 
 void atender_instruccion (char* leido)
@@ -278,7 +277,6 @@ void consolaInteractiva()
 	}
 }
 
-
 void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
 {
     //Creamos un Buffer
@@ -322,8 +320,6 @@ void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
     free(paquete);
 }
 
-
-
 void informar_memoria_nuevo_procesoNEW()
 {
 	//CREAMOS BUFFER
@@ -345,7 +341,6 @@ void informar_memoria_nuevo_procesoNEW()
 	sem_post(&sem_cant_ready);  // mutex hace wait
 	
 }
-
 
 void finalizar_proceso ()
 {
@@ -461,7 +456,6 @@ void enviar_pcb_a_cpu()
 
 	to_send->path = string_duplicate( pcb_cola->path);
 
-	//ACÁ SI MANDO POR FD_CPU_DISPATCH, NO ENVIA NADA
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
 }
 
@@ -470,12 +464,99 @@ void planificador_corto_plazo()
 
 	while(1)
 		{
+			
+			if(strcmp(ALGORITMO_PLANIFICACION,"FIFO")==0)
+			{
+				//PLANIFICAR POR FIFO
+				sem_wait(&sem_mutex_plani_corto);
+				enviar_pcb_a_cpu();
+				sem_post(&sem_mutex_plani_corto);
+			}
+			
+			if(strcmp(ALGORITMO_PLANIFICACION,"RR")==0)
+			{
+
+				//PLANIFICAR POR RR
+				// Simulación del planificador de Round Robin
+				/*#include <stdio.h>
+				#include <stdlib.h>
+				
+									#define QUANTUM 3
+									
+					// Definición de la estructura PCB (Process Control Block)
+					typedef struct {
+						int pid;  // Identificador del proceso
+						int burst_time;  // Tiempo de ráfaga restante del proceso
+					} PCB;
+
+					// Función para ejecutar un proceso con el quantum actual
+					void ejecutar_proceso(PCB *proceso) {
+						printf("Ejecutando proceso %d\n", proceso->pid);
+						proceso->burst_time -= QUANTUM;  // Reducir el tiempo de ráfaga restante por el quantum
+					}
+
+					int main() {
+						// Ejemplo de una cola de procesos (podrían ser procesos en espera)
+						PCB cola_procesos[] = {
+							{1, 9},
+							{2, 6},
+							{3, 4},
+							{4, 5},
+							{5, 8}
+						};
+
+						int num_procesos = sizeof(cola_procesos) / sizeof(cola_procesos[0]);
+
+						// Simulación del planificador de Round Robin
+						int tiempo_total = 0;
+						while (1) {
+							int proceso_ejecutado = 0;																	
+							for (int i = 0; i < num_procesos; i++) {                  							
+								if (cola_procesos[i].burst_time > 0) {										
+									proceso_ejecutado = 1;											
+									if (cola_procesos[i].burst_time > QUANTUM) {										
+										ejecutar_proceso(&cola_procesos[i]);
+										tiempo_total += QUANTUM;
+									} else {
+										tiempo_total += cola_procesos[i].burst_time;
+										cola_procesos[i].burst_time = 0;
+									}
+								}
+							}
+						int cantidad_procesos_ready = queue_size(cola_ready);
+						for ( int i = 0; i < cantidad_procesos_ready; i++){
+							PCB* proceso_ejecutar = queue_pop(cola_ready);
+							if(proceso_ejecutar.quantum < QUANTUM  ) {         // (QUANTUM = 2000)
+								enviar_pcb_a_cpu();
+								
+						
+						
+						
+						
+							if (!proceso_ejecutado) {
+								break;  // Todos los procesos han sido completados
+							}
+						}
+
+						printf("Tiempo total transcurrido: %d unidades de tiempo\n", tiempo_total);
+
+						return 0;
+					}*/
+				
+			}
+			if(strcmp(ALGORITMO_PLANIFICACION,"VRR")==0)
+			{
+
+				//PLANIFICAR POR VRR
+			}
+
+
 			//usamos semaforo para avisar
 			//enviamos la pcb a la cpu
-			enviar_pcb_a_cpu();
+			//enviar_pcb_a_cpu();
 			//SEMAFORO CON UNA ESPERA PARA RECIBIR EL PROCESO NUEVAMENTE
 		}
 }
 	
 
-#endif KERNEL_H_ 
+#endif /* KERNEL_H_ */

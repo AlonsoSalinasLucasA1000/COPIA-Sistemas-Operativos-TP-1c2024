@@ -4,14 +4,15 @@
 
 int main(int argc, char* argv[]) {
 
-sem_init(&sem, 0, 1); // EM en la cola new
-sem_init(&sem_ready, 0, 1);
-sem_init(&sem_cant,0,0); // el productor es el inicial_proceso
-sem_init(&sem_cant_ready,0,0);
+    sem_init(&sem, 0, 1); // EM en la cola new
+    sem_init(&sem_ready, 0, 1);
+    sem_init(&sem_cant,0,0); // el productor es el inicial_proceso
+    sem_init(&sem_cant_ready,0,0);
+    sem_init(&sem_mutex_plani_corto,0,1);
 
 
 
-kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
+    kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (kernel_logger == NULL)
 	{
 		perror("Algo paso con el log. No se pudo crear.");
@@ -79,7 +80,6 @@ handshakeClient(fd_cpu_interrupt, 2);
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_kernel, kernel_logger, "ENTRADASALIDA");
 handshakeServer(fd_entradasalida);
-
 
 
 //escuchar mensajes de entradasalida

@@ -22,6 +22,9 @@ int TAM_PAGINA;
 char* PATH_INSTRUCCIONES;
 int RETARDO_RESPUESTA;
 
+void* espacio_usuario;
+void* espacio_pagina;
+
 char* abrir_archivo(char* path, int PC);
 
 ProcesoMemoria* encontrarProceso(t_list* lista, uint32_t pid)
@@ -74,7 +77,9 @@ void memoria_escuchar_cpu (){
 				//leemos la linea indicada por el PC
 			    char* instruccion = abrir_archivo(datos->path, proceso->PC); 
 				printf("Enviaremos a la cpu: %s\n",instruccion); 
-				//enviamos
+				//enviamos, sin antes dormir el tiempo esperado
+				printf("Me voy a mimir, buenas noches\n");
+				sleep(RETARDO_RESPUESTA);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu);
 
 				break;
@@ -182,7 +187,13 @@ char* abrir_archivo(char* path, int PC)
 	if( PC < cantInstrucciones )
 	{
 		to_ret = malloc(strlen(newContent[PC])+1);
-		to_ret = newContent[PC];
+		//to_ret = newContent[PC];
+		if (to_ret == NULL) {
+        printf("Error al asignar memoria para to_ret\n");
+        // Manejar el error apropiadamente
+    	}
+    	
+		strcpy(to_ret, newContent[PC]); // Copiar el contenido de newContent[PC] a to_ret
 	}
 	else
 	{
@@ -195,10 +206,10 @@ char* abrir_archivo(char* path, int PC)
 }
 
 void memoria_escuchar_kernel (){
-		bool control_key = 1;
+	bool control_key = 1;
 		
 		
-			//t_list* lista;
+	//t_list* lista;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 
@@ -230,7 +241,9 @@ void memoria_escuchar_kernel (){
 			case PAQUETE:
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
 				if(nuevoProceso != NULL){ 
-					//list proceso no se aniade correctamente a la lista
+					//añadimos el proceso a la lista de procesos que posee la memoria, además le creamos un array con su tabla de páginas
+					printf("Me voy a mimir, buenas noches\n");
+					sleep(RETARDO_RESPUESTA);
 					list_add(listProcesos, nuevoProceso);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);

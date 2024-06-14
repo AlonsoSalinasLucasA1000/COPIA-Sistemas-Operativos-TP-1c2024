@@ -51,25 +51,6 @@ void enviar_pcb_memoria(int PID, int PC)
 	to_send->path = "";
 	enviarPCB (to_send, fd_memoria,PROCESO);
 
-/*
-	//esperar recibir mensaje de memoria
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-	paquete->buffer = malloc(sizeof(t_newBuffer));
-	recibir_operacion(fd_memoria);
-	recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
-	paquete->buffer->stream = malloc(paquete->buffer->size);
-	recv(fd_memoria,paquete->buffer->stream, paquete->buffer->size,0);
-	printf("recibi el mensaje\n");
-
-	void *stream = paquete->buffer->stream;
-	memcpy(&(paquete->buffer->size), stream, sizeof(uint32_t));
-	stream += sizeof(uint32_t);
-	// deserailizamos el path como tal
-	char* ret = malloc(paquete->buffer->size);
-	memcpy(ret, stream, paquete->buffer->size);
-	printf("deserialice el paquete correctamente\n");
-*/
-
 }
 
 //UNA POSIBLE SOLUCION Y LOS CASOS.
@@ -137,7 +118,6 @@ void* obtener_registro(char* registro, PCB* proceso)
 				else
 				{
 					printf("REGISTRO uint32\n");
-// casos registros uint32
 					if( strcmp(registro,"EAX") == 0 )
 					{
 						return (void*)&(proceso->registro.EAX); // Devuelve un puntero al valor de EAX
@@ -604,8 +584,47 @@ void ejecutar_proceso(PCB* proceso)
 				
 			}
 		}
-		
-		//CASO DE TENER UNA INSTRUCCION 
+	
+		//CASO DE TENER UNA INSTRUCCION IO_GEN_SLEEP
+		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
+		/*
+		if (strcmp(instruccion_split[0], "IO_STDIN_READ") == 0)
+		{
+			if( esRegistroUint8(instruccion_split[1]))
+			{
+				uint8_t* direc_logica = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
+				int direccion_logica = *direc_logica;
+				if( direc_logica != NULL )
+				{
+					if ( esRegistroUint8(instruccion_split[2])){
+						uint8_t* tam_registro = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
+						mmu (direc_logica , tam_registro); //fc a implementar (MMU)
+					}
+					
+				}	
+
+				else
+				{
+					printf("El registro no se encontró en el proceso.\n");
+				}
+			}
+			else
+			{
+				if( esRegistroUint32(instruccion_split[1]))
+				{
+					uint32_t* valor_registro = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
+					if( valor_registro != NULL )
+					{
+					}
+				}
+				else
+				{
+					printf("El registro no se encontró en el proceso.\n");
+				}
+				
+			}
+		}
+		*/
 		
 		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 			proceso->PC++;

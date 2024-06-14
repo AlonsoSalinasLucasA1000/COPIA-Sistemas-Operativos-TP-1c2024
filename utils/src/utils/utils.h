@@ -56,7 +56,7 @@ typedef enum{
 	NEW,
 	READY,
 	BLOCKED,
-	EXEC,
+	EXEC, //pasa a ejecutar cuando sale entra a la cola de ready
 	EXIT
 } estado_proceso;
 
@@ -78,12 +78,8 @@ typedef struct
 {
 	uint32_t PID;
 	uint32_t PC;
-	uint32_t quantum;
+	uint32_t quantum; //es para VRR
 	RegistrosCPU registro;//descomente para implementarlo
-	/*uint8_t AX;
-	uint8_t BX;
-	uint8_t CX;
-	uint8_t DX;*/
 	estado_proceso estado;
 	uint32_t path_length;
 	char* path;
@@ -95,6 +91,11 @@ typedef struct
 	uint32_t path_length;
 	char* path;
 } ProcesoMemoria;
+
+
+
+
+
 
 //funciones crear conexion
 int crear_conexion(char* ip, char* puerto,char* nameServ);
