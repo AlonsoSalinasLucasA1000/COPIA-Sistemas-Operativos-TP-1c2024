@@ -106,6 +106,11 @@ cola_ready = queue_create();
 cola_blocked = queue_create();
 
 //creo las listas con las entradas
+entradasSalidas_genericas = list_create();
+entradasSalidas_stdin = list_create();
+entradasSalidas_stdout = list_create();
+entradasSalidas_dialfs = list_create();
+
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
 

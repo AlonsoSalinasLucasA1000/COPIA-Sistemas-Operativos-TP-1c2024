@@ -71,6 +71,29 @@ Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
 	return to_return;
 }
 
+EntradaSalida* encontrarEntradaSalida(t_list* lista, char* nombreInterfaz)
+{
+	EntradaSalida* ret;
+	int i = 0;
+	while( i < list_size(lista) && i != -(1))
+	{
+		EntradaSalida* got = list_get(lista,i);
+		printf("We have found an I/O which name is: %s\n",got->nombre);
+		if( strcmp(nombreInterfaz,got->nombre) == 0 )
+		{
+			ret = got;
+			i = -1;
+		}
+		i++;
+	}
+	if( i == list_size(lista) )
+	{
+		ret->fd_cliente = -1;
+	}
+	return ret;
+}
+
+
 void kernel_escuchar_cpu ()
 {
 	bool control_key = 1;
@@ -91,7 +114,7 @@ void kernel_escuchar_cpu ()
 			    PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				proceso->estado = EXIT;
 				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
-				printf("Recibidos el proceso con el QUANTUM: %d",proceso->quantum);
+				printf("Recibidos el proceso con el QUANTUM: %d\n",proceso->quantum);
 				printf("Recibimos el proceso con el AX: %d\n",proceso->registro.AX);//cambios
 				printf("Recibimos el proceso con el BX: %d\n",proceso->registro.BX);//cambios
 				printf("Recibimos el proceso con el CX: %d\n",proceso->registro.CX);//cambios
@@ -121,6 +144,22 @@ void kernel_escuchar_cpu ()
 				Instruccion_io* instruccion_io_gen = deserializar_instruccion_io(paquete->buffer);
 				printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
 				printf("El PID de la instruccion es: %d\n",instruccion_io_gen->proceso.PID);
+
+				//encuentro al proceso en la lista
+				char** instruccion_split = string_split(instruccion_io_gen->instruccion, " ");
+				int unidadDeTrabajo = atoi(instruccion_split[2]);
+				EntradaSalida* io_to_sleep = encontrarEntradaSalida(entradasSalidas_genericas,instruccion_split[1]);
+				if(io_to_sleep->fd_cliente == (-1) )
+				{
+					//no existe
+					//mandar el proceso a bloquear
+					printf("No encontré la entrada salida, EXPLOTO\n");
+				}
+				else
+				{
+                    //ejecutar_entrada_salida_generica(io_to_sleep->fd_cliente,unidadDeTrabajo);
+					printf("Lo encontré, vas por buen camino\n");
+				}
 				break;
 			
 			case IO_STDIN_READ:
@@ -180,6 +219,21 @@ void kernel_escuchar_entradasalida ()
 		}	
 }
 
+void ejecutar_entrada_salida_generica(int* fd_entradasalida, int unidadDeTrabajo)
+{
+	//tenemos que enviar
+}
+
+void ejecutar_entrada_salida_stdin()
+{
+
+}
+
+void ejecutar_entrada_salida_stdout()
+{
+
+}
+
 //No definido que hara
 void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 {
@@ -201,25 +255,39 @@ void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 			{
 			case GENERICA:
 				//
-				
 				printf("Recibi algo de una interfaz generica, vas bien\n");
 				EntradaSalida* new_io_generica = deserializar_entrada_salida(paquete->buffer);
 				printf("Ha llegado la siguiente entrada salida con nombre: %s\n",new_io_generica->nombre);
 				printf("Ha llegado la siguiente entrada salida con path: %s\n",new_io_generica->path);
-	
+				new_io_generica->fd_cliente = *fd_cliente_entrada_salida;
+
+				//lo incluímos en la cola general de entradas salidas genericas
+				list_add(entradasSalidas_genericas,new_io_generica);
 				break;
 			case STDIN:
 				//
 				printf("Recibi algo de una interfaz stdin, vas bien\n");
-				//EntradaSalida* new_io = deserializar_entrada_salida(buffer);
+				EntradaSalida* new_io_stdin = deserializar_entrada_salida(paquete->buffer);
+				printf("Ha llegado la siguiente entrada salida con nombre: %s\n",new_io_stdin->nombre);
+				printf("Ha llegado la siguiente entrada salida con path: %s\n",new_io_stdin->path);
+				new_io_stdin->fd_cliente = *fd_cliente_entrada_salida;
+
+				//lo incluímos en la cola general de entradas salidas genericas
+				list_add(entradasSalidas_stdin,new_io_stdin);
 				break;
 			case STDOUT:
 				//
 				printf("Recibi algo de una interfaz stdout, vas bien\n");
-				//EntradaSalida* new_io = deserializar_entrada_salida(buffer);
+				EntradaSalida* new_io_stdout = deserializar_entrada_salida(paquete->buffer);
+				printf("Ha llegado la siguiente entrada salida con nombre: %s\n",new_io_stdout->nombre);
+				printf("Ha llegado la siguiente entrada salida con path: %s\n",new_io_stdout->path);
+				new_io_stdout->fd_cliente = *fd_cliente_entrada_salida;
+
+				//lo incluímos en la cola general de entradas salidas genericas
+				list_add(entradasSalidas_stdout,new_io_stdout);
 				break;
 			case DIALFS:
-				//
+				//FALTA DESARROLLAR POR COMPLETO
 				printf("Recibi algo de una interfaz dialfs, vas bien\n");
 				//EntradaSalida* new_io = deserializar_entrada_salida(buffer);
 				break;
@@ -405,7 +473,6 @@ void consolaInteractiva()
 	}
 }
 
-
 void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
 {
     //Creamos un Buffer
@@ -448,8 +515,6 @@ void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
     free(paquete->buffer);
     free(paquete);
 }
-
-
 
 void informar_memoria_nuevo_procesoNEW()
 {
@@ -594,7 +659,43 @@ void enviar_pcb_a_cpu()
 
 void planificador_corto_plazo()
 {
+	
+	if(strcmp(ALGORITMO_PLANIFICACION,"FIFO")==0)
+	{
 
+		//PLANIFICAR POR FIFO
+	}
+	if(strcmp(ALGORITMO_PLANIFICACION,"RR")==0)
+	{
+
+		//PLANIFICAR POR RR
+		 // Simulación del planificador de Round Robin
+    int tiempo_total = 0;
+    while (1) {
+        int proceso_ejecutado = 0;
+        for (int i = 0; i < num_procesos; i++) {
+            if (cola_procesos[i].burst_time > 0) {
+                proceso_ejecutado = 1;
+                if (cola_procesos[i].burst_time > QUANTUM) {
+                    ejecutar_proceso(&cola_procesos[i]);
+                    tiempo_total += QUANTUM;
+                } else {
+                    tiempo_total += cola_procesos[i].burst_time;
+                    cola_procesos[i].burst_time = 0;
+                }
+            }
+        }
+        if (!proceso_ejecutado) {
+            break;  // Todos los procesos han sido completados
+        }
+    }
+		
+	}
+	if(strcmp(ALGORITMO_PLANIFICACION,"VRR")==0)
+	{
+
+		//PLANIFICAR POR VRR
+	}
 	while(1)
 		{
 			//usamos semaforo para avisar
@@ -602,6 +703,7 @@ void planificador_corto_plazo()
 			enviar_pcb_a_cpu();
 			//SEMAFORO CON UNA ESPERA PARA RECIBIR EL PROCESO NUEVAMENTE
 		}
+	
 }
 	
 
