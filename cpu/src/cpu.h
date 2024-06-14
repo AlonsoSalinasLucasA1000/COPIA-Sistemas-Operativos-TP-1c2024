@@ -73,43 +73,6 @@ void enviar_pcb_memoria(int PID, int PC)
 }
 
 //UNA POSIBLE SOLUCION Y LOS CASOS.
-//UNA POSIBLE SOLUCION Y LOS CASOS.
-/*
-void* obtener_registro(char* registro, PCB* proceso)
-{
-	if( strcmp(registro,"AX") == 0 )
-	{
-		//return *proceso->AX;// 
-		return (void*)&(proceso->registro.AX); // Devuelve un puntero al valor de AX
-	}
-	else
-	{
-		if( strcmp(registro,"BX") == 0 )//cambios
-		{
-			return (void*)&(proceso->registro.BX); // Devuelve un puntero al valor de BX
-		}
-		else
-		{
-			if( strcmp(registro,"CX") == 0 )//cambios
-			{
-				return (void*)&(proceso->registro.CX); // Devuelve un puntero al valor de CX
-			}
-			else
-			{
-				if( strcmp(registro,"DX") == 0 )
-				{
-					return (void*)&(proceso->registro.DX); // Devuelve un puntero al valor de DX
-				}
-				else
-				{
-					printf("ERROR, NO SE ENCONTRO REGISTRO\n");
-				}
-			}
-		}
-	}
-	return NULL;
-}*/
-
 void* obtener_registro(char* registro, PCB* proceso)
 {
 	if( strcmp(registro,"AX") == 0 )
@@ -266,43 +229,31 @@ bool esRegistroUint32(char* registro)
 	return to_ret;
 }
 
-/*
-void enviarPCB (char** instruccion, int tam_instruccion, PCB* proceso, op_code codigo_operacion )
+
+void enviar_instruccion_kernel (char* instruccion, uint32_t tam_instruccion, PCB proceso, op_code codigo_operacion )
 {
     //Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-	buffer->size = sizeof(PCB) + (tam_instruccion);//cambios
+	buffer->size = sizeof(PCB) + (tam_instruccion) + sizeof(uint32_t);//cambios
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
     //Movemos los valores al buffer
-    memcpy(buffer->stream + buffer->offset, &proceso->PID, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->PC, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->quantum, sizeof(uint32_t));
-    buffer->offset += sizeof(uint32_t);
-
-	memcpy(buffer->stream + buffer->offset, &(proceso->registro), sizeof(RegistrosCPU));//cambios
-    buffer->offset += sizeof(RegistrosCPU);
-
-	memcpy(buffer->stream + buffer->offset, &proceso->estado, sizeof(estado_proceso));
-    buffer->offset += sizeof(estado_proceso);
+    memcpy(buffer->stream + buffer->offset, &proceso, sizeof(PCB));
+    buffer->offset += sizeof(PCB);
 
 
     // Para el nombre primero mandamos el tamaño y luego el texto en sí:
-    memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
+    memcpy(buffer->stream + buffer->offset, &tam_instruccion, sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
-    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
+    memcpy(buffer->stream + buffer->offset, instruccion, tam_instruccion);
     
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
     //Podemos usar una constante por operación
-    paquete->codigo_operacion = codigo;
+    paquete->codigo_operacion = codigo_operacion;
     paquete->buffer = buffer;
 
     //Empaquetamos el Buffer
@@ -314,7 +265,7 @@ void enviarPCB (char** instruccion, int tam_instruccion, PCB* proceso, op_code c
     offset += sizeof(uint32_t);
     memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
     //Por último enviamos
-    send(socket_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+    send(fd_kernel_dispatch, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
@@ -323,7 +274,7 @@ void enviarPCB (char** instruccion, int tam_instruccion, PCB* proceso, op_code c
     free(paquete);
 }
 
-
+/*
 void enviar_instruccion_kernel (char** instruccion, int tam_instruccion, PCB* proceso, op_code codigo_operacion ){
 	void* to_send = malloc( sizeof(tam_instruccion)+ sizeof(op_code)+sizeof(PCB));
 	to_send = instruccion;
@@ -356,8 +307,8 @@ void enviar_instruccion_kernel (char** instruccion, int tam_instruccion, PCB* pr
     free(paquete->buffer);
     free(paquete);
 	free(to_send);
-}
-*/
+}*/
+
 void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
@@ -523,14 +474,27 @@ void ejecutar_proceso(PCB* proceso)
 		}
 
 		//CASO DE TENER UNA INSTRUCCION IO_GEN_SLEEP
-		/*if (strcmp(instruccion_split[0], "IO_GEN_SLEEP") == 0)
+		if (strcmp(instruccion_split[0], "IO_GEN_SLEEP") == 0)
 		{
-			int instruccion_length = strlen(instruccion_split)+1;
-			enviar_instruccion_kernel(instruccion_split, instruccion_length,proceso,IO_GEN_SLEEP);
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,IO_GEN_SLEEP);
 			
-		}*/
+		}
 		
-		//CASO DE TENER UNA INSTRUCCION 
+		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ
+		if (strcmp(instruccion_split[0], "IO_STDIN_READ") == 0)
+		{
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,IO_STDIN_READ);
+			
+		}
+		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE
+		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0)
+		{
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,IO_STDOUT_WRITE);
+			
+		}
 		
 		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 			proceso->PC++;

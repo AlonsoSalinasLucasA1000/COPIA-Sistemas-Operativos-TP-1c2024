@@ -105,7 +105,7 @@ cola_new = queue_create();
 cola_ready = queue_create();
 cola_blocked = queue_create();
 
-//creo 
+//creo las listas con las entradas
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
 

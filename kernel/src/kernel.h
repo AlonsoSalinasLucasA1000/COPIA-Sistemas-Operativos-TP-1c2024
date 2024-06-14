@@ -26,6 +26,8 @@ int pid = 0;
 t_queue* cola_new;
 t_queue* cola_ready;
 t_queue* cola_blocked;
+
+//listas con las entradas salidas
 t_list* entradasSalidas_genericas;
 t_list* entradasSalidas_stdin;
 t_list* entradasSalidas_stdout;
@@ -48,7 +50,26 @@ char* INSTANCIAS_RECURSOS;
 char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 
 
-
+Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
+	
+	Instruccion_io* to_return = malloc(sizeof(Instruccion_io));
+	void* stream = buffer->stream;
+	memcpy(&(to_return->proceso),stream, sizeof(PCB));
+	stream += sizeof(PCB);
+	
+	memcpy(&(to_return->tam_instruccion), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	
+	to_return->instruccion = malloc(to_return->tam_instruccion);
+	if (to_return->instruccion == NULL) {
+		// Manejar el error de asignación de memoria
+		// Por ejemplo, imprimir un mensaje de error y salir de la función
+		fprintf(stderr, "Error: No se pudo asignar memoria para la instrucción.\n");
+		return NULL;
+	}
+	memcpy(to_return->instruccion, stream, to_return->tam_instruccion);
+	return to_return;
+}
 
 void kernel_escuchar_cpu ()
 {
@@ -63,12 +84,14 @@ void kernel_escuchar_cpu ()
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(fd_cpu_dispatch,paquete->buffer->stream, paquete->buffer->size,0);
 
+			
 			switch (cod_op) {
 			case PROCESOFIN:
 			//recibo el proceso de la CPU
 			    PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				proceso->estado = EXIT;
 				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
+				printf("Recibidos el proceso con el QUANTUM: %d",proceso->quantum);
 				printf("Recibimos el proceso con el AX: %d\n",proceso->registro.AX);//cambios
 				printf("Recibimos el proceso con el BX: %d\n",proceso->registro.BX);//cambios
 				printf("Recibimos el proceso con el CX: %d\n",proceso->registro.CX);//cambios
@@ -95,13 +118,22 @@ void kernel_escuchar_cpu ()
 				break;
 			case IO_GEN_SLEEP:
 				//
+				Instruccion_io* instruccion_io_gen = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
+				printf("El PID de la instruccion es: %d\n",instruccion_io_gen->proceso.PID);
 				break;
 			
 			case IO_STDIN_READ:
 				//
+				Instruccion_io* instruccion_io_in = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_io_in->instruccion);
+				printf("El PID de la instruccion es: %d\n",instruccion_io_in->proceso.PID);
 				break;
 			case IO_STDOUT_WRITE:
 				//
+				Instruccion_io* instruccion_io_out = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_io_out->instruccion);
+				printf("El PID de la instruccion es: %d\n",instruccion_io_out->proceso.PID);
 				break;
 			case -1:
 				log_error(kernel_logger, "Desconexion de cpu.");
@@ -169,12 +201,12 @@ void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 			{
 			case GENERICA:
 				//
-				/*
+				
 				printf("Recibi algo de una interfaz generica, vas bien\n");
-				EntradaSalida* new_io = deserializar_entrada_salida(buffer);
-				printf("Ha llegado la siguiente entrada salida: %s",new_io->nombre);
-				printf("Ha llegado la siguiente entrada salida: %s",new_io->path);
-				*/
+				EntradaSalida* new_io_generica = deserializar_entrada_salida(paquete->buffer);
+				printf("Ha llegado la siguiente entrada salida con nombre: %s\n",new_io_generica->nombre);
+				printf("Ha llegado la siguiente entrada salida con path: %s\n",new_io_generica->path);
+	
 				break;
 			case STDIN:
 				//
@@ -198,6 +230,9 @@ void atender_entrada_salida_kernel(int* fd_cliente_entrada_salida)
 				printf("Esto no funciona\n");
 				break;
 			}
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
 	}
 }
 

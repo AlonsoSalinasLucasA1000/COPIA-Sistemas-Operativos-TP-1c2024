@@ -114,6 +114,12 @@ typedef struct
 	char* path;
 } EntradaSalida;
 
+typedef struct 
+{
+	uint32_t tam_instruccion;
+	char* instruccion;
+	PCB proceso;
+} Instruccion_io;
 
 
 

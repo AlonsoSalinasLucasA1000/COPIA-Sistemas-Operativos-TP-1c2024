@@ -218,14 +218,6 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	stream += sizeof(uint32_t);
 	memcpy(&(to_return->registro), stream, sizeof(RegistrosCPU)); // Cambio en el tipo de este campo
     stream += sizeof(RegistrosCPU);//cambios
-	/*memcpy(&(to_return->AX), stream, sizeof(uint8_t));
-	stream += sizeof(uint8_t);
-	memcpy(&(to_return->BX), stream, sizeof(uint8_t));
-	stream += sizeof(uint8_t);
-	memcpy(&(to_return->CX), stream, sizeof(uint8_t));
-	stream += sizeof(uint8_t);
-	memcpy(&(to_return->DX), stream, sizeof(uint8_t));
-	stream += sizeof(uint8_t);*/
 	memcpy(&(to_return->estado), stream, sizeof(estado_proceso));
 	stream += sizeof(estado_proceso);
 	memcpy(&(to_return->path_length), stream, sizeof(uint32_t));
@@ -262,6 +254,30 @@ EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer)
 	return to_return;
 }
 */
+
+EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer)
+{
+	EntradaSalida* to_return = malloc(sizeof(EntradaSalida));
+	void* stream = buffer->stream;
+
+	//deserializamos los campos del buffer
+	memcpy(&(to_return->fd_cliente), stream, sizeof(int));
+	stream += sizeof(int);
+
+	memcpy(&(to_return->nombre_length), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	to_return->nombre = malloc(to_return->nombre_length);
+	memcpy(to_return->nombre,stream,to_return->nombre_length);
+	stream += to_return->nombre_length;
+
+	memcpy(&(to_return->path_length),stream,sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	to_return->path = malloc(to_return->path_length);
+	memcpy(to_return->path,stream,to_return->path_length);
+	return to_return;
+}
 
 
 void *recibir_buffer(int *size, int socket_cliente)
