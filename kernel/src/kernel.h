@@ -73,16 +73,16 @@ Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
 
 EntradaSalida* encontrarEntradaSalida(t_list* lista, char* nombreInterfaz)
 {
-	EntradaSalida* ret;
+	EntradaSalida* ret = malloc(sizeof(EntradaSalida));
 	int i = 0;
-	while( i < list_size(lista) && i != -(1))
+	while( i < list_size(lista) && i >= 0)
 	{
 		EntradaSalida* got = list_get(lista,i);
 		printf("We have found an I/O which name is: %s\n",got->nombre);
 		if( strcmp(nombreInterfaz,got->nombre) == 0 )
 		{
 			ret = got;
-			i = -1;
+			i = -100;
 		}
 		i++;
 	}
@@ -659,7 +659,7 @@ void enviar_pcb_a_cpu()
 
 void planificador_corto_plazo()
 {
-	
+	/*
 	if(strcmp(ALGORITMO_PLANIFICACION,"FIFO")==0)
 	{
 
@@ -696,6 +696,7 @@ void planificador_corto_plazo()
 
 		//PLANIFICAR POR VRR
 	}
+	*/
 	while(1)
 		{
 			//usamos semaforo para avisar
