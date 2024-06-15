@@ -24,6 +24,8 @@ typedef enum
 	PAQUETE,
 	PROCESO,
 	PROCESOFIN,
+	MARCO,
+	NUMERO,
 	GOKU
 }op_code;
 
@@ -92,7 +94,13 @@ typedef struct
 	char* path;
 } ProcesoMemoria;
 
-
+typedef struct
+{
+	uint32_t PID;
+	int pagina;
+	int marco; //
+	//si se necesita se puede agrgar campos extras
+} TLB;
 
 
 

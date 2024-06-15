@@ -86,6 +86,9 @@ void memoria_escuchar_cpu (){
 			case PAQUETE:
 				//
 				break;
+			case MARCO:
+				//
+				break;
 			case -1:
 				log_error(memoria_logger, "El cliente cpu se desconecto. Terminando servidor");
 				control_key = 0;
