@@ -69,7 +69,12 @@ handshakeClient(fd_kernel, 3);
 
 //mandaremos datos a kernel
 enviarDatos(fd_kernel,datosInicialesPartidos,TIPO_INTERFAZ);
-//por el momento que memoria la chupe jaja
+
+if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
+{
+	//de no ser generica, debemos enviarle los datos a memoria
+	enviarDatos(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
+}
 
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;
@@ -77,12 +82,12 @@ pthread_create (&hilo_memoria, NULL, (void*)entradasalida_escuchar_memoria, NULL
 pthread_detach (hilo_memoria);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
 
-
 //escuchar mensajes de kernel
 pthread_t hilo_kernel;
 pthread_create (&hilo_kernel, NULL, (void*)entradasalida_escuchar_kernel, NULL);
 pthread_detach (hilo_kernel);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
+
 
 while(1)
 {

@@ -193,7 +193,7 @@ ProcesoMemoria *deserializar_proceso_memoria(t_newBuffer *buffer)
 	stream += sizeof(int);
 	// deserailizamos el path como tal
 	to_return->path = malloc(to_return->path_length);
-	memcpy(to_return->path, stream, to_return->path_length);
+	memcpy(to_return->path, stream, to_return->path_length);	
 
 	return to_return;
 }
@@ -298,11 +298,11 @@ void* serializar_paquete(t_newPaquete* paquete, int bytes)
 	return magic;
 }
 
-void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente)
+void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente, op_code codigoOperacion)
 {
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 
-	paquete->codigo_operacion = MENSAJE;
+	paquete->codigo_operacion = codigoOperacion;
 	paquete->buffer = malloc(sizeof(t_newBuffer));
 	paquete->buffer->size = strlen(mensaje) + 1; //
 	paquete->buffer->offset = 0;
@@ -419,7 +419,7 @@ void liberar_config(t_config *config)
 void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 {
 	printf("Enviaremos la siguiente PCB: %d\n", proceso->PID);
-	printf("Enviaremos la siguiente PCB: %d\n", proceso->path_length);
+	printf("Enviaremos el siguiente path length: %d\n", proceso->path_length);
 
     //Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
@@ -518,4 +518,41 @@ Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
 	}
 	memcpy(to_return->instruccion, stream, to_return->tam_instruccion);
 	return to_return;
+}
+
+void enviarEntero(int* entero_a_enviar,int fd_cliente,op_code codigoDeOperacion)
+{
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(int);
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(int));
+    buffer->offset += sizeof(int);
+
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigoDeOperacion;
+    paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_cliente, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
 }

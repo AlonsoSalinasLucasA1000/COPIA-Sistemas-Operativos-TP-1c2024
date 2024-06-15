@@ -15,7 +15,8 @@
 #include<readline/readline.h>
 #include<commons/collections/queue.h>
 #include <semaphore.h>
-#include<commons/collections/list.h> 
+#include<commons/collections/list.h>
+#include <math.h>
 
 
 typedef enum
@@ -36,6 +37,13 @@ typedef enum
 	DESPERTAR,
 	WRONG,
 
+	RESIZE,
+	ASIGNACION_CORRECTA,
+	OUT_OF_MEMORY,
+
+	LECTURA,
+	LEIDO,
+	ESCRITO,
 	GOKU
 }op_code;
 
@@ -102,6 +110,7 @@ typedef struct
 	uint32_t PID;
 	uint32_t path_length;
 	char* path;
+	t_list* TablaDePaginas; //añadido
 } ProcesoMemoria;
 
 typedef struct
@@ -127,9 +136,6 @@ typedef struct
 	char* instruccion;
 	PCB proceso;
 } Instruccion_io;
-
-
-
 
 
 //funciones crear conexion
@@ -162,7 +168,8 @@ void paquete(int conexion,char* lo_que_se_desea_enviar);
 void enviar_mensaje(char* mensaje, int socket_cliente);
 
 t_list* recibir_paquete(int socket_cliente);
-void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente);
+
+void enviar_mensaje_cpu_memoria(char* mensaje, int socket_cliente, op_code codigoOperacion);
 
 void eliminar_paquete(t_newPaquete* paquete);
 
@@ -172,6 +179,8 @@ void enviarPCB (PCB* proceso, int socket_servidor, op_code codigo);
 EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer);
 
 Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer);
+
+void enviarEntero(int* entero_a_enviar,int fd_cliente,op_code codigoDeOperacion);
 
 //handshake y liberar conexiones
 void handshakeClient(int fd_servidor, int32_t handshake);

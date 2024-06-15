@@ -12,6 +12,9 @@ int main(int argc, char* argv[]) {
 
     //creamos la lista para las io genericas
     listGenericas = list_create();
+    listStdin = list_create();
+    listStdout = list_create();
+    listDialfs = list_create();
 
 
     kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);

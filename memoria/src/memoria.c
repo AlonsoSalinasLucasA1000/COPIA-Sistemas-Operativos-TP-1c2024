@@ -3,8 +3,14 @@
 #include <memoria.h>
 
 int main(int argc, char* argv[]) {
+	
+	
 
+	//LISTA DE PROCESOS
 	listProcesos = list_create();
+	listStdin = list_create();
+	listStdout = list_create();
+	listDialfs = list_create();
 
 	memoria_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (memoria_logger == NULL)
@@ -26,6 +32,8 @@ int main(int argc, char* argv[]) {
     PATH_INSTRUCCIONES = config_get_string_value (memoria_config , "PATH_INSTRUCCIONES" );
     RETARDO_RESPUESTA = config_get_int_value (memoria_config , "RETARDO_RESPUESTA" );
 
+	//TAMANIO_PAGINA = TAM_PAGINA;
+
     log_info(memoria_logger, "PUERTO_ESCUCHA: %s", PUERTO_ESCUCHA);
     log_info(memoria_logger, "TAM_MEMORIA: %i", TAM_MEMORIA);
     log_info(memoria_logger, "TAM_PAGINA: %i", TAM_PAGINA);
@@ -40,7 +48,8 @@ int main(int argc, char* argv[]) {
     	return 1;
 	}
 
-
+	//LISTA DE MARCOS
+	listMarcos = generarListaDeMarcos(listMarcos);
 
 	//inicia servidor memoria
 	fd_memoria = iniciar_servidor (PUERTO_ESCUCHA, memoria_logger, "INICIADA LA MEMORIA");

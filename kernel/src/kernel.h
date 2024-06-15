@@ -31,6 +31,9 @@ t_queue* cola_blocked;
 
 //LISTA DE ENTRADAS Y SALIDAS
 t_list* listGenericas;
+t_list* listStdin;
+t_list* listStdout;
+t_list* listDialfs;
 
 t_log *kernel_logger; // LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config *kernel_config;
@@ -54,6 +57,7 @@ void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz)
 	int* unidadesDeTrabajo = malloc(sizeof(int));
 	*unidadesDeTrabajo = atoi(instruccion_split[2]);
 
+/*
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
@@ -87,7 +91,18 @@ void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz)
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
+	*/
+	enviarEntero(unidadesDeTrabajo,fd_entradasalida,GENERICA);
 }
+
+
+void ejecutar_interfaz_stdin(char* instruccion, op_code tipoDeInterfaz)
+{
+	char** instruccion_split = string_split(instruccion," ");
+	//IO_STDIN_READ (Interfaz, Registro Direccion, Registro Tamaño)
+	
+}
+
 
 void kernel_escuchar_cpu ()
 {
@@ -163,6 +178,16 @@ void kernel_escuchar_cpu ()
 				ejecutar_interfaz_generica(instruccion_io_gen->instruccion,GENERICA);
 				//
 				break;
+			case STDIN:
+				
+				Instruccion_io* instruccion_io_stdin = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
+				printf("El PID de la instruccion es: %d\n",instruccion_io_stdin->proceso.PID);
+				//ejecutar funcion para la interfaz
+				printf("Checkpoin1 \n");
+				ejecutar_interfaz_stdin(instruccion_io_stdin->instruccion,STDIN);
+				//
+				break;
 			case MENSAJE:
 				//
 				break;
@@ -205,10 +230,25 @@ void kernel_escuchar_entradasalida ()
 				list_add(listGenericas,new_io_generica);
 			    break;
 			case STDIN:
+				EntradaSalida* new_io_stdin = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdin->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdin->path);
+				
+				list_add(listGenericas,new_io_stdin);			
 			    break;
 			case STDOUT:
+				EntradaSalida* new_io_stdout = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdout->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdout->path);
+				
+				list_add(listGenericas,new_io_stdout);			
 			    break;
 			case DIALFS:
+				EntradaSalida* new_io_dialfs = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_dialfs->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_dialfs->path);
+				
+				list_add(listGenericas,new_io_dialfs);
 			    break;
 			case DESPERTAR:
 			//sacamos al proceso de la cola de blocked y lo añadimos a IO
@@ -397,7 +437,7 @@ void enviarProcesoMemoria (ProcesoMemoria* proceso, int socket_servidor)
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-    buffer->size = sizeof(uint32_t)*2 + proceso->path_length +1;
+    buffer->size = sizeof(uint32_t)*2 + proceso->path_length +1;//MODIFCADO
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
@@ -442,10 +482,11 @@ void informar_memoria_nuevo_procesoNEW()
 
 	PCB* pcb = queue_pop(cola_new);//
 	proceso->path = malloc(strlen(pcb->path)+1);
-	proceso->path = pcb->path;
+	//proceso->path = pcb->path;
+	strcpy(proceso->path, pcb->path);
 	proceso->PID = pcb->PID;
 	proceso->path_length = strlen(pcb->path)+1;
-	
+	proceso->TablaDePaginas = list_create();
 	
 	enviarProcesoMemoria(proceso,fd_memoria);
 	

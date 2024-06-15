@@ -4,8 +4,13 @@
 
 int main(int argc, char* argv[]) {
 
+//semaforos para la ejecucion
 sem_init(&sem_exe_a,0,1);
 sem_init(&sem_exe_b,0,0);
+
+//semaforos para la interaccion cpu memoria
+sem_init(&sem_memoria_aviso_cpu,0,0);
+sem_init(&sem_copy_string,0,0);
 
 
 
