@@ -24,8 +24,18 @@ typedef enum
 	PAQUETE,
 	PROCESO,
 	PROCESOFIN,
+
 	MARCO,
 	NUMERO,
+
+	PROCESOIO,
+	GENERICA,
+	STDIN,
+	STDOUT,
+	DIALFS,
+	DESPERTAR,
+	WRONG,
+
 	GOKU
 }op_code;
 
@@ -102,6 +112,23 @@ typedef struct
 	//si se necesita se puede agrgar campos extras
 } TLB;
 
+typedef struct 
+{
+	int fd_cliente;
+	uint32_t nombre_length;
+	char* nombre;
+	uint32_t path_length;
+	char* path;
+} EntradaSalida;
+
+typedef struct 
+{
+	uint32_t tam_instruccion;
+	char* instruccion;
+	PCB proceso;
+} Instruccion_io;
+
+
 
 
 
@@ -141,6 +168,10 @@ void eliminar_paquete(t_newPaquete* paquete);
 
 //funciones propias para la serializacion
 void enviarPCB (PCB* proceso, int socket_servidor, op_code codigo);
+
+EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer);
+
+Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer);
 
 //handshake y liberar conexiones
 void handshakeClient(int fd_servidor, int32_t handshake);

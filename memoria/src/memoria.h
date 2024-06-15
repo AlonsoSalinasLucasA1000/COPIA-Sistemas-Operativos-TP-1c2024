@@ -79,7 +79,7 @@ void memoria_escuchar_cpu (){
 				printf("Enviaremos a la cpu: %s\n",instruccion); 
 				//enviamos, sin antes dormir el tiempo esperado
 				printf("Me voy a mimir, buenas noches\n");
-				sleep(RETARDO_RESPUESTA);
+				usleep(RETARDO_RESPUESTA);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu);
 
 				break;
@@ -245,8 +245,8 @@ void memoria_escuchar_kernel (){
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
 				if(nuevoProceso != NULL){ 
 					//añadimos el proceso a la lista de procesos que posee la memoria, además le creamos un array con su tabla de páginas
-					printf("Me voy a mimir, buenas noches\n");
-					sleep(RETARDO_RESPUESTA);
+					//printf("Me voy a mimir, buenas noches\n");
+					//sleep(RETARDO_RESPUESTA); INCLUIR EL SLEEP ACA HARIA QUE CAMBIASEMOS GRAN PARTE DE LA SINCRONIZACION ENTRE MEMORIA Y KERNEL EN LA CREACION DE PROCESOS
 					list_add(listProcesos, nuevoProceso);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);

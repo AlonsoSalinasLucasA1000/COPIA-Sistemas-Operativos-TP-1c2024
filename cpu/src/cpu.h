@@ -28,6 +28,50 @@ char* PUERTO_ESCUCHA_INTERRUPT;
 int CANTIDAD_ENTRADAS_TLB;
 char* ALGORITMO_TLB;
 
+void enviar_instruccion_kernel (char* instruccion, uint32_t tam_instruccion, PCB proceso, op_code codigo_operacion )
+{
+    //Creamos un Buffer
+    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(PCB) + (tam_instruccion) + sizeof(uint32_t);//cambios
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, &proceso, sizeof(PCB));
+    buffer->offset += sizeof(PCB);
+
+
+    // Para el nombre primero mandamos el tamaño y luego el texto en sí:
+    memcpy(buffer->stream + buffer->offset, &tam_instruccion, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+    memcpy(buffer->stream + buffer->offset, instruccion, tam_instruccion);
+    
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigo_operacion;
+    paquete->buffer = buffer;
+
+    //Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_kernel_dispatch, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
 void enviar_pcb_memoria(int PID, int PC)
 { 
 	//enviar pcb
@@ -473,6 +517,7 @@ void ejecutar_proceso(PCB* proceso)
 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
 } */
 
+
 void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
@@ -638,6 +683,23 @@ void ejecutar_proceso(PCB* proceso)
 		}
 	
 		//CASO DE TENER UNA INSTRUCCION IO_GEN_SLEEP
+		if(strcmp(instruccion_split[0], "IO_GEN_SLEEP") == 0 )
+		{
+			//debemos devolver instruccion + pcb parando el proceso actual
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,GENERICA);
+			
+			//se bloquea el proceso, devolvemos al kernel
+			free(instruccionActual);
+			instruccionActual = malloc(1);
+			instruccionActual = "";
+
+			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
+			usleep(2000);
+			proceso->PC++;
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			return;
+		}
 		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
 		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
 		/*
