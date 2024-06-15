@@ -98,7 +98,7 @@ void entradasalida_escuchar_kernel (){
 
 				printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n",*unidadesDeTrabajo);
 				printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO ));
-				usleep(*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO);
+				sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO)/1000);
 
 				//DEVOLVER AL KERNEL PARA DESPERTAR
 				avisar_despertar_kernel();
@@ -135,13 +135,6 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
 	to_send->path = malloc(to_send->path_length);
 	to_send->path = datos[1];
 
-	printf("vamos a enviar lo siguiente a KERNEL: \n");
-	printf("vamos a enviar lo el siguiente fd: %d\n", to_send->fd_cliente);
-	printf("vamos a enviar lo el siguiente fd: %d\n", to_send->nombre_length);
-	printf("vamos a enviar el nombre: %s \n",to_send->nombre);
-	printf("vamos a enviar lo el siguiente fd: %d\n", to_send->path_length);
-	printf("vamos a enviar el path %s: \n",to_send->path);
-
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 	//calculamos su tamaño
 	buffer->size = sizeof(int) + sizeof(uint32_t)*2 + (to_send->nombre_length) + (to_send->path_length);
@@ -169,29 +162,24 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
 	{
 
 		paquete->codigo_operacion = GENERICA;
-		printf("codigo de operacion generica: %d\n",paquete->codigo_operacion);
-
 	}
 	else
 	{
 		if( strcmp(tipo_interfaz,"STDIN") == 0 )
 		{
 			paquete->codigo_operacion = STDIN;
-			printf("codigo de operacion stdin: %d\n",paquete->codigo_operacion);
 		}
 		else
 		{
 			if( strcmp(tipo_interfaz,"STDOUT") == 0 )
 			{
 				paquete->codigo_operacion = STDOUT;
-				printf("codigo de operacion stdout: %d\n",paquete->codigo_operacion);
 			}
 			else
 			{
 				if( strcmp(tipo_interfaz,"DIALFS") == 0 )
 				{
 					paquete->codigo_operacion = DIALFS;
-					printf("codigo de operacion dialfs: %d\n",paquete->codigo_operacion);
 				}
 				else
 				{

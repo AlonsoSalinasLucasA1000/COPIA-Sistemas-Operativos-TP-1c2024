@@ -12,6 +12,8 @@ int fd_kernel;
 int fd_cpu;
 int fd_entradasalida;
 
+sem_t protect_list_procesos;
+
 t_log* memoria_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config* memoria_config;
 t_list* listProcesos; 
@@ -109,7 +111,9 @@ void memoria_escuchar_cpu (){
 				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
 				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				
+				sem_wait(&protect_list_procesos);
 				ProcesoMemoria* datos = encontrarProceso(listProcesos,proceso->PID);
+				sem_post(&protect_list_procesos);
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
 
@@ -118,7 +122,7 @@ void memoria_escuchar_cpu (){
 				printf("Enviaremos a la cpu: %s\n",instruccion); 
 				//enviamos, sin antes dormir el tiempo esperado
 				printf("Me voy a mimir, buenas noches\n");
-				usleep(RETARDO_RESPUESTA);
+				sleep(RETARDO_RESPUESTA/1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
 				break;
 
@@ -127,7 +131,9 @@ void memoria_escuchar_cpu (){
 				printf("Los datos recibidos de CPU para HACER RESIZE son pid: %d\n",proceso->PID);
 				printf("Los datos recibidos de CPU para HACER RESIZE pc: %d\n",proceso->PC);
 				
+				sem_wait(&protect_list_procesos);
 				ProcesoMemoria* datos_resize = encontrarProceso(listProcesos,proceso_resize->PID);
+				sem_post(&protect_list_procesos);
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos_resize->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos_resize->path);
 
@@ -158,6 +164,7 @@ void memoria_escuchar_cpu (){
 							}
 							i++; 
 						}
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS1");
 						printf("Pude asignarle, la lista de marcos quedó así:\n");
 						int j = 0;
 						while( j < list_size(listMarcos) )
@@ -175,7 +182,7 @@ void memoria_escuchar_cpu (){
 							j++;
 							printf("-----------------\n");					
 						}
-
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS2");
 						for(int k = 0; k < list_size(listMarcos); k++)
 						{
 							int* marco = list_get(listMarcos,k);
@@ -188,6 +195,7 @@ void memoria_escuchar_cpu (){
 							}
 						}
 
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS3");
 						//pude asignar los marcos, la lista del proceso quedó así:
 						int l = 0;
 						while( l < list_size(datos_resize->TablaDePaginas) )
@@ -304,6 +312,18 @@ void memoria_escuchar_cpu (){
 				enviarEntero(datoObtenido,fd_cpu,LECTURA);
 				//
 				break;
+			/*case ESCRITURA_CADENA:
+				printf("He recibido un pedido de ESCRITURA_CADENA\n");
+				int* direccionFisica = malloc(sizeof(int));
+				char* cadena = malloc(sizeof(char));
+				memcpy(direccionFisica,paquete->buffer->stream,sizeof(int));
+				paquete->buffer->stream += sizeof(int);
+				memcpy(cadena,paquete->buffer->stream,sizeof(char));
+			
+				break;*/
+			/*case ESCRITURA_NUMERICO:
+				
+				break;*/
 			case PAQUETE:
 				//
 				break;
@@ -488,9 +508,43 @@ void memoria_escuchar_kernel (){
 					PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 					
 					printf("Borraremos el proceso con pid: %d\n",proceso->PID);
+					//hay que liberar los marcos
+					int i = 0;
+					while( i < list_size(listMarcos) )
+					{
+						int* got = list_get(listMarcos,i);
+						if( *got == proceso->PID )
+						{
+							int* to_add = malloc(sizeof(int));
+							*to_add = (-1);
+							list_replace(listMarcos,i,to_add);
+						}
+						i++;
+					}
 
+					printf("Pude asignarle, la lista de marcos quedó así:\n");
+					int j = 0;
+					while( j < list_size(listMarcos) )
+					{
+						int* number = list_get(listMarcos,j);
+						if (number != NULL) 
+						{
+							printf("El marco numero %d\n",j);
+							printf("Esta asignado al proceso %d\n",*number);
+						} 
+						else 
+						{
+							printf("El marco numero %d no está asignado a ningún proceso",j);
+						}
+						j++;
+						printf("-----------------\n");					
+					}
+					
+					sem_wait(&protect_list_procesos);
 					ProcesoMemoria* dato = encontrarProceso(listProcesos,proceso->PID);
+					sem_post(&protect_list_procesos);
 					printf("Borraremos [CONFIRMADO] el proceso con pid: %d\n", dato->PID);
+					list_destroy(dato->TablaDePaginas);
 					free(dato->path);
 					free(dato);
 					printf("Proceso borrado con exito\n");
@@ -502,7 +556,9 @@ void memoria_escuchar_kernel (){
 					//añadimos el proceso a la lista de procesos que posee la memoria, además le creamos un array con su tabla de páginas
 					//printf("Me voy a mimir, buenas noches\n");
 					//sleep(RETARDO_RESPUESTA); INCLUIR EL SLEEP ACA HARIA QUE CAMBIASEMOS GRAN PARTE DE LA SINCRONIZACION ENTRE MEMORIA Y KERNEL EN LA CREACION DE PROCESOS
+					sem_wait(&protect_list_procesos);
 					list_add(listProcesos, nuevoProceso);
+					sem_post(&protect_list_procesos);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
 				} else{

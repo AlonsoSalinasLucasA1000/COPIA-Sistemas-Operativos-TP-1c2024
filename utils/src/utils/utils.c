@@ -418,8 +418,8 @@ void liberar_config(t_config *config)
 // }
 void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 {
-	printf("Enviaremos la siguiente PCB: %d\n", proceso->PID);
-	printf("Enviaremos el siguiente path length: %d\n", proceso->path_length);
+	//printf("Enviaremos la siguiente PCB: %d\n", proceso->PID);
+	//printf("Enviaremos el siguiente path length: %d\n", proceso->path_length);
 
     //Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
@@ -522,6 +522,7 @@ Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
 
 void enviarEntero(int* entero_a_enviar,int fd_cliente,op_code codigoDeOperacion)
 {
+	printf("Voy a mandar algo\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
@@ -549,7 +550,7 @@ void enviarEntero(int* entero_a_enviar,int fd_cliente,op_code codigoDeOperacion)
     memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
     //Por último enviamos
     send(fd_cliente, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
+	printf("Lo mande\n");
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
     free(paquete->buffer->stream);

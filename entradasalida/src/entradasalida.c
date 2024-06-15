@@ -68,11 +68,13 @@ fd_kernel = crear_conexion (IP_KERNEL, PUERTO_KERNEL,"kernel");
 handshakeClient(fd_kernel, 3);
 
 //mandaremos datos a kernel
+printf("Enviaremos datos al KERNEL\n");
 enviarDatos(fd_kernel,datosInicialesPartidos,TIPO_INTERFAZ);
 
 if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
 {
 	//de no ser generica, debemos enviarle los datos a memoria
+	printf("Enviaremos datos a la MEMORIA\n");
 	enviarDatos(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
 }
 

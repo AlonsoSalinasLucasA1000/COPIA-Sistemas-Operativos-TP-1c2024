@@ -12,6 +12,7 @@ int fd_cpu_interrupt;
 int fd_cpu_dispatch; //luego se dividira en dos fd, un dispach y un interrupt, por ahora nos es suficiente con este
 int fd_memoria;
 int fd_entradasalida;
+bool cpu_ocupada; //0 si no, 1 si sí
 
 //colas y pid
 int procesos_en_new = 0;
@@ -22,6 +23,7 @@ sem_t sem_ready;
 sem_t sem_cant; //semaforo cant de elementos en la cola
 sem_t sem_cant_ready;
 sem_t sem_mutex_plani_corto; //semaforo oara planificacion FIFO
+sem_t sem_mutex_cpu_ocupada; //semaforo para indicar si la cpu esta ocupada
 
 //TODAS LAS QUEUES
 int pid = 0;
@@ -139,6 +141,10 @@ void kernel_escuchar_cpu ()
 
 				free(proceso->path);
 				free(proceso);
+				
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);				
 			//	
                 break;
 			case PROCESOIO:
@@ -161,6 +167,33 @@ void kernel_escuchar_cpu ()
 				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
 				queue_push(cola_blocked, proceso_io);
 
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);		
+
+				break;
+			case FIN_DE_QUANTUM:
+
+				PCB* proceso_fin_de_quantum = deserializar_proceso_cpu(paquete->buffer);
+				proceso_io->estado = READY;
+				printf("Recibimos el proceso con el pid: %d\n",proceso_fin_de_quantum->PID);
+				printf("Recibimos el proceso con el AX: %d\n",proceso_fin_de_quantum->registro.AX);//cambios
+				printf("Recibimos el proceso con el BX: %d\n",proceso_fin_de_quantum->registro.BX);//cambios
+				printf("Recibimos el proceso con el CX: %d\n",proceso_fin_de_quantum->registro.CX);//cambios
+				printf("Recibimos el proceso con el DX: %d\n",proceso_fin_de_quantum->registro.DX);//cambios
+				printf("Recibimos el proceso con el EAX: %d\n",proceso_fin_de_quantum->registro.EAX);//cambios
+				printf("Recibimos el proceso con el EBX: %d\n",proceso_fin_de_quantum->registro.EBX);//cambios
+				printf("Recibimos el proceso con el ECX: %d\n",proceso_fin_de_quantum->registro.ECX);//cambios
+				printf("Recibimos el proceso con el EDX: %d\n",proceso_fin_de_quantum->registro.EDX);//cambios
+				printf("Recibimos el proceso con el SI: %d\n",proceso_fin_de_quantum->registro.SI);//cambios
+				printf("Recibimos el proceso con el DI: %d\n",proceso_fin_de_quantum->registro.DI);//cambios
+				printf("SE HA ACABADO EL QUANTUM DE ESTE PROCESO\n");
+
+				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
+				queue_push(cola_ready, proceso_fin_de_quantum);
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);	
 				break;
 			case GENERICA:
 				
@@ -589,6 +622,14 @@ void planificador_largo_plazo()
 
 void enviar_pcb_a_cpu()
 {
+	sem_wait(&sem_mutex_cpu_ocupada);
+	while( cpu_ocupada != false )
+	{
+		sem_post(&sem_mutex_cpu_ocupada);
+		sleep(1);
+		sem_wait(&sem_mutex_cpu_ocupada);
+	}
+	sem_post(&sem_mutex_cpu_ocupada);
 	//Reservo memoria para enviarla
 	PCB* to_send = malloc(sizeof(PCB));
 
@@ -611,106 +652,61 @@ void enviar_pcb_a_cpu()
 
 	to_send->path = string_duplicate( pcb_cola->path);
 
+	printf("Enviaremos un proceso\n");
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
+	sem_wait(&sem_mutex_cpu_ocupada);
+	cpu_ocupada = true;
+	sem_post(&sem_mutex_cpu_ocupada);
 }
+
+
+void interrumpir_por_quantum()
+{
+	printf("Entre a dormir un poco para el quantum\n");
+	int quantumAUsar = atoi(QUANTUM);
+	printf("El quantum sera: %d\n",quantumAUsar);
+	sleep(quantumAUsar/1000);
+	//MANDAR A MEMORIA FIN DE QUANTUM POR DISPATCH
+	int* enteroRandom = malloc(sizeof(int));
+	*enteroRandom = 0;
+ 	printf("Me desperte uwu\n");
+	enviarEntero(enteroRandom,fd_cpu_interrupt,FIN_DE_QUANTUM);
+}
+
 
 void planificador_corto_plazo()
 {
 
-	while(1)
+		if(strcmp(ALGORITMO_PLANIFICACION,"FIFO")==0)
 		{
-			
-			if(strcmp(ALGORITMO_PLANIFICACION,"FIFO")==0)
+			printf("Planificare por FIFO\n");
+			while(1)
 			{
 				//PLANIFICAR POR FIFO
 				sem_wait(&sem_mutex_plani_corto);
 				enviar_pcb_a_cpu();
 				sem_post(&sem_mutex_plani_corto);
 			}
-			
-			if(strcmp(ALGORITMO_PLANIFICACION,"RR")==0)
-			{
-
-				//PLANIFICAR POR RR
-				// Simulación del planificador de Round Robin
-				/*#include <stdio.h>
-				#include <stdlib.h>
-				
-									#define QUANTUM 3
-									
-					// Definición de la estructura PCB (Process Control Block)
-					typedef struct {
-						int pid;  // Identificador del proceso
-						int burst_time;  // Tiempo de ráfaga restante del proceso
-					} PCB;
-
-					// Función para ejecutar un proceso con el quantum actual
-					void ejecutar_proceso(PCB *proceso) {
-						printf("Ejecutando proceso %d\n", proceso->pid);
-						proceso->burst_time -= QUANTUM;  // Reducir el tiempo de ráfaga restante por el quantum
-					}
-
-					int main() {
-						// Ejemplo de una cola de procesos (podrían ser procesos en espera)
-						PCB cola_procesos[] = {
-							{1, 9},
-							{2, 6},
-							{3, 4},
-							{4, 5},
-							{5, 8}
-						};
-
-						int num_procesos = sizeof(cola_procesos) / sizeof(cola_procesos[0]);
-
-						// Simulación del planificador de Round Robin
-						int tiempo_total = 0;
-						while (1) {
-							int proceso_ejecutado = 0;																	
-							for (int i = 0; i < num_procesos; i++) {                  							
-								if (cola_procesos[i].burst_time > 0) {										
-									proceso_ejecutado = 1;											
-									if (cola_procesos[i].burst_time > QUANTUM) {										
-										ejecutar_proceso(&cola_procesos[i]);
-										tiempo_total += QUANTUM;
-									} else {
-										tiempo_total += cola_procesos[i].burst_time;
-										cola_procesos[i].burst_time = 0;
-									}
-								}
-							}
-						int cantidad_procesos_ready = queue_size(cola_ready);
-						for ( int i = 0; i < cantidad_procesos_ready; i++){
-							PCB* proceso_ejecutar = queue_pop(cola_ready);
-							if(proceso_ejecutar.quantum < QUANTUM  ) {         // (QUANTUM = 2000)
-								enviar_pcb_a_cpu();
-								
-						
-						
-						
-						
-							if (!proceso_ejecutado) {
-								break;  // Todos los procesos han sido completados
-							}
-						}
-
-						printf("Tiempo total transcurrido: %d unidades de tiempo\n", tiempo_total);
-
-						return 0;
-					}*/
-				
-			}
-			if(strcmp(ALGORITMO_PLANIFICACION,"VRR")==0)
-			{
-
-				//PLANIFICAR POR VRR
-			}
-
-
-			//usamos semaforo para avisar
-			//enviamos la pcb a la cpu
-			//enviar_pcb_a_cpu();
-			//SEMAFORO CON UNA ESPERA PARA RECIBIR EL PROCESO NUEVAMENTE
 		}
+		
+		if(strcmp(ALGORITMO_PLANIFICACION,"RR")==0)
+		{
+			printf("Planificare por RR\n");
+			//PLANIFICAR POR RR
+			while(1)
+			{
+				sem_wait(&sem_mutex_plani_corto);
+				enviar_pcb_a_cpu();
+				sem_post(&sem_mutex_plani_corto);
+				interrumpir_por_quantum();
+			}
+		}
+		if(strcmp(ALGORITMO_PLANIFICACION,"VRR")==0)
+		{
+
+			//PLANIFICAR POR VRR
+		}
+
 }
 	
 

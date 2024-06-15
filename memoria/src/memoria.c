@@ -12,6 +12,8 @@ int main(int argc, char* argv[]) {
 	listStdout = list_create();
 	listDialfs = list_create();
 
+	sem_init(&protect_list_procesos,0,1);
+
 	memoria_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (memoria_logger == NULL)
 	{

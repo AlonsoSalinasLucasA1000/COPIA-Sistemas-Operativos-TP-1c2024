@@ -9,6 +9,10 @@ int main(int argc, char* argv[]) {
     sem_init(&sem_cant,0,0); // el productor es el inicial_proceso
     sem_init(&sem_cant_ready,0,0);
     sem_init(&sem_mutex_plani_corto,0,1);
+    sem_init(&sem_mutex_plani_corto,0,1);
+    sem_init(&sem_mutex_cpu_ocupada,0,1);
+
+    cpu_ocupada = false;
 
     //creamos la lista para las io genericas
     listGenericas = list_create();

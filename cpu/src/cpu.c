@@ -10,9 +10,13 @@ sem_init(&sem_exe_b,0,0);
 
 //semaforos para la interaccion cpu memoria
 sem_init(&sem_memoria_aviso_cpu,0,0);
-sem_init(&sem_copy_string,0,0);
+sem_init(&sem_lectura,0,0);
+sem_init(&sem_escritura,0,0);
 
+//semaforos para revisar interrupcion
+sem_init(&interrupt_mutex,0,1);
 
+any_interrupcion = 0;
 
 cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (cpu_logger == NULL)
