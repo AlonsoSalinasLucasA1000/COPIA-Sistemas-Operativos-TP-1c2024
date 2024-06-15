@@ -10,6 +10,8 @@ int main(int argc, char* argv[]) {
     sem_init(&sem_cant_ready,0,0);
     sem_init(&sem_mutex_plani_corto,0,1);
 
+    //creamos la lista para las io genericas
+    listGenericas = list_create();
 
 
     kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
@@ -99,10 +101,11 @@ pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)kernel_escuchar_memoria, NULL);
 pthread_detach (hilo_memoria);
 
-// Creo la cola que voy a usar para guardar mis PCBs
+// Creo la cola que voy a usar para guardar mis PCBs y las listas para las IO
 cola_new = queue_create();
 cola_ready = queue_create();
 cola_blocked = queue_create();
+
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
 

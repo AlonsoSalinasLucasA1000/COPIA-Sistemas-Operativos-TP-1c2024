@@ -418,6 +418,9 @@ void liberar_config(t_config *config)
 // }
 void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 {
+	printf("Enviaremos la siguiente PCB: %d\n", proceso->PID);
+	printf("Enviaremos la siguiente PCB: %d\n", proceso->path_length);
+
     //Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
@@ -470,4 +473,49 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
+}
+
+EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer)
+{
+	EntradaSalida* to_return = malloc(sizeof(EntradaSalida));
+	void* stream = buffer->stream;
+
+	//deserializamos los campos del buffer
+	memcpy(&(to_return->fd_cliente), stream, sizeof(int));
+	stream += sizeof(int);
+
+	memcpy(&(to_return->nombre_length), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	to_return->nombre = malloc(to_return->nombre_length);
+	memcpy(to_return->nombre,stream,to_return->nombre_length);
+	stream += to_return->nombre_length;
+
+	memcpy(&(to_return->path_length),stream,sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	to_return->path = malloc(to_return->path_length);
+	memcpy(to_return->path,stream,to_return->path_length);
+	return to_return;
+}
+
+Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
+	
+	Instruccion_io* to_return = malloc(sizeof(Instruccion_io));
+	void* stream = buffer->stream;
+	memcpy(&(to_return->proceso),stream, sizeof(PCB));
+	stream += sizeof(PCB);
+	
+	memcpy(&(to_return->tam_instruccion), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	
+	to_return->instruccion = malloc(to_return->tam_instruccion);
+	if (to_return->instruccion == NULL) {
+		// Manejar el error de asignación de memoria
+		// Por ejemplo, imprimir un mensaje de error y salir de la función
+		fprintf(stderr, "Error: No se pudo asignar memoria para la instrucción.\n");
+		return NULL;
+	}
+	memcpy(to_return->instruccion, stream, to_return->tam_instruccion);
+	return to_return;
 }

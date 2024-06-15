@@ -28,6 +28,50 @@ char* PUERTO_ESCUCHA_INTERRUPT;
 int CANTIDAD_ENTRADAS_TLB;
 char* ALGORITMO_TLB;
 
+void enviar_instruccion_kernel (char* instruccion, uint32_t tam_instruccion, PCB proceso, op_code codigo_operacion )
+{
+    //Creamos un Buffer
+    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(PCB) + (tam_instruccion) + sizeof(uint32_t);//cambios
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, &proceso, sizeof(PCB));
+    buffer->offset += sizeof(PCB);
+
+
+    // Para el nombre primero mandamos el tamaño y luego el texto en sí:
+    memcpy(buffer->stream + buffer->offset, &tam_instruccion, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+    memcpy(buffer->stream + buffer->offset, instruccion, tam_instruccion);
+    
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigo_operacion;
+    paquete->buffer = buffer;
+
+    //Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_kernel_dispatch, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
 void enviar_pcb_memoria(int PID, int PC)
 { 
 	//enviar pcb
@@ -248,179 +292,6 @@ bool esRegistroUint32(char* registro)
 	return to_ret;
 }
 
-
-
-/*
-void ejecutar_proceso(PCB* proceso)
-{
-	//enviar mensaje a memoria, debemos recibir primera interrupcion
-	instruccionActual = "Goku";
-	enviar_pcb_memoria(proceso->PID,proceso->PC);
-	
-	sem_wait(&sem_exe_b);
-	while( strcmp(instruccionActual,"") != 0 )
-	{
-		//obtengo instruccion actual
-		char* instruccion = string_duplicate(instruccionActual);
-		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
-		char** instruccion_split = string_split (instruccion, " ");
-
-		//CASO DE TENER UNA INSTRUCCION SET
-		if(strcmp(instruccion_split[0], "SET") == 0)
-		{
-			if( esRegistroUint8(instruccion_split[1]))
-			{
-				uint8_t* valor_registro = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
-				if( valor_registro != NULL )
-				{
-					int dato = atoi(instruccion_split[2]);
-					*valor_registro = dato;
-					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro);
-				}
-				else
-				{
-					printf("El registro no se encontró en el proceso.\n");
-				}
-			}
-			else
-			{
-				printf("El registro no se encontró en el proceso.\n");
-			}
-			/*
-			int *valor_registro = (int *)obtener_registro(instruccion_split[1], proceso);
-			if (valor_registro != NULL) 
-			{
-				int dato = atoi(instruccion_split[2]);
-				*valor_registro = dato; // Asigna el valor a través del puntero
-				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro);
-			} 
-			else 
-			{
-				printf("El registro no se encontró en el proceso.\n");
-			}
-			
-		}
-		//CASO DE TENER UNA INSTRUCCION SUM
-		if (strcmp(instruccion_split[0], "SUM") == 0)
-		{
-			if( esRegistroUint8(instruccion_split[1]) )
-			{
-				//si es un registro de 8 bits, tenemos que interpretarlo como tal
-				uint8_t* valor_registro1 = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
-				uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
-				if (valor_registro1 != NULL && valor_registro2 != NULL) 
-				{
-					*valor_registro1 = *valor_registro1 + *valor_registro2; // Asigna el valor a través del puntero
-					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
-				} 
-				else 
-				{
-					printf("El registro no se encontró en el proceso.\n");
-				}
-			}
-			else
-			{
-				printf("Todavia no implementado registros de 32 bits o tuviste algún error");
-			}
-			/*
-			int *valor_registro1 = (int *)obtener_registro(instruccion_split[1], proceso);
-			int *valor_registro2 = (int *)obtener_registro(instruccion_split[2], proceso);
-			if (valor_registro1 != NULL && valor_registro2 != NULL) 
-			{
-				*valor_registro1 = *valor_registro1 + *valor_registro2; // Asigna el valor a través del puntero
-				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
-			} 
-			else 
-			{
-				printf("El registro no se encontró en el proceso.\n");
-			}
-			/
-		}
-		//CASO DE TENER UNA INSTRUCCION SUB
-		if (strcmp(instruccion_split[0], "SUB") == 0)
-		{
-			//TENEMOS QUE APRECIAR LOS CASOS DONDE OBTENGAMOS AX, BX, CX o DX y los casos donde tengamos EAX, EBX, ECX, EDX, SI o DI. ASUMIENDO QUE NO SE INTENTA SUMAR UN AX con EAX
-			if( esRegistroUint8(instruccion_split[1]) )
-			{
-				//si es un registro de 8 bits, tenemos que interpretarlo como tal
-				uint8_t* valor_registro1 = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
-				uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
-				if (valor_registro1 != NULL && valor_registro2 != NULL) 
-				{
-					*valor_registro1 = *valor_registro1 - *valor_registro2; // Asigna el valor a través del puntero
-					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
-				} 
-				else 
-				{
-					printf("El registro no se encontró en el proceso.\n");
-				}
-			}
-			else
-			{
-				printf("Todavia no implementado registros de 32 bits o tuviste algún error");
-			}
-			/*
-			int *valor_registro1 = (int *)obtener_registro(instruccion_split[1], proceso);
-			int *valor_registro2 = (int *)obtener_registro(instruccion_split[2], proceso);
-			if (valor_registro1 != NULL && valor_registro2 != NULL) 
-			{
-				*valor_registro1 = *valor_registro1 - *valor_registro2; // Asigna el valor a través del puntero
-				printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
-			} 
-			else 
-			{
-				printf("El registro no se encontró en el proceso.\n");
-			}
-			
-		}
-		//CASO DE TENER UNA INSTRUCCION JNZ
-		if (strcmp(instruccion_split[0], "JNZ") == 0)
-		{
-			if( esRegistroUint8(instruccion_split[1]))
-			{
-				uint8_t* valor_registro = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
-				if( valor_registro != NULL )
-				{
-					if( *valor_registro != 0 )
-					{
-						proceso->PC = atoi(instruccion_split[2]);
-						printf("El registro PC ha sido modificado a: %d", proceso->PC);
-					}
-				}
-				else
-				{
-					printf("El registro no se encontró en el proceso.\n");
-				}
-			}
-			else
-			{
-				printf("El registro no se encontró en el proceso.\n");
-			}
-			/*
-			int *valor_registro = (int *)obtener_registro(instruccion_split[1], proceso);
-			if (valor_registro != NULL) 
-			{
-				if( *valor_registro != 0 )
-				{
-					proceso->PC = atoi(instruccion_split[2]);
-				}
-			} 
-			else 
-			{
-				printf("El registro no se encontró en el proceso.\n");
-			}
-			
-		}
-		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
-		proceso->PC++;
-		enviar_pcb_memoria(proceso->PID,proceso->PC);
-		printf("------------------------------\n");
-		sem_post(&sem_exe_a);
-		sem_wait(&sem_exe_b);
-	}
-	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
-} */
-
 void ejecutar_proceso(PCB* proceso)
 {
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
@@ -586,6 +457,23 @@ void ejecutar_proceso(PCB* proceso)
 		}
 	
 		//CASO DE TENER UNA INSTRUCCION IO_GEN_SLEEP
+		if(strcmp(instruccion_split[0], "IO_GEN_SLEEP") == 0 )
+		{
+			//debemos devolver instruccion + pcb parando el proceso actual
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,GENERICA);
+			
+			//se bloquea el proceso, devolvemos al kernel
+			free(instruccionActual);
+			instruccionActual = malloc(1);
+			instruccionActual = "";
+
+			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
+			usleep(2000);
+			proceso->PC++;
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			return;
+		}
 		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
 		/*
 		if (strcmp(instruccion_split[0], "IO_STDIN_READ") == 0)

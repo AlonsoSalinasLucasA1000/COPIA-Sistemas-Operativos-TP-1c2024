@@ -23,10 +23,14 @@ sem_t sem_cant; //semaforo cant de elementos en la cola
 sem_t sem_cant_ready;
 sem_t sem_mutex_plani_corto; //semaforo oara planificacion FIFO
 
+//TODAS LAS QUEUES
 int pid = 0;
 t_queue* cola_new;
 t_queue* cola_ready;
 t_queue* cola_blocked;
+
+//LISTA DE ENTRADAS Y SALIDAS
+t_list* listGenericas;
 
 t_log *kernel_logger; // LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config *kernel_config;
@@ -44,8 +48,46 @@ char* RECURSOS;
 char* INSTANCIAS_RECURSOS;
 char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 
+void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz)
+{
+	char** instruccion_split = string_split(instruccion," ");
+	int* unidadesDeTrabajo = malloc(sizeof(int));
+	*unidadesDeTrabajo = atoi(instruccion_split[2]);
 
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
+    //Calculamos su tamaño
+	buffer->size = sizeof(int);
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset,unidadesDeTrabajo, sizeof(int));
+    buffer->offset += sizeof(int);
+
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = tipoDeInterfaz;
+    paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_entradasalida, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
 
 void kernel_escuchar_cpu ()
 {
@@ -84,6 +126,43 @@ void kernel_escuchar_cpu ()
 				free(proceso);
 			//	
                 break;
+			case PROCESOIO:
+
+				PCB* proceso_io = deserializar_proceso_cpu(paquete->buffer);
+				proceso_io->estado = BLOCKED;
+				printf("Recibimos el proceso con el pid: %d\n",proceso_io->PID);
+				printf("Recibimos el proceso con el AX: %d\n",proceso_io->registro.AX);//cambios
+				printf("Recibimos el proceso con el BX: %d\n",proceso_io->registro.BX);//cambios
+				printf("Recibimos el proceso con el CX: %d\n",proceso_io->registro.CX);//cambios
+				printf("Recibimos el proceso con el DX: %d\n",proceso_io->registro.DX);//cambios
+				printf("Recibimos el proceso con el EAX: %d\n",proceso_io->registro.EAX);//cambios
+				printf("Recibimos el proceso con el EBX: %d\n",proceso_io->registro.EBX);//cambios
+				printf("Recibimos el proceso con el ECX: %d\n",proceso_io->registro.ECX);//cambios
+				printf("Recibimos el proceso con el EDX: %d\n",proceso_io->registro.EDX);//cambios
+				printf("Recibimos el proceso con el SI: %d\n",proceso_io->registro.SI);//cambios
+				printf("Recibimos el proceso con el DI: %d\n",proceso_io->registro.DI);//cambios
+				printf("Este SE HA BLOQUEADO\n");
+
+				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
+				queue_push(cola_blocked, proceso_io);
+
+				break;
+			case GENERICA:
+				
+				Instruccion_io* instruccion_io_gen = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
+				printf("El PID de la instruccion es: %d\n",instruccion_io_gen->proceso.PID);
+
+				//asumiendo un unico elemento en la lista
+				//EntradaSalida* io_gen = list_get(listGenericas,0);
+
+				//como por ahora tenemos un único elemento, ejecutamos directamente
+
+				//ejecutar funcion para enviar a dormir a la interfaz
+				printf("Checkpoin1 \n");
+				ejecutar_interfaz_generica(instruccion_io_gen->instruccion,GENERICA);
+				//
+				break;
 			case MENSAJE:
 				//
 				break;
@@ -103,13 +182,45 @@ void kernel_escuchar_cpu ()
 		}	
 }
 
-
 void kernel_escuchar_entradasalida ()
 {
 	bool control_key = 1;
 	while (control_key) {
+
 			int cod_op = recibir_operacion(fd_entradasalida);
+
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(fd_entradasalida,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(fd_entradasalida,paquete->buffer->stream, paquete->buffer->size,0);
+
 			switch (cod_op) {
+			case GENERICA:
+
+				EntradaSalida* new_io_generica = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_generica->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_generica->path);
+				
+				list_add(listGenericas,new_io_generica);
+			    break;
+			case STDIN:
+			    break;
+			case STDOUT:
+			    break;
+			case DIALFS:
+			    break;
+			case DESPERTAR:
+			//sacamos al proceso de la cola de blocked y lo añadimos a IO
+				printf("La IO ha despertado :O\n");
+				PCB* proceso_awaken = queue_pop(cola_blocked);
+				proceso_awaken->estado = READY;
+				//meter en ready
+				sem_wait(&sem_ready);   // mutex hace wait
+				queue_push(cola_ready,proceso_awaken);	//agrega el proceso a la cola de ready
+    			sem_post(&sem_ready); 
+				sem_post(&sem_cant_ready);
+			    break;
 			case MENSAJE:
 				//
 				break;
@@ -123,6 +234,9 @@ void kernel_escuchar_entradasalida ()
 				log_warning(kernel_logger,"Operacion desconocida. No quieras meter la pata");
 				break;
 			}
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
 		}	
 }
 
