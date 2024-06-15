@@ -299,7 +299,7 @@ void memoria_escuchar_cpu (){
 				
 				printf("He recibido un pedido de LECTURA\n");
 				int* direccionFisica = malloc(sizeof(int));
-				int* tamanioDato = malloc(sizeof(size_t));
+				size_t* tamanioDato = malloc(sizeof(size_t));//puede que sea int*
 				memcpy(direccionFisica,paquete->buffer->stream,sizeof(int));
 				paquete->buffer->stream += sizeof(int);
 				memcpy(tamanioDato,paquete->buffer->stream,sizeof(size_t));
@@ -314,15 +314,30 @@ void memoria_escuchar_cpu (){
 				break;
 			/*case ESCRITURA_CADENA:
 				printf("He recibido un pedido de ESCRITURA_CADENA\n");
-				int* direccionFisica = malloc(sizeof(int));
+				int direccionFisica = malloc(sizeof(int));
 				char* cadena = malloc(sizeof(char));
+				memcpy(direccionFisica, paquete->buffer->stream, sizeof(int));
+				paquete->buffer->stream += sizeof(int);
+				memcpy(cadena, paquete->buffer->stream, sizeof(char));
+				
+				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
+				memmove (espacio_usuario + direccionFisica, cadena, sizeof(cadena));
+
+Copy N bytes of SRC to DEST, guaranteeing
+   correct behavior for overlapping strings. 
+extern void *memmove (void *__dest, const void *__src, size_t __n)
+     __THROW __nonnull ((1, 2));
+
+
+			
+				break;  */
+			/*case ESCRITURA_NUMERICO:
+				printf("He recibido un pedido de ESCRITURA_NUMERICO\n");
+				int* direccionFisica = malloc(sizeof(int));
+				int* valor = malloc(sizeof(int));
 				memcpy(direccionFisica,paquete->buffer->stream,sizeof(int));
 				paquete->buffer->stream += sizeof(int);
-				memcpy(cadena,paquete->buffer->stream,sizeof(char));
-			
-				break;*/
-			/*case ESCRITURA_NUMERICO:
-				
+				memcpy(valor,paquete->buffer->stream,sizeof(int));
 				break;*/
 			case PAQUETE:
 				//

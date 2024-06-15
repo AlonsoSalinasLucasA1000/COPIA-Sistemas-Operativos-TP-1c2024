@@ -84,7 +84,6 @@ log_info (kernel_logger, "Conectado a cpu exitosamente por interrupt.");
 handshakeClient(fd_cpu_interrupt, 2);
 
 
-
 //esperar conexion de entradasalida
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_kernel, kernel_logger, "ENTRADASALIDA");

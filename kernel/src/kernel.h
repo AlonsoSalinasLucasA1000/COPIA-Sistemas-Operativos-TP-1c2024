@@ -175,7 +175,7 @@ void kernel_escuchar_cpu ()
 			case FIN_DE_QUANTUM:
 
 				PCB* proceso_fin_de_quantum = deserializar_proceso_cpu(paquete->buffer);
-				proceso_io->estado = READY;
+				proceso_fin_de_quantum->estado = READY;
 				printf("Recibimos el proceso con el pid: %d\n",proceso_fin_de_quantum->PID);
 				printf("Recibimos el proceso con el AX: %d\n",proceso_fin_de_quantum->registro.AX);//cambios
 				printf("Recibimos el proceso con el BX: %d\n",proceso_fin_de_quantum->registro.BX);//cambios
@@ -190,7 +190,11 @@ void kernel_escuchar_cpu ()
 				printf("SE HA ACABADO EL QUANTUM DE ESTE PROCESO\n");
 
 				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
-				queue_push(cola_ready, proceso_fin_de_quantum);
+				sem_wait(&sem_ready);   // mutex hace wait
+				queue_push(cola_ready,proceso_fin_de_quantum);	//agrega el proceso a la cola de ready
+  				sem_post(&sem_ready); 
+				sem_post(&sem_cant_ready);  // mutex hace wait
+				
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);	

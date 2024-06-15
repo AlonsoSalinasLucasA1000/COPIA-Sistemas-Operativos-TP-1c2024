@@ -14,6 +14,7 @@ int fd_kernel_dispatch;
 int fd_kernel_interrupt;
 //lista de TLB
 t_list* listaTLB;
+
 //Si la asignacion fue correcta es 0, de haber out of memory es 1
 int asignacion_or_out_of_memory;
 
@@ -114,14 +115,15 @@ void enviar_pcb_memoria(int PID, int PC)
 }
 
 
-
 //Funcion para encontar la TLB del numero_pagina y pid del proceso
 /*	
-	TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) {
+	TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) { 	
     	// Implementación básica de búsqueda en la TLB 
-    	for (int i = 0; i < list_size(listaTLB); i++) {    //duda en un usar un for
+    	for (int i = 0; i < list_size(listaTLB); i++) { 
 			TLB* entrada = list_get(listaTLB, i);
+
 			if (entrada->PID == proceso->PID && entrada->pagina == numero_Pagina) {
+				
 				return entrada; // Retorna la entrada de la TLB si se encuentra
 			}
     	}
@@ -136,29 +138,56 @@ void enviar_pcb_memoria(int PID, int PC)
 		nueva_entrada->pid = pid;
 		nueva_entrada->pagina = numero_Pagina;
 		nueva_entrada->marco = marco;
-		
+	
 		list_add(listaTLB, nueva_entrada);
 	}
 */
 /*
 	void algoritmoSustitucion(int pid, int numero_Pagina, int marco) 
 	{
-		if(strcmp(ALGORITMO_TLB,"FIFO")==0)
+		if(strcmp(ALGORITMO_TLB,"FIFO")==0)    //-------------------
 		{   // Implementación básica de FIFO para la TLB
+		
 		TLB* entrada_mas_antigua = list_get(listaTLB, 0);
+
 		entrada_mas_antigua->pid = pid;
 		entrada_mas_antigua->pagina = numero_Pagina;
 		entrada_mas_antigua->marco = marco;
 		
 		// Mover la entrada más antigua al final de la lista (simulando FIFO)
+		
 		list_remove(listaTLB, 0);
 		list_add(listaTLB, entrada_mas_antigua);
-		}
-		if(strcmp(ALGORITMO_TLB,"LRU")==0)   
+		
+		}   
+		
+		if(strcmp(ALGORITMO_TLB,"LRU")==0)   //---------------
 		{
+			// Implementación de LRU para la TLB
+        	int indiceLRU;  //
+			TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid, &indiceLRU);
 			
-		}
-	}
+			if (entradaLRU != NULL) {
+				// Actualizar la entrada LRU encontrada
+				entradaLRU->pid = pid;
+				entradaLRU->pagina = numero_Pagina;
+				entradaLRU->marco = marco;
+				entradaLRU->contadorLRU = LRU_counter++;
+			} else {
+				// No se encontró una entrada, se debe reemplazar la menos recientemente usada
+				indiceLRU = encontrar_indice_menos_recientemente_usado();
+				TLB* 				listaTLB[indiceLRU].pid = pid;   // 
+				listaTLB[indiceLRU].pagina = numero_Pagina;
+				listaTLB[indiceLRU].marco = marco;
+				listaTLB[indiceLRU].contadorLRU = LRU_counter++;
+			}
+			
+		} else   
+		{
+       		printf("Algoritmo de TLB no reconocido\n");
+    	}
+	} 
+	
 
 */
 /*
@@ -307,7 +336,7 @@ void pedido_escritura_numerico (int direccion_fisica, int valor_a_escribir)
 }
 
 
-void pedido_escritura_numerico (int direccion_fisica, char valor_a_escribir,)
+void pedido_escritura_cadena (int direccion_fisica, char valor_a_escribir,)
 {
 	int* direccion_a_enviar = malloc(sizeof(int));
 	*direccion_a_enviar = direccion_fisica;
@@ -769,8 +798,8 @@ void ejecutar_proceso(PCB* proceso)
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
-/*
-/*
+
+
 		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
 		{
@@ -828,8 +857,7 @@ void ejecutar_proceso(PCB* proceso)
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
-*/
-/*
+
 		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
 		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
 		{
@@ -992,10 +1020,8 @@ void ejecutar_proceso(PCB* proceso)
 			}
 		}
 
-
-
 		*/
-		
+		printf("SIGO MI EJECUCION TRANQUIAHRE AJAJA\n");
 		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 		proceso->PC++;
 		
@@ -1003,11 +1029,14 @@ void ejecutar_proceso(PCB* proceso)
 		sem_wait(&interrupt_mutex);
 		if( any_interrupcion == 1 )//fin de quantum
 		{
+			any_interrupcion = 0;
+			printf("Voy a regresar al proceso\n");
 			enviarPCB(proceso,fd_kernel_dispatch,FIN_DE_QUANTUM);
+			sem_post(&interrupt_mutex);
 			return;
 		}
 		sem_post(&interrupt_mutex);
-
+		printf("SIGO MI EJECUCION TRANQUI\n");
 		enviar_pcb_memoria(proceso->PID,proceso->PC);
 		printf("------------------------------\n");
 		sem_post(&sem_exe_a);

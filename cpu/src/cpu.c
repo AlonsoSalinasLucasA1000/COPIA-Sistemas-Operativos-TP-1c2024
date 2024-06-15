@@ -71,14 +71,19 @@ pthread_create (&hilo_kernel_dispatch, NULL, (void*)cpu_escuchar_kernel_dispatch
 pthread_detach (hilo_kernel_dispatch);
 
 pthread_t hilo_kernel_interrupt;
-pthread_create (&hilo_kernel_interrupt, NULL, (void*)cpu_escuchar_kernel_dispatch, NULL);
+pthread_create (&hilo_kernel_interrupt, NULL, (void*)cpu_escuchar_kernel_interrupt, NULL);
 pthread_detach (hilo_kernel_interrupt);
 
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)cpu_escuchar_memoria, NULL);
-pthread_join (hilo_memoria, NULL);
+pthread_detach (hilo_memoria);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
+
+while(1)
+{
+	sleep(1);
+}
 
 liberar_config(cpu_config);
 liberar_logger(cpu_logger);
