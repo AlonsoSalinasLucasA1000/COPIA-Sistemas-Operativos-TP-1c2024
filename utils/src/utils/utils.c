@@ -519,8 +519,8 @@ Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
 	memcpy(to_return->instruccion, stream, to_return->tam_instruccion);
 	return to_return;
 }
-
-void enviarEntero(int* entero_a_enviar,int fd_cliente,op_code codigoDeOperacion)
+//seriali
+void enviarEntero(int* entero_a_enviar, int fd_cliente, op_code codigoDeOperacion)
 {
 	printf("Voy a mandar algo\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));

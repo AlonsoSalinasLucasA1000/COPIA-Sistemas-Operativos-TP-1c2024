@@ -220,6 +220,7 @@ void memoria_escuchar_cpu (){
 						strncpy(to_send, "vegeta", hola - 1);
 						to_send[hola - 1] = '\0';
 						enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
+						free(to_send);
 					}
 					else
 					{
@@ -229,6 +230,7 @@ void memoria_escuchar_cpu (){
 						strncpy(to_send, "vegeta", hola - 1);
 						to_send[hola - 1] = '\0';
 						enviar_mensaje_cpu_memoria(instruccion,fd_cpu,OUT_OF_MEMORY);
+						free(to_send);
 					}
 				}
 				else
@@ -292,36 +294,53 @@ void memoria_escuchar_cpu (){
 					strncpy(to_send, "vegeta", hola - 1);
 					to_send[hola - 1] = '\0';
 					enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
+					free(to_send);
 
 				}
 				break;
 			case LECTURA:
 				
+				void* copy_stream = paquete->buffer->stream;
 				printf("He recibido un pedido de LECTURA\n");
 				int* direccionFisica = malloc(sizeof(int));
-				size_t* tamanioDato = malloc(sizeof(size_t));//puede que sea int*
-				memcpy(direccionFisica,paquete->buffer->stream,sizeof(int));
-				paquete->buffer->stream += sizeof(int);
-				memcpy(tamanioDato,paquete->buffer->stream,sizeof(size_t));
+				int* tamanioDato = malloc(sizeof(int));		//puede que sea int*
+				memcpy(direccionFisica,copy_stream,sizeof(int));
+				copy_stream += sizeof(int);
+				memcpy(tamanioDato,copy_stream,sizeof(int));
+
+				printf("Recibimos la direccion fisica: %d\n",*direccionFisica);
+				printf("Recibimos la del tamaño del dato: %d\n",*tamanioDato);
 
 
 				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
 				int* datoObtenido = malloc(sizeof(int));
 				memcpy(datoObtenido,espacio_usuario + *direccionFisica,*tamanioDato);
-
+				printf("Enviaremos %d\n",*datoObtenido);
 				enviarEntero(datoObtenido,fd_cpu,LECTURA);
 				//
 				break;
-			/*case ESCRITURA_CADENA:
+			/*
+			case ESCRITURA_CADENA:
+				void* copia_stream = paquete->buffer->stream;
 				printf("He recibido un pedido de ESCRITURA_CADENA\n");
-				int direccionFisica = malloc(sizeof(int));
+				int* direccionFisica = malloc(sizeof(int));
+				int* tamanioCadena = malloc(sizeof(int)); 
 				char* cadena = malloc(sizeof(char));
-				memcpy(direccionFisica, paquete->buffer->stream, sizeof(int));
-				paquete->buffer->stream += sizeof(int);
-				memcpy(cadena, paquete->buffer->stream, sizeof(char));
+				
+				memcpy(direccionFisica, copia_stream, sizeof(int));
+				copia_stream += sizeof(int);
+				memcpy(tamanioCadena, copia_stream, sizeof(int));
+				copia_stream += sizeof(int);
+				memcpy(cadena, copia_stream, *tamanioCadena);
 				
 				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
-				memmove (espacio_usuario + direccionFisica, cadena, sizeof(cadena));
+				memmove (espacio_usuario + *direccionFisica, cadena, *tamanioCadena);
+
+				void* to_show = malloc(*tamanioCadena);
+				memcpy(to_show,espacio_usuario + *direccionFisica,*tamanioCadena);
+
+				char* show = (char*)to_show;
+				printf("Mostrar lo escrito %s",show);
 
 Copy N bytes of SRC to DEST, guaranteeing
    correct behavior for overlapping strings. 
@@ -330,15 +349,36 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 
 
 			
-				break;  */
-			/*case ESCRITURA_NUMERICO:
+				break;  
+			*/
+			case ESCRITURA_NUMERICO:
+
+				void* copy_stream_e_n = paquete->buffer->stream;
 				printf("He recibido un pedido de ESCRITURA_NUMERICO\n");
-				int* direccionFisica = malloc(sizeof(int));
+				int* direccionFisica_e_n = malloc(sizeof(int));
 				int* valor = malloc(sizeof(int));
-				memcpy(direccionFisica,paquete->buffer->stream,sizeof(int));
-				paquete->buffer->stream += sizeof(int);
-				memcpy(valor,paquete->buffer->stream,sizeof(int));
-				break;*/
+				memcpy(direccionFisica_e_n,copy_stream_e_n,sizeof(int));
+				copy_stream += sizeof(int);
+				memcpy(valor,copy_stream_e_n,sizeof(int));
+				
+				printf("Recibimos la siguiente direccion: %d\n",*direccionFisica_e_n);//BX
+				printf("Recibimos el siguiente valor a escribir: %d\n",*valor);//AX
+				memmove(espacio_usuario + *direccionFisica_e_n, valor, sizeof(int));
+
+				void* to_show_n = malloc(sizeof(int));
+				memcpy(to_show_n,espacio_usuario + *direccionFisica_e_n, sizeof(int));
+
+				int* show_n = (int*)to_show_n;
+				printf("Mostrar lo escrito %d\n",*show_n);
+
+				int hola = 20;
+				char* to_send = malloc(hola);
+				strncpy(to_send, "vegeta", hola - 1);
+				to_send[hola - 1] = '\0';
+				enviar_mensaje_cpu_memoria(to_send,fd_cpu,ESCRITO);
+				free(to_send);
+				
+				break;
 			case PAQUETE:
 				//
 				break;
@@ -353,6 +393,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				break;
 			}
 			//Liberando los paquetes solucionamos los errores presentados anteriormente
+		
 			free(paquete->buffer->stream);
 			free(paquete->buffer);
 			free(paquete);
