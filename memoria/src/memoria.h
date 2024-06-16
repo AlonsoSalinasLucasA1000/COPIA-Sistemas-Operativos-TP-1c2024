@@ -98,6 +98,8 @@ void memoria_escuchar_cpu (){
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			recv(fd_cpu,paquete->buffer->stream, paquete->buffer->size,0);
 
+			printf("Recibi el codigo operacion\n");
+
 			switch (cod_op) {
 			case MENSAJE: 
 				//
@@ -358,7 +360,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				int* direccionFisica_e_n = malloc(sizeof(int));
 				int* valor = malloc(sizeof(int));
 				memcpy(direccionFisica_e_n,copy_stream_e_n,sizeof(int));
-				copy_stream += sizeof(int);
+				copy_stream_e_n += sizeof(int);
 				memcpy(valor,copy_stream_e_n,sizeof(int));
 				
 				printf("Recibimos la siguiente direccion: %d\n",*direccionFisica_e_n);//BX

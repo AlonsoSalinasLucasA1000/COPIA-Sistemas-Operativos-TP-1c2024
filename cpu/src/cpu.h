@@ -117,135 +117,132 @@ void enviar_pcb_memoria(int PID, int PC)
 
 
 //Funcion para encontar la TLB del numero_pagina y pid del proceso
-/*	
-	TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) { 	
-    	// Implementación básica de búsqueda en la TLB 
-    	for (int i = 0; i < list_size(listaTLB); i++) { 
-			TLB* entrada = list_get(listaTLB, i);
 
-			if (entrada->PID == proceso->PID && entrada->pagina == numero_Pagina) {
+TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) { 	
+    // Implementación básica de búsqueda en la TLB 
+    for (int i = 0; i < list_size(listaTLB); i++) { 
+		TLB* entrada = list_get(listaTLB, i);
+
+		if (entrada->PID == proceso->PID && entrada->pagina == numero_Pagina) {
 				
-				return entrada; // Retorna la entrada de la TLB si se encuentra
-			}
-    	}
-    	return NULL; // Retorna NULL si no se encuentra la entrada en la TLB (TLB HIT)
-	}
-*/
-/*
-	//Funcion para agregar a lista de TLB el pid del proceso y su numero_pagina
-	void agregar_a_TLB(int pid, int numero_Pagina, int marco) 
-	{
-		TLB* nueva_entrada = malloc(sizeof(TLB));
-		nueva_entrada->pid = pid;
-		nueva_entrada->pagina = numero_Pagina;
-		nueva_entrada->marco = marco;
+			return entrada; // Retorna la entrada de la TLB si se encuentra
+		}
+    }
+    return NULL; // Retorna NULL si no se encuentra la entrada en la TLB (TLB HIT)
+}
+
+
+//Funcion para agregar a lista de TLB el pid del proceso y su numero_pagina
+void agregar_a_TLB(int pid, int numero_Pagina, int marco) 
+{
+	TLB* nueva_entrada = malloc(sizeof(TLB));
+	nueva_entrada->pid = pid;
+	nueva_entrada->pagina = numero_Pagina;
+	nueva_entrada->marco = marco;
 	
-		list_add(listaTLB, nueva_entrada);
-	}
-*/
-/*
-	void algoritmoSustitucion(int pid, int numero_Pagina, int marco) 
-	{
-		if(strcmp(ALGORITMO_TLB,"FIFO")==0)    //-------------------
-		{   // Implementación básica de FIFO para la TLB
+	list_add(listaTLB, nueva_entrada);
+}
+
+
+void algoritmoSustitucion(int pid, int numero_Pagina, int marco) 
+{
+	if(strcmp(ALGORITMO_TLB,"FIFO")==0)    //-------------------
+	{   // Implementación básica de FIFO para la TLB
 		
 		TLB* entrada_mas_antigua = list_get(listaTLB, 0);
 
 		entrada_mas_antigua->pid = pid;
 		entrada_mas_antigua->pagina = numero_Pagina;
 		entrada_mas_antigua->marco = marco;
-		
+			
 		// Mover la entrada más antigua al final de la lista (simulando FIFO)
-		
+			
 		list_remove(listaTLB, 0);
 		list_add(listaTLB, entrada_mas_antigua);
 		
-		}   
+	}   
 		
-		if(strcmp(ALGORITMO_TLB,"LRU")==0)   //---------------
-		{
-			// Implementación de LRU para la TLB
-        	int indiceLRU;  //
-			TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid, &indiceLRU);
-			
-			if (entradaLRU != NULL) {
-				// Actualizar la entrada LRU encontrada
-				entradaLRU->pid = pid;
-				entradaLRU->pagina = numero_Pagina;
-				entradaLRU->marco = marco;
-				entradaLRU->contadorLRU = LRU_counter++;
-			} else {
-				// No se encontró una entrada, se debe reemplazar la menos recientemente usada
-				indiceLRU = encontrar_indice_menos_recientemente_usado();
-				TLB* 				listaTLB[indiceLRU].pid = pid;   // 
-				listaTLB[indiceLRU].pagina = numero_Pagina;
-				listaTLB[indiceLRU].marco = marco;
-				listaTLB[indiceLRU].contadorLRU = LRU_counter++;
-			}
-			
-		} else   
-		{
-       		printf("Algoritmo de TLB no reconocido\n");
-    	}
-	} 
-	
-
-*/
-/*
-	// Función para enviar solicitud a la memoria y recibir el número actualizado
-	void obtener_marco_desde_memoria(int fd_memoria, int numero_Pagina, uint32_t pid, op_code codigo_operacion) {
-		// Aquí se implementaría la lógica para enviar la solicitud a la memoria
-		// usando el descriptor de archivo fd_memoria y recibir la respuesta.
-		// Esto puede variar dependiendo de cómo se implemente la comunicación
-		// con el subsistema de memoria en tu aplicación.
-	}
-
-	// Función para recibir el número desde la memoria
-	int recibir_numero(int fd_memoria) 
+	if(strcmp(ALGORITMO_TLB,"LRU")==0)   //---------------
 	{
-		// Implementación de recepción de número desde la memoria.
-		// Esto puede variar dependiendo de la estructura de los datos que
-		// recibes desde el subsistema de memoria.
-		int numero_recibido = 0; // Ejemplo básico, debes adaptarlo según tu implementación real
-		// Ejemplo básico:
-		read(fd_memoria, &numero_recibido, sizeof(int));
-		return numero_recibido;
-	}
-
-*/
-// Función MMU, traductor de lógica a física
-/*
-	int mmu(int dir_Logica, PCB* proceso){  			 					//faltaria pasar el proceso								
-		int numero_Pagina = floor(dirLogica/TAMANIO_PAGINA); 					//config.tam_pag_memoria= TAM_MEMORIA=4096,   floor(dirección_lógica / tamaño_página)
-		int desplazamiento = dir_Logica - numero_Pagina * TAMANIO_PAGINA;   	//dirección_lógica - número_página * tamaño_página          ,TAM_PAGINA=32
-		
-		TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);				//buscar por numero de pagina y pid de proceso					                           //
-		
-		if(retorno_TLB!=NULL){  											                          // Si el TLB obtiene el numero_Pagina  ->TLB Hit
-			log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
-			return (retorno_TLB->marco) + desplazamiento;   				                         //devuelve la direccion fisica
-		} else{																                        // Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
-			log_info(logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
-			int marco = obtener_marco_desde_memoria(fd_memoria, numero_Pagina, proceso->PID, MARCO); //pide a memoria  
+		// Implementación de LRU para la TLB
+        int indiceLRU;  //
+		TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid, &indiceLRU);
 			
-			op_code codigo_operacion = recibir_operacion(fd_memoria);
-
-			if(codigo_operacion == NUMERO){
-				log_debug(cpu_logger,"Entre a numero bien");
-				int marco = recibir_numero(fd_memoria);
-
-				if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
-					agregar_a_TLB(proceso->PID, numero_Pagina, marco);		//datos de la TLB
-				} else{														// pero si lo esta debo implementar el algoritmo
-					//el algoritmo FIFO	
-					algoritmoSustitucion(proceso->PID, numero_Pagina, marco);
-				}
-				return marco + desplazamiento;//Devuelve la direccion fisica
-			}			
+		if (entradaLRU != NULL) {
+			// Actualizar la entrada LRU encontrada
+			entradaLRU->pid = pid;
+			entradaLRU->pagina = numero_Pagina;
+			entradaLRU->marco = marco;
+			entradaLRU->contadorLRU = LRU_counter++;
+		} else {
+			// No se encontró una entrada, se debe reemplazar la menos recientemente usada
+			indiceLRU = encontrar_indice_menos_recientemente_usado();
+			TLB* listaTLB[indiceLRU].pid = pid;   // 
+			listaTLB[indiceLRU].pagina = numero_Pagina;
+			listaTLB[indiceLRU].marco = marco;
+			listaTLB[indiceLRU].contadorLRU = LRU_counter++;
 		}
-		return -1;
-	}
-*/
+			
+	} else   
+	{
+       	printf("Algoritmo de TLB no reconocido\n");
+    }
+} 
+	
+// Función para enviar solicitud a la memoria y recibir el número actualizado
+void obtener_marco_desde_memoria(int fd_memoria, int numero_Pagina, uint32_t pid, op_code codigo_operacion) 
+{
+	// Aquí se implementaría la lógica para enviar la solicitud a la memoria
+	// usando el descriptor de archivo fd_memoria y recibir la respuesta.
+	// Esto puede variar dependiendo de cómo se implemente la comunicación
+	// con el subsistema de memoria en tu aplicación.
+}
+
+// Función para recibir el número desde la memoria
+int recibir_numero(int fd_memoria) 
+{
+	// Implementación de recepción de número desde la memoria.
+	// Esto puede variar dependiendo de la estructura de los datos que
+	// recibes desde el subsistema de memoria.
+	int numero_recibido = 0; // Ejemplo básico, debes adaptarlo según tu implementación real
+	// Ejemplo básico:
+	read(fd_memoria, &numero_recibido, sizeof(int));
+	return numero_recibido;
+}
+
+// Función MMU, traductor de lógica a física
+int mmu(int dir_Logica, PCB* proceso)
+{  			 									
+	int numero_Pagina = floor(dirLogica/TAMANIO_PAGINA); 					//config.tam_pag_memoria
+	int desplazamiento = dir_Logica - numero_Pagina * TAMANIO_PAGINA;   	//dirección_lógica - número_página * tamaño_página         
+		
+	TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);				//buscar por numero de pagina y pid de proceso	
+		
+	if(retorno_TLB!=NULL){  											                          // Si el TLB obtiene el numero_Pagina  ->TLB Hit
+		log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
+		return (retorno_TLB->marco) + desplazamiento;   				                         //devuelve la direccion fisica
+	} else{																                        // Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
+		log_info(logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
+		int marco = obtener_marco_desde_memoria(fd_memoria, numero_Pagina, proceso->PID, MARCO); //pide a memoria  
+			
+		op_code codigo_operacion = recibir_operacion(fd_memoria);
+
+		if(codigo_operacion == NUMERO){
+			log_debug(cpu_logger,"Entre a numero bien");
+			int marco = recibir_numero(fd_memoria);
+
+			if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
+				agregar_a_TLB(proceso->PID, numero_Pagina, marco);		//datos de la TLB
+			} else{														// pero si lo esta debo implementar el algoritmo
+				//el algoritmo FIFO	
+				algoritmoSustitucion(proceso->PID, numero_Pagina, marco);
+			}
+			return marco + desplazamiento;//Devuelve la direccion fisica
+		}			
+		}
+	return -1;
+}
+
 void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
 {
 	int* entero_a_enviar = malloc(sizeof(int));
@@ -291,7 +288,6 @@ void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
 
 }
 
-
 void pedido_escritura_numerico (int direccion_fisica, int valor_a_escribir)
 {
 	int* direccion_a_enviar = malloc(sizeof(int));
@@ -335,7 +331,6 @@ void pedido_escritura_numerico (int direccion_fisica, int valor_a_escribir)
     free(paquete->buffer);
     free(paquete);
 }
-
 
 void pedido_escritura_cadena (int direccion_fisica, char* valor_a_escribir)
 {
@@ -385,7 +380,6 @@ void pedido_escritura_cadena (int direccion_fisica, char* valor_a_escribir)
     free(paquete->buffer);
     free(paquete);
 }
-
 
 void* obtener_registro(char* registro, PCB* proceso)
 {
@@ -746,7 +740,6 @@ void ejecutar_proceso(PCB* proceso)
 			}
 		}
 
-	/*
 		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDIN_READ") == 0 ) 
 		{
@@ -863,11 +856,11 @@ void ejecutar_proceso(PCB* proceso)
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
-		*/
+
 		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
 		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
 		{
-			/*if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
+			if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 			{
 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso); //direccion
 				int direc_logica = (int)*registro_uint8;
@@ -896,27 +889,26 @@ void ejecutar_proceso(PCB* proceso)
 		
 						}
 					}
-				
-			*/	 
-			//}
-			//else
-			//{
+				 
+			}
+			else
+			{
 				if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
 				{
 					uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 					int direc_logica = (int)*registro_uint32;
 
 						//REGISTRO TAMAÑO UNIT8
-						if ( esRegistroUint8(instruccion_split[3])){
-							uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
+						if ( esRegistroUint8(instruccion_split[1])){
+							uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
 							//int direccion_fisica = mmu (direc_logica, proceso); 
-							pedido_lectura_numerico (direc_logica,sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
+							pedido_lectura_numerico (direc_logica,sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
 							sem_wait(&sem_lectura);
-							registro_datos = (uint32_t*)valor_leido;//asigna ese valor al registro
+							registro_datos = (uint8_t*)valor_leido;//asigna ese valor al registro
 						}
 						else 
 						{	//REGISTRO TAMAÑO UINT32
-							if ( esRegistroUint32(instruccion_split[3])){
+							if ( esRegistroUint32(instruccion_split[1])){
 								uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
 								//int direccion_fisica = mmu (direc_logica, proceso);
 								pedido_lectura_numerico (direc_logica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
@@ -930,7 +922,7 @@ void ejecutar_proceso(PCB* proceso)
 					printf("El registro no se encontró en el proceso.\n");
 				}
 				
-			//}
+			}
 		}
 	
 		//CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
@@ -996,7 +988,7 @@ void ejecutar_proceso(PCB* proceso)
 				
 			}
 		}
-  /*
+
 		//CASO DE TENER UNA INSTRUCCION COPY_STRING (Tamaño) tamaño = cantidad de bytes a copiar
 		if (strcmp(instruccion_split[0], "COPY_STRING") == 0)
 		{
@@ -1025,7 +1017,7 @@ void ejecutar_proceso(PCB* proceso)
 				printf("El registro no se encontró en el proceso.\n");				
 			}
 		}
-		*/
+
 		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 		proceso->PC++;
 		
@@ -1159,7 +1151,7 @@ void cpu_escuchar_memoria (){
 			recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			recv(fd_memoria,paquete->buffer->stream,paquete->buffer->size,0);
 			
-
+			printf("Recibi una operacion nashe\n");
 			switch (cod_op) {
 			case MENSAJE:
 			    sem_wait(&sem_exe_a);
@@ -1182,11 +1174,11 @@ void cpu_escuchar_memoria (){
 				asignacion_or_out_of_memory = 1;
 				sem_post(&sem_memoria_aviso_cpu);
 			case LECTURA:
-				printf("Lei el valor en memoria");
-				valor_leido = malloc(paquete->buffer->size);
+				printf("Lei el valor en memoria\n");
+				valor_leido = malloc(sizeof(int));
 				int* leidoQueLlego = paquete->buffer->stream;
 				memcpy(valor_leido, leidoQueLlego, sizeof(int));  
-				printf("El valor leido que llego fue: %d\n",*valor_leido);
+				printf("El valor leido que llego fue: %d\n",*valor_leido); //no imprime el valor leido
 				sem_post(&sem_lectura);
 			case ESCRITO:
 				sem_post(&sem_escritura);
