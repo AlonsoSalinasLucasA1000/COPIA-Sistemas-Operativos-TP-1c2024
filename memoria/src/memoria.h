@@ -386,7 +386,6 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				break;
 			case MARCO:
 				//llega de cpu numero_pagina y pid del proceso
-				/*
 				void* copy_stream_m = paquete->buffer->stream;
 				printf("He recibido un pedido de MARCO\n");
 				int* numero_pagina = malloc(sizeof(int));
@@ -398,26 +397,30 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				printf("Recibimos numero de pagina: %d\n",*numero_pagina);
 				printf("Recibimos el pid: %d\n",*pid);
 
+				ProcesoMemoria* proceso_encontrado;
 				for(int i=0; i < list_size(listProcesos); i++)
 				{
-					PCB *proceso_actual = list_get(listProcesos,i);
-					if(proceso_actual->PID == pid)
+					ProcesoMemoria *proceso_actual = list_get(listProcesos,i);
+					
+					if(proceso_actual->PID == *pid)
 					{
-						PCB* proceso_encontrado = proceso_actual;
+						proceso_encontrado = proceso_actual;
 					}
 				}
 				for(int i = 0; i < list_size(proceso_encontrado->TablaDePaginas);i++)
 				{
-					if(proceso_encontrado->TablaDePaginas == numero_pagina)
+					int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas,i);
+					if(i == *numero_pagina)
 					{
 						//enviar el marco
-						enviarEntero(marco, fd_cpu,)
+						int* marco = pag_proceso_encontrado;
+						printf("Numero de marco a enviar: %d\n", *marco);
+						
+						usleep(2000);
+						enviarEntero(marco,fd_cpu,MARCO);
 					}
 				}
-				
-*/
-
-				
+								
 				break;
 			case -1:
 				log_error(memoria_logger, "El cliente cpu se desconecto. Terminando servidor");

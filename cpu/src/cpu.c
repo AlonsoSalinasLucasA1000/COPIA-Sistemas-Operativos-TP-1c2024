@@ -17,6 +17,8 @@ int main(int argc, char* argv[])
 	//semaforos para revisar interrupcion
 	sem_init(&interrupt_mutex,0,1);
 
+	sem_init(&sem_mmu,0,0);
+
 	any_interrupcion = 0;
 
 	cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
@@ -80,6 +82,8 @@ int main(int argc, char* argv[])
 	pthread_create (&hilo_memoria, NULL, (void*)cpu_escuchar_memoria, NULL);
 	pthread_detach (hilo_memoria);
 	//si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
+	
+	listaTLB = list_create();
 
 	while(1)
 	{

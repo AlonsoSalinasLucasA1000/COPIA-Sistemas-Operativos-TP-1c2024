@@ -531,7 +531,7 @@ void enviarEntero(int* entero_a_enviar, int fd_cliente, op_code codigoDeOperacio
     buffer->stream = malloc(buffer->size);
 	
     //Movemos los valores al buffer
-    memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(int));
+    memcpy(buffer->stream + buffer->offset, entero_a_enviar, sizeof(int));
     buffer->offset += sizeof(int);
 
 	//Creamos un Paquete

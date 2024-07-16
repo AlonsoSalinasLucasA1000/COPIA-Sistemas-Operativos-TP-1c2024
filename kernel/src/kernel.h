@@ -237,9 +237,19 @@ void kernel_escuchar_cpu ()
 				ejecutar_interfaz_stdin(instruccion_io_stdin->instruccion,STDIN);
 				//
 				break;
-			//case FS:
+			//case FS_CREATE:
 				//
 			//	break;
+			case STDOUT:
+
+				Instruccion_io* instruccion_io_stdout = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
+				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
+				//ejecutar funcion para la interfaz
+				printf("Checkpoin1 \n");
+				ejecutar_interfaz_stdin(instruccion_io_stdin->instruccion,STDIN);
+
+				break;
 			case MENSAJE:
 				//
 				break;

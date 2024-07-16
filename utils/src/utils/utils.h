@@ -29,7 +29,6 @@ typedef enum
 	FIN_DE_QUANTUM,
 
 	MARCO,
-	NUMERO,
 
 	PROCESOIO,
 	GENERICA,
