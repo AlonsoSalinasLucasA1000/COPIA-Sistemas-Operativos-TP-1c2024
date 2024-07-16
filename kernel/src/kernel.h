@@ -67,6 +67,52 @@ void ejecutar_interfaz_stdin(char* instruccion, op_code tipoDeInterfaz)
 {
 	char** instruccion_split = string_split(instruccion," ");
 	//IO_STDIN_READ (Interfaz, Registro Direccion, Registro Tamaño)
+	//Debemos enviar la direccion y el tamanio a escribir
+	int* direccionFisica = malloc(sizeof(int));
+	int* tamanio = malloc(sizeof(int));
+	*direccionFisica = atoi(instruccion_split[4]);
+	*tamanio = atoi(instruccion_split[5]);
+
+	//mandaremos
+	printf("mandaremos la siguiente direccion fisica: %d\n",*direccionFisica);
+	printf("mandaremos el siguiente tamanio: %d\n",*tamanio);
+
+	printf("Voy a mandar algo para el stdin\n");
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(int)*2;
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
+    buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
+    buffer->offset += sizeof(int);
+
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = STDIN;
+    paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_entradasalida, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+	printf("Lo mande\n");
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
 	
 }
 
@@ -153,6 +199,7 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso_fin_de_quantum->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso_fin_de_quantum->registro.DI);//cambios
 				printf("SE HA ACABADO EL QUANTUM DE ESTE PROCESO\n");
+				log_info (kernel_logs_obligatorios, "PID: <%d> - Desalojado por fin de Quantum", proceso_fin_de_quantum->PID);
 
 				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
 				sem_wait(&sem_ready);   // mutex hace wait
@@ -168,7 +215,7 @@ void kernel_escuchar_cpu ()
 				
 				Instruccion_io* instruccion_io_gen = deserializar_instruccion_io(paquete->buffer);
 				printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
-				printf("El PID de la instruccion es: %d\n",instruccion_io_gen->proceso.PID);
+				printf("El PID del proceso es: %d\n",instruccion_io_gen->proceso.PID);
 
 				//asumiendo un unico elemento en la lista
 				//EntradaSalida* io_gen = list_get(listGenericas,0);
@@ -184,12 +231,15 @@ void kernel_escuchar_cpu ()
 				
 				Instruccion_io* instruccion_io_stdin = deserializar_instruccion_io(paquete->buffer);
 				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
-				printf("El PID de la instruccion es: %d\n",instruccion_io_stdin->proceso.PID);
+				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
 				//ejecutar funcion para la interfaz
 				printf("Checkpoin1 \n");
 				ejecutar_interfaz_stdin(instruccion_io_stdin->instruccion,STDIN);
 				//
 				break;
+			//case FS:
+				//
+			//	break;
 			case MENSAJE:
 				//
 				break;

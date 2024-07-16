@@ -117,7 +117,7 @@ void enviar_pcb_memoria(int PID, int PC)
 
 
 //Funcion para encontar la TLB del numero_pagina y pid del proceso
-
+/*
 TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) { 	
     // Implementación básica de búsqueda en la TLB 
     for (int i = 0; i < list_size(listaTLB); i++) { 
@@ -130,9 +130,10 @@ TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) {
     }
     return NULL; // Retorna NULL si no se encuentra la entrada en la TLB (TLB HIT)
 }
+*/
 
-
-//Funcion para agregar a lista de TLB el pid del proceso y su numero_pagina
+/*
+//Funcion para agregar a lista de TLB el pid del proceso y su numero_pagina ------------------------------------
 void agregar_a_TLB(int pid, int numero_Pagina, int marco) 
 {
 	TLB* nueva_entrada = malloc(sizeof(TLB));
@@ -142,8 +143,9 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 	
 	list_add(listaTLB, nueva_entrada);
 }
+*/
 
-
+/*
 void algoritmoSustitucion(int pid, int numero_Pagina, int marco) 
 {
 	if(strcmp(ALGORITMO_TLB,"FIFO")==0)    //-------------------
@@ -167,7 +169,7 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 		// Implementación de LRU para la TLB
         int indiceLRU;  //
 		TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid, &indiceLRU);
-			
+		
 		if (entradaLRU != NULL) {
 			// Actualizar la entrada LRU encontrada
 			entradaLRU->pid = pid;
@@ -188,18 +190,57 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
        	printf("Algoritmo de TLB no reconocido\n");
     }
 } 
+*/
 	
 // Función para enviar solicitud a la memoria y recibir el número actualizado
-void obtener_marco_desde_memoria(int fd_memoria, int numero_Pagina, uint32_t pid, op_code codigo_operacion) 
+/*void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo_operacion) 
 {
 	// Aquí se implementaría la lógica para enviar la solicitud a la memoria
 	// usando el descriptor de archivo fd_memoria y recibir la respuesta.
 	// Esto puede variar dependiendo de cómo se implemente la comunicación
 	// con el subsistema de memoria en tu aplicación.
+	
+	//Creamos un Buffer
+    t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	
+    //Calculamos su tamaño
+	buffer->size = sizeof(int) + sizeof(uint32_t);//cambios
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+    //Movemos los valores al buffer
+	memcpy(buffer->stream + buffer->offset, &numero_pagina, sizeof(int));
+    buffer->offset += sizeof(int);
+    memcpy(buffer->stream + buffer->offset, &pid, sizeof(uint32_t));
+    buffer->offset += sizeof(uint32_t);
+
+    
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigo_operacion;
+    paquete->buffer = buffer;
+
+    //Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
 }
 
 // Función para recibir el número desde la memoria
-int recibir_numero(int fd_memoria) 
+int recibir_numero() 
 {
 	// Implementación de recepción de número desde la memoria.
 	// Esto puede variar dependiendo de la estructura de los datos que
@@ -208,22 +249,23 @@ int recibir_numero(int fd_memoria)
 	// Ejemplo básico:
 	read(fd_memoria, &numero_recibido, sizeof(int));
 	return numero_recibido;
-}
+}*/
 
+/*
 // Función MMU, traductor de lógica a física
 int mmu(int dir_Logica, PCB* proceso)
 {  			 									
-	int numero_Pagina = floor(dirLogica/TAMANIO_PAGINA); 					//config.tam_pag_memoria
-	int desplazamiento = dir_Logica - numero_Pagina * TAMANIO_PAGINA;   	//dirección_lógica - número_página * tamaño_página         
+	int numero_Pagina = floor(dirLogica/TAM_PAGINA); 					//config.TAM_PAGINA. necesitamos traer de memoria.config TAM_PAGINA
+	int desplazamiento = dir_Logica - numero_Pagina * TAM_PAGINA;   	//dirección_lógica - número_página * tamaño_página         
 		
-	TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);				//buscar por numero de pagina y pid de proceso	
+	TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
 		
-	if(retorno_TLB!=NULL){  											                          // Si el TLB obtiene el numero_Pagina  ->TLB Hit
+	if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
 		log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
-		return (retorno_TLB->marco) + desplazamiento;   				                         //devuelve la direccion fisica
-	} else{																                        // Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
+		return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
+	} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
 		log_info(logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
-		int marco = obtener_marco_desde_memoria(fd_memoria, numero_Pagina, proceso->PID, MARCO); //pide a memoria  
+		enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
 			
 		op_code codigo_operacion = recibir_operacion(fd_memoria);
 
@@ -239,9 +281,10 @@ int mmu(int dir_Logica, PCB* proceso)
 			}
 			return marco + desplazamiento;//Devuelve la direccion fisica
 		}			
-		}
+	}
 	return -1;
 }
+*/
 
 void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
 {
@@ -712,7 +755,7 @@ void ejecutar_proceso(PCB* proceso)
 			instruccionActual = "";
 
 			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
-			usleep(2000);
+			//usleep(1000);
 			proceso->PC++;
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
@@ -753,7 +796,7 @@ void ejecutar_proceso(PCB* proceso)
 				{
 					//int direccion_fisica = mmu (direc_logica, proceso); 
 					char direccion[10];
-					sprintf(direccion, "%d", direccion_fisica);
+					//sprintf(direccion, "%d", direccion_fisica);
 					strcat(instruccion," ");//CONCATENAR
 					strcat(instruccion, direccion);//CONCATENAR
 					printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
@@ -763,17 +806,57 @@ void ejecutar_proceso(PCB* proceso)
 			{
 				if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
 				{
-					uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
-					int *direc_logica = (int *)registro_uint8; // Conversión explícita a int *
-					
+					//GUARDAMOS LA DIRECCION FÍSICA
+
+					uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
+					printf("El valor del registro encontrado es: %d\n",*registro_uint32);
+					int *direc_logica = (int *)registro_uint32; // Conversión explícita a int *
+					printf("al haberlo transformado en int quedó: %d\n",*direc_logica);
 					if( direc_logica != NULL )
 					{
-						int direccion_fisica = mmu (direc_logica, proceso); 
-						char direccion[10];
-						sprintf(direccion, "%d", direccion_fisica);
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+
+						//contenamos la direccion fisica
+						char direccionFisica[20];
+						sprintf(direccionFisica, "%d", *direc_logica);
 						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccion);//CONCATENAR
-						printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
+						strcat(instruccion, direccionFisica);//CONCATENAR
+
+					}
+
+					//GUARDAMOS EL TAMAÑO
+					if( esRegistroUint8(instruccion_split[3]) )
+					{
+						uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
+						int *tamanio = (int *)registro_uint8; // Conversión explícita a int *
+						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+
+						if( tamanio != NULL )
+						{
+							//int direccion_fisica = mmu (direc_logica, proceso); 
+							char tamanioToSend[20];
+							sprintf(tamanioToSend, "%d", *tamanio);
+							strcat(instruccion," ");//CONCATENAR
+							strcat(instruccion, tamanioToSend);//CONCATENAR
+
+						}
+					}
+					else
+					{
+						uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
+						int *tamanio = (int *)registro_uint32_2; // Conversión explícita a int *
+						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+
+						if( tamanio != NULL )
+						{
+							//int direccion_fisica = mmu (direc_logica, proceso); 
+							char tamanioToSend[20];
+							sprintf(tamanioToSend, "%d", *tamanio);
+							strcat(instruccion," ");//CONCATENAR
+							strcat(instruccion, tamanioToSend);//CONCATENAR
+						}
 					}
 				}
 				else
@@ -781,6 +864,8 @@ void ejecutar_proceso(PCB* proceso)
 					printf("El registro no se encontró en el proceso.\n");
 				}	
 			}
+
+			printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
 
 			//debemos devolver instruccion + pcb parando el proceso actual
 			uint32_t instruccion_length = strlen(instruccion)+1;
@@ -792,13 +877,13 @@ void ejecutar_proceso(PCB* proceso)
 			instruccionActual = "";
 
 			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
-			usleep(2000);
+			//usleep(2000);
 			proceso->PC++;
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
 
-
+		/*
 		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
 		{
@@ -809,7 +894,7 @@ void ejecutar_proceso(PCB* proceso)
 			
 				if( direc_logica != NULL )
 				{
-					int direccion_fisica = mmu (direc_logica, proceso); 
+					//int direccion_fisica = mmu (direc_logica, proceso); 
 					char direccion[10];
 					sprintf(direccion, "%d", direccion_fisica);
 					strcat(instruccion," ");//CONCATENAR
@@ -841,6 +926,7 @@ void ejecutar_proceso(PCB* proceso)
 				}	
 			}
 			
+			
 			//debemos devolver instruccion + pcb parando el proceso actual
 			uint32_t instruccion_length = strlen(instruccion)+1;
 			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,STDOUT);
@@ -856,6 +942,7 @@ void ejecutar_proceso(PCB* proceso)
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
+		*/
 
 		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
 		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
@@ -925,6 +1012,7 @@ void ejecutar_proceso(PCB* proceso)
 			}
 		}
 	
+		/*
 		//CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
 		if (strcmp(instruccion_split[0], "MOV_OUT") == 0)
 		{
@@ -1017,6 +1105,21 @@ void ejecutar_proceso(PCB* proceso)
 				printf("El registro no se encontró en el proceso.\n");				
 			}
 		}
+		//CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
+		//Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
+		if (strcmp(instruccion_split[0], "IO_FS_CREATE") == 0)
+		{
+			//debemos devolver instruccion + pcb parando el proceso actual
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,FS);
+	
+			
+		
+		}
+		
+		
+		
+		*/
 
 		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 		proceso->PC++;

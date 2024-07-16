@@ -143,7 +143,7 @@ void memoria_escuchar_cpu (){
 				//veamos el tamaño actual de la lista del proceso
 				//dejamos especificado en el path length el tamaño de resize que queremos
 				
-				//cuantas paginas necesita?
+				//cuantas paginas necesita? 
 				int paginas_requeridas = dividir_y_redondear_arriba(proceso_resize->path_length,TAM_PAGINA);
 				int tam_actual_tabla = list_size(datos_resize->TablaDePaginas);
 				if( tam_actual_tabla < paginas_requeridas )
@@ -187,7 +187,7 @@ void memoria_escuchar_cpu (){
 						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS2");
 						for(int k = 0; k < list_size(listMarcos); k++)
 						{
-							int* marco = list_get(listMarcos,k);
+							int * marco = list_get(listMarcos,k);
 							if( *marco == proceso->PID )
 							{
 								//añado el marco a la tabla de paginas del proceso
@@ -385,7 +385,39 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				//
 				break;
 			case MARCO:
-				//
+				//llega de cpu numero_pagina y pid del proceso
+				/*
+				void* copy_stream_m = paquete->buffer->stream;
+				printf("He recibido un pedido de MARCO\n");
+				int* numero_pagina = malloc(sizeof(int));
+				uint32_t* pid = malloc(sizeof(uint32_t));	
+				memcpy(numero_pagina,copy_stream_m,sizeof(int));
+				copy_stream_m += sizeof(int);
+				memcpy(pid,copy_stream_m,sizeof(uint32_t));
+
+				printf("Recibimos numero de pagina: %d\n",*numero_pagina);
+				printf("Recibimos el pid: %d\n",*pid);
+
+				for(int i=0; i < list_size(listProcesos); i++)
+				{
+					PCB *proceso_actual = list_get(listProcesos,i);
+					if(proceso_actual->PID == pid)
+					{
+						PCB* proceso_encontrado = proceso_actual;
+					}
+				}
+				for(int i = 0; i < list_size(proceso_encontrado->TablaDePaginas);i++)
+				{
+					if(proceso_encontrado->TablaDePaginas == numero_pagina)
+					{
+						//enviar el marco
+						enviarEntero(marco, fd_cpu,)
+					}
+				}
+				
+*/
+
+				
 				break;
 			case -1:
 				log_error(memoria_logger, "El cliente cpu se desconecto. Terminando servidor");
@@ -421,6 +453,29 @@ void memoria_escuchar_entradasalida (){
 		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdin->path);
 				
 				list_add(listStdin,new_io_stdin);
+				//
+				break;
+			case STDIN_TOWRITE:
+
+				int* direccionFisica = malloc(sizeof(int));
+				direccionFisica = paquete->buffer->stream;
+				int* tamanio = malloc(sizeof(int));
+				tamanio = paquete->buffer->stream + sizeof(int);
+				char* text = malloc(*tamanio);
+				text = paquete->buffer->stream + sizeof(int)*2;
+
+				//imprimamos los valores que llegaron
+				printf("direccion fisica que llego fue: %d\n",*direccionFisica);
+				printf("el tamanio que llego fue: %d\n",*tamanio);
+				printf("el texto a escribir es: %s\n",text);
+
+				memmove(espacio_usuario + *direccionFisica, text, *tamanio);
+
+				char* hola = malloc(*tamanio);
+				strcpy(hola,espacio_usuario + *direccionFisica);
+
+				printf("Leyendo nuevamente de la dirección física obtuvimos: %s\n",hola);
+
 				//
 				break;
 			case STDOUT:
@@ -461,6 +516,8 @@ void iterator(char* value)
 {
 	log_info(memoria_logger,"%s", value);
 }
+
+
 
 char* leerArchivo(FILE* file)
 {
