@@ -142,23 +142,35 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 	nueva_entrada->marco = marco;
 	
 	list_add(listaTLB, nueva_entrada);
+	printf("Agregué el proceso %d a la TLB\n", nueva_entrada->PID);
+
+	for(int i=0; i < list_size(listaTLB); i++){
+		
+		TLB* entrada_tlb = list_get(listaTLB, i);
+
+		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
+
+	}
+	printf("Fin de agregar entradas a la TLB\n");
 }
 
-void algoritmoSustitucion(int pid, int numero_Pagina, int marco) 
+void algoritmoSustitucion(int pid, int numero_Pagina, int* marco) 
 {
 	if(strcmp(ALGORITMO_TLB,"FIFO")==0)    //-------------------
 	{   // Implementación básica de FIFO para la TLB
 		
-		TLB* entrada_mas_antigua = list_get(listaTLB, 0);
+		agregar_a_TLB(pid, numero_Pagina, *marco);
+		/*
+		TLB* entrada_mas_antigua = malloc(sizeof(TLB));      //list_get(listaTLB, 0);
 
 		entrada_mas_antigua->PID = pid;
 		entrada_mas_antigua->pagina = numero_Pagina;
-		entrada_mas_antigua->marco = marco;
+		entrada_mas_antigua->marco = marco;     
 			
 		// Mover la entrada más antigua al final de la lista (simulando FIFO)
-			
+		*/	
 		list_remove(listaTLB, 0);
-		list_add(listaTLB, entrada_mas_antigua);
+		//list_add(listaTLB, entrada_mas_antigua);
 		
 	}   
 		
@@ -258,6 +270,8 @@ int mmu(int dir_Logica, PCB* proceso)
 		printf("Llegué hasta despues del semaforo\n");
 		//num_marco es global
 		if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
+			
+			printf("Voy agregar el proceso %d  a la TLB\n", proceso->PID);
 			agregar_a_TLB(proceso->PID, numero_Pagina, *num_marco);	//agregamos los datos del proceso a la TLB
 		} else{														// pero si lo esta debo implementar el algoritmo
 			//el algoritmo FIFO	y LRU
@@ -572,7 +586,7 @@ void ejecutar_proceso(PCB* proceso)
 	{
 		//obtengo instruccion actual
 		char* instruccion = string_duplicate(instruccionActual);
-		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
+		//printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
 		char** instruccion_split = string_split (instruccion, " ");
 
 		//CASO DE TENER UNA INSTRUCCION SET
@@ -774,9 +788,9 @@ void ejecutar_proceso(PCB* proceso)
 					//GUARDAMOS LA DIRECCION FÍSICA
 
 					uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
+					int *direc_logica = (int*)(registro_uint8); // Conversión explícita a int *
 					printf("El valor del registro encontrado es: %d\n",*registro_uint8);
-					int *direc_logica = (int *)registro_uint8; // Conversión explícita a int *
-					printf("al haberlo transformado en int quedó: %d\n",*direc_logica);
+					printf("al haberlo transformado en int quedó: %d\n",*direc_logica); //no se realiza la conversion correctamente
 					if( direc_logica != NULL )
 					{
 						//int direccion_fisica = mmu (direc_logica, proceso); 
@@ -906,16 +920,15 @@ void ejecutar_proceso(PCB* proceso)
 		}
 
 
-		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
+		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
 		{
 			if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 			{
 					//GUARDAMOS LA DIRECCION FÍSICA
-
 					uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
-					printf("El valor del registro encontrado es: %d\n",*registro_uint8);
 					int *direc_logica = (int *)registro_uint8; // Conversión explícita a int *
+					printf("El valor del registro encontrado es: %d\n",*registro_uint8);
 					printf("al haberlo transformado en int quedó: %d\n",*direc_logica);
 					if( direc_logica != NULL )
 					{
@@ -1405,23 +1418,24 @@ void cpu_escuchar_memoria (){
 		bool control_key = 1;
 	while (control_key) {
             //recibimos operacion y mensaje
-			printf("Holi, al inicio de escuchar memoria\n");
 			int cod_op = recibir_operacion(fd_memoria);
-
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
+
             //deserializamos el mensaje, primero el tamaño del buffer, luego el offset
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
+			
+			if( cod_op != 6 && cod_op != 18 ) 		//los cod_op reciben datos de tipo ENTERO
+			{
+				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
+			}
+
 			recv(fd_memoria,paquete->buffer->stream,paquete->buffer->size,0);
 			
-			printf("Recibi una operacion nashe\n");
 			switch (cod_op) {
 			case MENSAJE:
-				printf("Estoy en la parte antes del seamforo exe a\n");
 			    sem_wait(&sem_exe_a);
-				printf("Instruccion de la memoria recibida con exito\n");
 				//variable global con 
 				instruccionActual = malloc(paquete->buffer->size);
 				char* instruccionQueLlego = paquete->buffer->stream;
@@ -1439,19 +1453,24 @@ void cpu_escuchar_memoria (){
 				printf("Voy a avisarle a ejecutar proceso NO puede seguir\n");
 				asignacion_or_out_of_memory = 1;
 				sem_post(&sem_memoria_aviso_cpu);
+				break;
 			case LECTURA:
+
 				printf("Lei el valor en memoria\n");
 				valor_leido = malloc(sizeof(int));
 				int* leidoQueLlego = paquete->buffer->stream;
 				memcpy(valor_leido, leidoQueLlego, sizeof(int));  
 				printf("El valor leido que llego fue: %d\n",*valor_leido); //no imprime el valor leido
 				sem_post(&sem_lectura);
+				break;
 			case ESCRITO:
 				sem_post(&sem_escritura);
 				//
 				break;
 			case MARCO:
+
 				//llega el marco de memoria
+				printf("Me encuentro en la parte de marco\n");
 				num_marco = malloc(sizeof(int));
 				int* marcoLeido = paquete->buffer->stream;
 				memcpy(num_marco, marcoLeido, sizeof(int));

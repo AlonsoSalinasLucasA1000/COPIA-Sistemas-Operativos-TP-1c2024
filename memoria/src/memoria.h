@@ -407,20 +407,23 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 						proceso_encontrado = proceso_actual;
 					}
 				}
+				int* marco = malloc(sizeof(int));
 				for(int i = 0; i < list_size(proceso_encontrado->TablaDePaginas);i++)
 				{
 					int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas,i);
 					if(i == *numero_pagina)
 					{
 						//enviar el marco
-						int* marco = pag_proceso_encontrado;
+						//int* marco = pag_proceso_encontrado;
+						marco = pag_proceso_encontrado;
 						printf("Numero de marco a enviar: %d\n", *marco);
 						
-						usleep(2000);
-						enviarEntero(marco,fd_cpu,MARCO);
+						//enviarEntero(marco,fd_cpu,MARCO);
+						i=list_size(proceso_encontrado->TablaDePaginas)+1;
 					}
 				}
-								
+				printf("Estoy a punto de enviar el marco\n");
+				enviarEntero(marco,fd_cpu,MARCO);						
 				break;
 			case -1:
 				log_error(memoria_logger, "El cliente cpu se desconecto. Terminando servidor");
@@ -460,22 +463,22 @@ void memoria_escuchar_entradasalida (){
 				break;
 			case STDIN_TOWRITE:
 
-				int* direccionFisica = malloc(sizeof(int));
-				direccionFisica = paquete->buffer->stream;
-				int* tamanio = malloc(sizeof(int));
-				tamanio = paquete->buffer->stream + sizeof(int);
-				char* text = malloc(*tamanio);
+				int* direccionFisicaIN = malloc(sizeof(int));
+				direccionFisicaIN = paquete->buffer->stream;
+				int* tamanioIN = malloc(sizeof(int));
+				tamanioIN = paquete->buffer->stream + sizeof(int);
+				char* text = malloc(*tamanioIN);
 				text = paquete->buffer->stream + sizeof(int)*2;
 
 				//imprimamos los valores que llegaron
-				printf("direccion fisica que llego fue: %d\n",*direccionFisica);
-				printf("el tamanio que llego fue: %d\n",*tamanio);
+				printf("direccion fisica que llego fue: %d\n",*direccionFisicaIN);
+				printf("el tamanio que llego fue: %d\n",*tamanioIN);
 				printf("el texto a escribir es: %s\n",text);
 
-				memmove(espacio_usuario + *direccionFisica, text, *tamanio);
+				memmove(espacio_usuario + *direccionFisicaIN, text, *tamanioIN);
 
-				char* hola = malloc(*tamanio);
-				strcpy(hola,espacio_usuario + *direccionFisica);
+				char* hola = malloc(*tamanioIN);
+				strcpy(hola,espacio_usuario + *direccionFisicaIN);
 
 				printf("Leyendo nuevamente de la dirección física obtuvimos: %s\n",hola);
 
@@ -489,6 +492,20 @@ void memoria_escuchar_entradasalida (){
 				
 				list_add(listStdout,new_io_stdout);
 				//
+				break;
+			case STDOUT_TOPRINT:
+
+				int* direccionFisicaOUT = malloc(sizeof(int));
+				direccionFisicaOUT = paquete->buffer->stream;
+				int* tamanioOUT = malloc(sizeof(int));
+				tamanioOUT = paquete->buffer->stream + sizeof(int);
+				printf("direccion fisica que llego fue: %d\n",*direccionFisicaOUT);
+				printf("el tamanio que llego fue: %d\n",*tamanioOUT);
+
+				char* text_to_send = malloc(*tamanioOUT);
+				strcpy(text_to_send,espacio_usuario + *direccionFisicaOUT);
+				printf("Vamos a enviar nuevamente el siguiente texto: %s\n",text_to_send);
+				enviar_mensaje_cpu_memoria(text_to_send,fd_entradasalida,STDOUT_TOPRINT);
 				break;
 			case DIALFS:
 
@@ -524,7 +541,7 @@ void iterator(char* value)
 
 char* leerArchivo(FILE* file)
 {
-	fseek(file,0,SEEK_END); //
+	fseek(file,0,SEEK_END); //a veces falla
 
 	int tamanioArchivo = ftell(file);
 

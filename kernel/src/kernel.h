@@ -63,7 +63,7 @@ void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz)
 }
 
 
-void ejecutar_interfaz_stdin(char* instruccion, op_code tipoDeInterfaz)
+void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz)
 {
 	char** instruccion_split = string_split(instruccion," ");
 	//IO_STDIN_READ (Interfaz, Registro Direccion, Registro Tamaño)
@@ -94,7 +94,7 @@ void ejecutar_interfaz_stdin(char* instruccion, op_code tipoDeInterfaz)
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
     //Podemos usar una constante por operación
-    paquete->codigo_operacion = STDIN;
+    paquete->codigo_operacion = tipoDeInterfaz;
     paquete->buffer = buffer;
 
 	//Empaquetamos el Buffer
@@ -234,7 +234,7 @@ void kernel_escuchar_cpu ()
 				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
 				//ejecutar funcion para la interfaz
 				printf("Checkpoin1 \n");
-				ejecutar_interfaz_stdin(instruccion_io_stdin->instruccion,STDIN);
+				ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDIN);
 				//
 				break;
 			//case FS_CREATE:
@@ -243,11 +243,11 @@ void kernel_escuchar_cpu ()
 			case STDOUT:
 
 				Instruccion_io* instruccion_io_stdout = deserializar_instruccion_io(paquete->buffer);
-				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
-				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
+				printf("La instruccion es: %s\n",instruccion_io_stdout->instruccion);
+				printf("El PID del proceso es: %d\n",instruccion_io_stdout->proceso.PID);
 				//ejecutar funcion para la interfaz
-				printf("Checkpoin1 \n");
-				ejecutar_interfaz_stdin(instruccion_io_stdin->instruccion,STDIN);
+				printf("Checkpoin de stdout \n");
+				ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDOUT);
 
 				break;
 			case MENSAJE:
