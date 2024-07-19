@@ -95,15 +95,20 @@ handshakeClient(fd_cpu_interrupt, 2);
 
 
 //esperar conexion de entradasalida
+/*
 log_info (kernel_logger, "Esperando a conectar con EntradaSalida.");
 fd_entradasalida = esperar_cliente (fd_kernel, kernel_logger, "ENTRADASALIDA");
 handshakeServer(fd_entradasalida);
+*/
 
-
+/*
 //escuchar mensajes de entradasalida
 pthread_t hilo_entradasalida;
 pthread_create (&hilo_entradasalida, NULL, (void*)kernel_escuchar_entradasalida, NULL);
 pthread_detach (hilo_entradasalida);
+*/
+
+//creamos un hilo que sirva para escuchar a las entradas salidas
 
 
 //escuchar mensajes de cpu
@@ -117,11 +122,15 @@ pthread_t hilo_memoria;
 pthread_create (&hilo_memoria, NULL, (void*)kernel_escuchar_memoria, NULL);
 pthread_detach (hilo_memoria);
 
+//escuchar entradas salidas
+pthread_t hilo_io;
+pthread_create(&hilo_io, NULL, (void*)escuchar_io,NULL);
+pthread_detach (hilo_io);
+
 // Creo la cola que voy a usar para guardar mis PCBs y las listas para las IO
 cola_new = queue_create();
 cola_ready = queue_create();
 cola_blocked = queue_create();
-
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
 
@@ -138,9 +147,6 @@ pthread_detach (hilo_planificador_corto_plazo);
 pthread_t hilo_planificador_largo_plazo;
 pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
 pthread_detach (hilo_planificador_largo_plazo);
-
-
-
 
 consolaInteractiva();
 

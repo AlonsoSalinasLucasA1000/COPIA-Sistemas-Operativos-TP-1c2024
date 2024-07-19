@@ -140,6 +140,8 @@ typedef struct
 	char* nombre;
 	uint32_t path_length;
 	char* path;
+	t_list* procesos_bloqueados;
+	bool ocupado;
 } EntradaSalida;
 
 typedef struct 

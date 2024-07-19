@@ -397,6 +397,7 @@ void liberar_logger(t_log *logger)
 void liberar_config(t_config *config)
 {
 	config_destroy(config);
+
 	free(config);
 }
 
@@ -478,6 +479,8 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer)
 {
 	EntradaSalida* to_return = malloc(sizeof(EntradaSalida));
+	to_return->procesos_bloqueados = list_create();
+	to_return->ocupado = false;
 	void* stream = buffer->stream;
 
 	//deserializamos los campos del buffer

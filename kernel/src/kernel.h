@@ -67,7 +67,100 @@ void removerCorchetes(char* str) {
     }
     str[j] = '\0'; // Añadir el carácter nulo al final de la cadena resultante
 }
+//Al escuchar las entradas salidas
+void kernel_escuchar_entradasalida_mult(int* fd_io)
+{
+	bool control_key = 1;
+	while (control_key) {
 
+			int cod_op = recibir_operacion(*fd_io);
+
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(*fd_io,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(*fd_io,paquete->buffer->stream, paquete->buffer->size,0);
+
+			switch (cod_op) {
+			case GENERICA:
+				//creamos la interfaz genérica
+				EntradaSalida* new_io_generica = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_generica->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_generica->path);
+				
+				//lo añadimos a la lista de ios genéricas.
+				list_add(listGenericas,new_io_generica);
+			    break;
+			case STDIN:
+				//creamos la interfaz genérica
+				EntradaSalida* new_io_stdin = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdin->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdin->path);
+				
+				//lo añadimos a la lista de ios genéricas.
+				list_add(listGenericas,new_io_stdin);			
+			    break;
+			case STDOUT:
+				//creamos la interfaz genérica
+				EntradaSalida* new_io_stdout = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdout->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdout->path);
+
+				//lo añadimos a la lista de ios genéricas.
+				list_add(listGenericas,new_io_stdout);			
+			    break;
+			case DIALFS:
+				//creamos la interfaz genérica
+				EntradaSalida* new_io_dialfs = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_dialfs->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_dialfs->path);
+				
+				//lo añadimos a la lista de ios genéricas.
+				list_add(listGenericas,new_io_dialfs);
+			    break;
+			case DESPERTAR: //OJO CON ESTA, PORQUE SE DEBE ESPECIFICAR CUÁL ES EL PROCESO BLOQUEADO
+			//sacamos al proceso de la cola de blocked y lo añadimos a IO
+				printf("La IO ha despertado :O\n");
+				PCB* proceso_awaken = queue_pop(cola_blocked);
+				proceso_awaken->estado = READY;
+				//meter en ready
+				sem_wait(&sem_ready);   // mutex hace wait
+				queue_push(cola_ready,proceso_awaken);	//agrega el proceso a la cola de ready
+    			sem_post(&sem_ready); 
+				sem_post(&sem_cant_ready);
+			    break;
+			case MENSAJE:
+				//
+				break;
+			case PAQUETE:
+				//
+				break;
+			case -1:
+				log_error(kernel_logger, "El cliente EntradaSalida se desconecto. Terminando servidor");
+				control_key = 0;
+			default:
+				log_warning(kernel_logger,"Operacion desconocida. No quieras meter la pata");
+				break;
+			}
+			free(paquete->buffer->stream);
+			free(paquete->buffer);
+			free(paquete);
+		}	
+}
+
+void escuchar_io()
+{
+	while (1) 
+	{
+		pthread_t thread;
+		int *fd_conexion_ptr = malloc(sizeof(int));
+		*fd_conexion_ptr = accept(fd_kernel, NULL, NULL);
+		handshakeServer(*fd_conexion_ptr);
+		printf("Se ha conectado un cliente de tipo IO\n");
+		pthread_create(&thread, NULL, (void*) kernel_escuchar_entradasalida_mult, fd_conexion_ptr);
+		pthread_detach(thread);
+	}
+}
 
 t_list* generarRecursos(char* recursos, char* instancias_recursos)
 {
@@ -762,10 +855,6 @@ void informar_memoria_nuevo_procesoNEW()
 	
 }
 
-void finalizar_proceso ()
-{
-}
-
 void mover_procesos_ready(int grado_multiprogramacion)
 {
 	//CONSULTA. TENDREMOS QUE USAR SEMAFOROS?
@@ -893,7 +982,6 @@ void enviar_pcb_a_cpu()
 	sem_post(&sem_mutex_cpu_ocupada);
 }
 
-
 void interrumpir_por_quantum()
 {
 	printf("Entre a dormir un poco para el quantum\n");
@@ -906,7 +994,6 @@ void interrumpir_por_quantum()
  	printf("Me desperte uwu\n");
 	enviarEntero(enteroRandom,fd_cpu_interrupt,FIN_DE_QUANTUM);
 }
-
 
 void planificador_corto_plazo()
 {

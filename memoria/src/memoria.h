@@ -440,6 +440,115 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 		}
 }
 
+void memoria_escuchar_entradasalida_mult(int* fd_io){
+	bool control_key = 1;
+	while (control_key) {
+			int cod_op = recibir_operacion(*fd_io);
+
+			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			paquete->buffer = malloc(sizeof(t_newBuffer));
+			recv(*fd_io,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			paquete->buffer->stream = malloc(paquete->buffer->size);
+			recv(*fd_io,paquete->buffer->stream, paquete->buffer->size,0);
+
+			switch (cod_op) {
+			case STDIN:
+
+				EntradaSalida* new_io_stdin = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdin->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdin->path);
+				
+				list_add(listStdin,new_io_stdin);
+				//
+				break;
+			case STDIN_TOWRITE:
+
+				int* direccionFisicaIN = malloc(sizeof(int));
+				direccionFisicaIN = paquete->buffer->stream;
+				int* tamanioIN = malloc(sizeof(int));
+				tamanioIN = paquete->buffer->stream + sizeof(int);
+				char* text = malloc(*tamanioIN);
+				text = paquete->buffer->stream + sizeof(int)*2;
+
+				//imprimamos los valores que llegaron
+				printf("direccion fisica que llego fue: %d\n",*direccionFisicaIN);
+				printf("el tamanio que llego fue: %d\n",*tamanioIN);
+				printf("el texto a escribir es: %s\n",text);
+
+				memmove(espacio_usuario + *direccionFisicaIN, text, *tamanioIN);
+
+				char* hola = malloc(*tamanioIN);
+				strcpy(hola,espacio_usuario + *direccionFisicaIN);
+
+				printf("Leyendo nuevamente de la dirección física obtuvimos: %s\n",hola);
+
+				//
+				break;
+			case STDOUT:
+
+				EntradaSalida* new_io_stdout = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdout->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdout->path);
+				
+				list_add(listStdout,new_io_stdout);
+				//
+				break;
+			case STDOUT_TOPRINT:
+
+				int* direccionFisicaOUT = malloc(sizeof(int));
+				direccionFisicaOUT = paquete->buffer->stream;
+				int* tamanioOUT = malloc(sizeof(int));
+				tamanioOUT = paquete->buffer->stream + sizeof(int);
+				printf("direccion fisica que llego fue: %d\n",*direccionFisicaOUT);
+				printf("el tamanio que llego fue: %d\n",*tamanioOUT);
+
+				char* text_to_send = malloc(*tamanioOUT);
+				strcpy(text_to_send,espacio_usuario + *direccionFisicaOUT);
+				printf("Vamos a enviar nuevamente el siguiente texto: %s\n",text_to_send);
+				enviar_mensaje_cpu_memoria(text_to_send,fd_entradasalida,STDOUT_TOPRINT);
+				break;
+			case DIALFS:
+
+				EntradaSalida* new_io_dialfs = deserializar_entrada_salida(paquete->buffer);
+				printf("Llego una IO cuyo nombre es: %s\n",new_io_dialfs->nombre);
+		   		printf("Llego una IO cuyo path es: %s\n",new_io_dialfs->path);
+				
+				list_add(listStdin,new_io_dialfs);
+				//
+				break;
+			case MENSAJE:
+				//
+				break;
+			case PAQUETE:
+				//
+				break;
+			case -1:
+				log_error(memoria_logger, "El cliente EntradaSalida se desconecto. Terminando servidor\n");
+				control_key = 0;
+			default:
+				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
+				break;
+			}
+		}
+}
+
+
+void escuchar_io()
+{
+	printf("Hola, estoy acá\n");
+	while (1) 
+	{
+		pthread_t thread;
+		int *fd_conexion_ptr = malloc(sizeof(int));
+		*fd_conexion_ptr = accept(fd_memoria, NULL, NULL);
+		printf("(1)Se ha conectado un cliente de tipo IO\n");
+		handshakeServer(*fd_conexion_ptr);
+		printf("Se ha conectado un cliente de tipo IO\n");
+		pthread_create(&thread, NULL, (void*) memoria_escuchar_entradasalida_mult, fd_conexion_ptr);
+		pthread_detach(thread);
+	}
+}
+
 void memoria_escuchar_entradasalida (){
 	bool control_key = 1;
 	while (control_key) {

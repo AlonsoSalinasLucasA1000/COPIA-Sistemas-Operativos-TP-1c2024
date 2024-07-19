@@ -55,11 +55,14 @@ printf("Hola soy una I/O y mi nombre es: %s\n",datosInicialesPartidos[0]);
 printf("Mi path es el siguiente: %s\n",datosInicialesPartidos[1]);
 printf("Mi tipo de interfaz es %s\n",TIPO_INTERFAZ);
 
+printf("Checkpoint 1\n");
 //conectarse a memoria como cliente
 log_info(entradasalida_logger,"Intentando conexion a memoria");
 fd_memoria = crear_conexion (IP_MEMORIA, PUERTO_MEMORIA,"memoria");
 //log_info (entradasalida_logger, "Conectado a memoria exitosamente.");
 handshakeClient(fd_memoria, 3);
+printf("Checkpoint 2\n");
+
 
 //conestarse a kernel como cliente
 log_info (entradasalida_logger, "Intentado conexion a kernel.");
@@ -71,12 +74,15 @@ handshakeClient(fd_kernel, 3);
 printf("Enviaremos datos al KERNEL\n");
 enviarDatos(fd_kernel,datosInicialesPartidos,TIPO_INTERFAZ);
 
+
 if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
 {
 	//de no ser generica, debemos enviarle los datos a memoria
 	printf("Enviaremos datos a la MEMORIA\n");
 	enviarDatos(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
 }
+
+
 
 //escuchar mensajes de memoria
 pthread_t hilo_memoria;

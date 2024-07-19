@@ -66,25 +66,39 @@ int main(int argc, char* argv[]) {
 	fd_kernel = esperar_cliente (fd_memoria, memoria_logger, "KERNEL");
 	handshakeServer(fd_kernel);
 
+	/*
 	//espero conexion entradasalida
 	log_info (memoria_logger, "Esperando a conectar con EntradaSalida.");
 	fd_entradasalida = esperar_cliente (fd_memoria, memoria_logger, "ENTRADASALIDA");
 	handshakeServer(fd_entradasalida);
+	*/
 
 	//escuchar mensajes de cpu
 	pthread_t hilo_cpu;
 	pthread_create (&hilo_cpu, NULL, (void*)memoria_escuchar_cpu, NULL);
 	pthread_detach (hilo_cpu);
 
+	/*
 	//escuchar mensajes de entradasalida
 	pthread_t hilo_entradasalida;
 	pthread_create (&hilo_entradasalida, NULL, (void*)memoria_escuchar_entradasalida, NULL);
 	pthread_detach (hilo_entradasalida);
+	*/
 
 	//escuchar mensajes de kernel
 	pthread_t hilo_kernel;
 	pthread_create (&hilo_kernel, NULL, (void*)memoria_escuchar_kernel, NULL);
-	pthread_join (hilo_kernel, NULL);
+	pthread_detach (hilo_kernel);
+
+	//escuchar entradas y salidas
+	pthread_t hilo_io;
+	pthread_create(&hilo_io, NULL, (void*)escuchar_io,NULL);
+	pthread_detach (hilo_io);
+
+	while(1)
+	{
+		sleep(1);
+	}
 
 	liberar_config(memoria_config);
 	liberar_logger(memoria_logger);
@@ -93,9 +107,6 @@ int main(int argc, char* argv[]) {
 	liberar_conexion(fd_kernel);
 	liberar_conexion(fd_entradasalida);
 
-
-
 	free(espacio_usuario);
 	return (EXIT_SUCCESS);
-
 }
