@@ -61,6 +61,16 @@ int main(int argc, char* argv[]) {
     log_info(kernel_logger, "INSTANCIAS_RECURSOS: %s", INSTANCIAS_RECURSOS);
     log_info(kernel_logger, "GRADO_MULTIPROGRAMACION: %s", GRADO_MULTIPROGRAMACION);
 
+//creamos los recursos
+listRecursos = generarRecursos(RECURSOS,INSTANCIAS_RECURSOS);
+
+//mostremos los recursos
+for(int i = 0; i < list_size(listRecursos); i++)
+{
+    Recurso* got = list_get(listRecursos,i);
+    printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
+}
+
 //inicia servidor kernel
 fd_kernel = iniciar_servidor (PUERTO_ESCUCHA, kernel_logger, "INICIADO EL KERNEL");
 

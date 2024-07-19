@@ -65,7 +65,7 @@ void entradasalida_escuchar_memoria (){
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);	
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			if( cod_op == 12 )
+			if( cod_op == 14 ) //ojo con este hardcodeo, de añadir mas codigos de operacion pueden modificarse
 			{
 				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			}

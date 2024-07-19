@@ -919,7 +919,6 @@ void ejecutar_proceso(PCB* proceso)
 			return;
 		}
 
-
 		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
 		{
@@ -1057,67 +1056,7 @@ void ejecutar_proceso(PCB* proceso)
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
-		/*
-		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
-		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
-		{
-			if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
-			{
-				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
-				int* direc_logica = (int *)registro_uint8;
-			
-				if( direc_logica != NULL )
-				{
-					//int direccion_fisica = mmu (direc_logica, proceso); 
-					char direccion[10];
-					sprintf(direccion, "%d", direccion_fisica);
-					strcat(instruccion," ");//CONCATENAR
-					strcat(instruccion, direccion);//CONCATENAR
-					printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
-				}
-			}	
-			else
-			{
-				if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
-				{
-					// Llamada a obtener_registro y conversión a int *
-					uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
-					int *direc_logica = (int *)registro_uint32; // Conversión explícita a int *
-
-					if( direc_logica != NULL )
-					{
-						int direccion_fisica = mmu (direc_logica, proceso); 
-						char direccion[10];
-						sprintf(direccion, "%d", direccion_fisica);
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccion);//CONCATENAR
-						printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
-					}
-				}
-				else
-				{
-					printf("El registro no se encontró en el proceso.\n");
-				}	
-			}
-			
-			
-			//debemos devolver instruccion + pcb parando el proceso actual
-			uint32_t instruccion_length = strlen(instruccion)+1;
-			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,STDOUT);
-			
-			//se bloquea el proceso, devolvemos al kernel
-			free(instruccionActual);
-			instruccionActual = malloc(1);
-			instruccionActual = "";
-
-			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
-			usleep(2000);
-			proceso->PC++;
-			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
-			return;
-		}
-		*/
-
+		
 		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
 		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
 		{
@@ -1295,6 +1234,34 @@ void ejecutar_proceso(PCB* proceso)
 		
 		*/
 
+		if(strcmp(instruccion_split[0], "WAIT") == 0)
+		{
+			//debemos devolver el proceso al kernel
+			proceso->PC++;
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,WAIT);
+			
+			//se bloquea el proceso, devolvemos al kernel
+			free(instruccionActual);
+			instruccionActual = malloc(1);
+			instruccionActual = "";
+			return;
+		}
+
+		if(strcmp(instruccion_split[0], "SIGNAL") == 0)
+		{
+			//debemos devolver el proceso al kernel
+			proceso->PC++;
+			uint32_t instruccion_length = strlen(instruccion)+1;
+			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,SIGNAL);
+			
+			//se bloquea el proceso, devolvemos al kernel
+			free(instruccionActual);
+			instruccionActual = malloc(1);
+			instruccionActual = "";
+			return;
+		}
+		
 		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
 		proceso->PC++;
 		
@@ -1426,7 +1393,7 @@ void cpu_escuchar_memoria (){
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			
-			if( cod_op != 6 && cod_op != 18 ) 		//los cod_op reciben datos de tipo ENTERO
+			if( cod_op != 8 && cod_op != 20 ) 		//los cod_op reciben datos de tipo ENTERO
 			{
 				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			}

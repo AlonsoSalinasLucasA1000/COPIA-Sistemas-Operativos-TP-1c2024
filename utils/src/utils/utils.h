@@ -27,6 +27,8 @@ typedef enum
 	PROCESOFIN,
 	INTERRUPCION,
 	FIN_DE_QUANTUM,
+	WAIT,
+	SIGNAL,
 
 	MARCO, //envia y recibe un Entero
 
@@ -52,12 +54,16 @@ typedef enum
 	GOKU
 }op_code;
 
-/*typedef struct
+
+typedef struct 
 {
-	int size;
-	void* stream;
-} t_buffer;
-*/
+	char name[100];
+	int instancias;
+	t_list* listBloqueados;
+} Recurso;
+
+
+
 typedef struct
 {
 	uint32_t size; // Tamaño del payload

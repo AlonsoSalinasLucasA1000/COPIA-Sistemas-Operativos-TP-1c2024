@@ -25,6 +25,9 @@ sem_t sem_cant_ready;
 sem_t sem_mutex_plani_corto; //semaforo oara planificacion FIFO
 sem_t sem_mutex_cpu_ocupada; //semaforo para indicar si la cpu esta ocupada
 
+//lista de recursos
+t_list* listRecursos;
+
 //TODAS LAS QUEUES
 int pid = 0;
 t_queue* cola_new;
@@ -52,6 +55,43 @@ char *QUANTUM; //Da segmentation fault si lo defino como int
 char* RECURSOS;
 char* INSTANCIAS_RECURSOS;
 char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
+
+void removerCorchetes(char* str) {
+    int len = strlen(str);
+    int j = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (str[i] != '[' && str[i] != ']') {
+            str[j++] = str[i];
+        }
+    }
+    str[j] = '\0'; // Añadir el carácter nulo al final de la cadena resultante
+}
+
+
+t_list* generarRecursos(char* recursos, char* instancias_recursos)
+{
+	//creamos la lista a retornar
+	t_list* ret = list_create();
+	//sacamos los corchetes
+	removerCorchetes(recursos);
+	removerCorchetes(instancias_recursos);
+	//los separamos por las comas
+	char** recursos_separados = string_split(recursos,",");
+	char** instancias_recursos_separados = string_split(instancias_recursos,",");
+	//vamos creando los Recurso y añadimos a la lista
+	int i = 0;
+	while( recursos_separados[i] != NULL )
+	{
+		Recurso* to_add = malloc(sizeof(Recurso));
+		strncpy(to_add->name, recursos_separados[i], sizeof(to_add->name) - 1);
+		to_add->instancias = atoi(instancias_recursos_separados[i]);
+		to_add->listBloqueados = list_create();
+		list_add(ret,to_add);
+		i++;
+	}
+	return ret;
+}
 
 void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz)
 {
@@ -155,7 +195,14 @@ void kernel_escuchar_cpu ()
 				
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
-				sem_post(&sem_mutex_cpu_ocupada);				
+				sem_post(&sem_mutex_cpu_ocupada);
+
+				printf("Los recursos han quedado de la siguiente forma:\n");
+				for(int i = 0; i < list_size(listRecursos); i++)
+				{
+					Recurso* got = list_get(listRecursos,i);
+					printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
+				}				
 			//	
                 break;
 			case PROCESOIO:
@@ -225,6 +272,10 @@ void kernel_escuchar_cpu ()
 				//ejecutar funcion para enviar a dormir a la interfaz
 				printf("Checkpoin1 \n");
 				ejecutar_interfaz_generica(instruccion_io_gen->instruccion,GENERICA);
+
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);
 				//
 				break;
 			case STDIN:
@@ -235,6 +286,10 @@ void kernel_escuchar_cpu ()
 				//ejecutar funcion para la interfaz
 				printf("Checkpoin1 \n");
 				ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDIN);
+
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);
 				//
 				break;
 			//case FS_CREATE:
@@ -249,7 +304,155 @@ void kernel_escuchar_cpu ()
 				printf("Checkpoin de stdout \n");
 				ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDOUT);
 
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);
 				break;
+			case WAIT:
+				//Deserializamos el recurso
+				Instruccion_io* instruccion_recurso_wait = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n",instruccion_recurso_wait->instruccion);
+				printf("El PID del proceso es: %d\n",instruccion_recurso_wait->proceso.PID);
+				char** instruccion_partida_wait = string_split(instruccion_recurso_wait->instruccion," ");
+
+				//verificamos que el recurso exista
+				bool existe_wait = false;
+				int i_wait = 0;
+				Recurso* recurso_wait;
+				while( i_wait < list_size(listRecursos) && existe_wait != true )
+				{
+					recurso_wait = list_get(listRecursos,i_wait);
+					if( strcmp(recurso_wait->name,instruccion_partida_wait[1]) == 0 )
+					{
+						existe_wait = true;
+					}
+					i_wait++;
+				}
+
+				//si existe
+				if( existe_wait )
+				{
+					//reducimos las instancias
+					recurso_wait->instancias--;
+
+					//si es menor a cero, se bloquea
+					if( recurso_wait->instancias < 0 )
+					{
+						//de lo contrario lo añadimos a la cola de bloqueados del recurso
+						PCB* proceso_recurso = malloc(sizeof(PCB));
+						*proceso_recurso = instruccion_recurso_wait->proceso;
+						list_add(recurso_wait->listBloqueados,proceso_recurso);
+						printf("El proceso se ha bloqueado porque no hay instancias disponibles\n");
+						sem_wait(&sem_mutex_cpu_ocupada);
+						cpu_ocupada = false;
+						sem_post(&sem_mutex_cpu_ocupada);
+						printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
+					}
+					else
+					{
+						//enviamos el proceso a la cola de ready
+						PCB* proceso_recurso = malloc(sizeof(PCB));
+						*proceso_recurso = instruccion_recurso_wait->proceso;
+						sem_wait(&sem_ready);   // mutex hace wait
+						queue_push(cola_ready,proceso_recurso);	//agrega el proceso a la cola de ready
+						sem_post(&sem_ready); 
+						sem_post(&sem_cant_ready);  // mutex hace wait
+					
+						sem_wait(&sem_mutex_cpu_ocupada);
+						cpu_ocupada = false;
+						sem_post(&sem_mutex_cpu_ocupada);
+					}
+				}
+				else
+				{
+					//el recurso no existe, debemos terminarlo
+					printf("El recurso no existe\n");
+					printf("Este proceso ha terminado\n");
+					printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
+					PCB* proceso_recurso = malloc(sizeof(PCB));
+					*proceso_recurso = instruccion_recurso_wait->proceso;
+					enviarPCB(proceso_recurso,fd_memoria,PROCESOFIN);
+
+					//EN ESTA PARTE, LO IDEAL SERÍA TENER UNA LISTA GLOBAL DE PROCESOS CON LA CUAL PODAMOS TENER SEGUIMIENTO TOTAL DE ELLOS.
+					//De darse este caso, en dicha lista diríamos que el proceso ha finalizado.
+					free(proceso_recurso);
+					sem_wait(&sem_mutex_cpu_ocupada);
+					cpu_ocupada = false;
+					sem_post(&sem_mutex_cpu_ocupada);
+				}
+				
+				break;
+			case SIGNAL:
+				// Deserializamos el recurso
+				Instruccion_io* instruccion_recurso_signal = deserializar_instruccion_io(paquete->buffer);
+				printf("La instruccion es: %s\n", instruccion_recurso_signal->instruccion);
+				printf("El PID del proceso es: %d\n", instruccion_recurso_signal->proceso.PID);
+				char** instruccion_partida_signal = string_split(instruccion_recurso_signal->instruccion, " ");
+
+				// Verificamos que el recurso exista
+				bool existe_signal = false;
+				int i_signal = 0;
+				Recurso* recurso_signal;
+				while (i_signal < list_size(listRecursos) && existe_signal != true) {
+					recurso_signal = list_get(listRecursos, i_signal);
+					if (strcmp(recurso_signal->name, instruccion_partida_signal[1]) == 0) {
+						existe_signal = true;
+					}
+					i_signal++;
+				}
+
+				// Si existe
+				if (existe_signal) 
+				{
+					// Aumentamos las instancias
+					recurso_signal->instancias++;
+
+					//ACÁ ESTÁ EL PROBLEMA, SE 
+					//devolvemos el proceso a ready
+
+					// Si hay procesos bloqueados, los desbloqueamos
+					if (recurso_signal->instancias <= 0) 
+					{
+						PCB* proceso_desbloqueado = list_remove(recurso_signal->listBloqueados, 0);
+						if (proceso_desbloqueado != NULL) {
+							// Enviamos el proceso a la cola de ready
+							sem_wait(&sem_ready);   // mutex hace wait
+							queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
+							sem_post(&sem_ready);
+							sem_post(&sem_cant_ready);  // mutex hace wait
+						}
+					}
+
+					PCB* proceso_recurso = malloc(sizeof(PCB));
+					*proceso_recurso = instruccion_recurso_signal->proceso;
+					sem_wait(&sem_ready);   // mutex hace wait
+					queue_push(cola_ready,proceso_recurso);	//agrega el proceso a la cola de ready
+					sem_post(&sem_ready); 
+					sem_post(&sem_cant_ready);  // mutex hace wait
+					printf("(EXISTE SIGNAL)Se ha añadido un proceso con PID %d\n",proceso_recurso->PID);
+
+					sem_wait(&sem_mutex_cpu_ocupada);
+					cpu_ocupada = false;
+					sem_post(&sem_mutex_cpu_ocupada);
+				} 
+				else 
+				{
+					// El recurso no existe, debemos terminarlo
+					printf("El recurso no existe\n");
+					printf("Este proceso ha terminado\n");
+					PCB* proceso_recurso = malloc(sizeof(PCB));
+					*proceso_recurso = instruccion_recurso_signal->proceso;
+					enviarPCB(proceso_recurso, fd_memoria, PROCESOFIN);
+
+					// EN ESTA PARTE, LO IDEAL SERÍA TENER UNA LISTA GLOBAL DE PROCESOS CON LA CUAL PODAMOS TENER SEGUIMIENTO TOTAL DE ELLOS.
+					// De darse este caso, en dicha lista diríamos que el proceso ha finalizado.
+					free(proceso_recurso);
+					sem_wait(&sem_mutex_cpu_ocupada);
+					cpu_ocupada = false;
+					sem_post(&sem_mutex_cpu_ocupada);
+				}
+
+				break;	
 			case MENSAJE:
 				//
 				break;
@@ -661,6 +864,7 @@ void enviar_pcb_a_cpu()
 	sem_post(&sem_mutex_cpu_ocupada);
 	//Reservo memoria para enviarla
 	PCB* to_send = malloc(sizeof(PCB));
+	
 
 	sem_wait(&sem_cant_ready);   // mutex hace wait
 	sem_wait(&sem_ready);   // mutex hace wait
@@ -682,6 +886,7 @@ void enviar_pcb_a_cpu()
 	to_send->path = string_duplicate( pcb_cola->path);
 
 	printf("Enviaremos un proceso\n");
+	printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
 	sem_wait(&sem_mutex_cpu_ocupada);
 	cpu_ocupada = true;
