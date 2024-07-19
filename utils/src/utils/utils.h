@@ -130,9 +130,9 @@ typedef struct
 	int pagina;
 	int marco; //
 	//si se necesita se puede agrgar campos extras
-	//int contadorLRU;  //agregado reciente para LRU
+	int contadorLRU;  //cantidad de veces que se accede a una entrada
 } TLB;
-
+ 
 typedef struct 
 {
 	int fd_cliente;

@@ -39,6 +39,7 @@ t_config* cpu_config;
 char* instruccionActual;
 int* valor_leido;
 int* num_marco;
+int LRU_counter = 0;
 
 char* IP_MEMORIA;
 char* PUERTO_MEMORIA;
@@ -119,7 +120,6 @@ void enviar_pcb_memoria(int PID, int PC)
 
 
 //Funcion para encontar la TLB del numero_pagina y pid del proceso
-
 TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) { 	
     // Implementación básica de búsqueda en la TLB 
     for (int i = 0; i < list_size(listaTLB); i++) { 
@@ -143,7 +143,8 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 	
 	list_add(listaTLB, nueva_entrada);
 	printf("Agregué el proceso %d a la TLB\n", nueva_entrada->PID);
-
+	printf("su num de pagina es %d y su marco %d\n", nueva_entrada->pagina, nueva_entrada->marco);
+	
 	for(int i=0; i < list_size(listaTLB); i++){
 		
 		TLB* entrada_tlb = list_get(listaTLB, i);
@@ -174,7 +175,7 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int* marco)
 		
 	}   
 		
-	/*if(strcmp(ALGORITMO_TLB,"LRU")==0)   //---------------
+	/*if(strcmp(ALGORITMO_TLB,"LRU")==0)   //------------------------------- Todavía no lo probé
 	{
 		// Implementación de LRU para la TLB
         int indiceLRU;  //
@@ -182,7 +183,7 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int* marco)
 		
 		if (entradaLRU != NULL) {
 			// Actualizar la entrada LRU encontrada
-			entradaLRU->pid = pid;
+			entradaLRU->pid = pid; 
 			entradaLRU->pagina = numero_Pagina;
 			entradaLRU->marco = marco;
 			entradaLRU->contadorLRU = LRU_counter++;
@@ -194,11 +195,37 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int* marco)
 			listaTLB[indiceLRU].marco = marco;
 			listaTLB[indiceLRU].contadorLRU = LRU_counter++;
 		}
-			
-	} else   
+		*/
+		//Implementación de LRU para la TLB, ver2
+		/*TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid);
+		if (entradaLRU != NULL){
+			// Actualizar la entrada LRU encontrada
+			entradaLRU->pid = pid;
+			entradaLRU->pagina = numero_Pagina;
+			entradaLRU->marco = marco;
+			entradaLRU->contadorLRU = LRU_counter++;
+		} else{ 
+			TLB* entrada_menos_usada = NULL;
+			for(int i = 0; i < list_size(listaTLB); i++ ){ //busco la entrada menos usada
+				TLB* entrada_a = list_get(listaTLB, i);
+
+				if(entrada_menos_usada == NULL || entrada_a->contadorLRU < entrada_menos_usada->contadorLRU){
+					entrada_menos_usada = entrada_a;
+				}
+			}
+
+			if (entrada_menos_usada != NULL){
+				// reemplazo 
+				entrada_menos_usada->pid = pid;
+				entrada_menos_usada->pagina = numero_Pagina;
+				entrada_menos_usada->marco = marco;
+				entrada_menos_usada->contadorLRU = LRU_counter++;
+			}
+	
+	}*/ else   
 	{
        	printf("Algoritmo de TLB no reconocido\n");
-    }*/
+    }
 } 
 	
 // Función para enviar solicitud a la memoria para recibir el marco correspondiente al proceso
@@ -269,7 +296,7 @@ int mmu(int dir_Logica, PCB* proceso)
 		
 		printf("Llegué hasta despues del semaforo\n");
 		//num_marco es global
-		if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
+		if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena, cpu.config
 			
 			printf("Voy agregar el proceso %d  a la TLB\n", proceso->PID);
 			agregar_a_TLB(proceso->PID, numero_Pagina, *num_marco);	//agregamos los datos del proceso a la TLB
