@@ -120,6 +120,11 @@ void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, in
 	*direccionFisica = atoi(instruccion_split[4]);
 	*tamanio = atoi(instruccion_split[5]);
 
+	//antes que todo enviamos del pid del proceso que actualmente lo usa
+	int* pid = malloc(sizeof(int));
+	*pid = pid_actual;
+	enviarEntero(pid,fd_io,NUEVOPID);
+
 	//mandaremos
 	printf("mandaremos la siguiente direccion fisica: %d\n",*direccionFisica);
 	printf("mandaremos el siguiente tamanio: %d\n",*tamanio);
@@ -153,7 +158,7 @@ void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, in
     offset += sizeof(uint32_t);
     memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
     //Por último enviamos
-    send(fd_entradasalida, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+    send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 	printf("Lo mande\n");
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
@@ -329,14 +334,6 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_blocked);				
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_gen->proceso.PID);
 					sem_post(&sem_blocked);	
-					if( proceso_to_end != NULL)
-					{
-						printf("El proceso extraído fue %d\n", proceso_to_end->PID);
-					}
-					else
-					{
-						printf("Hemos encontrado null\n");
-					}
 					printf("Este proceso ha terminado\n");
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
@@ -348,18 +345,48 @@ void kernel_escuchar_cpu ()
 					sem_post(&sem_mutex_cpu_ocupada);
 				break;
 			case STDIN:
-				
+				//Deserializamos
 				Instruccion_io* instruccion_io_stdin = deserializar_instruccion_io(paquete->buffer);
 				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
 				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
-				//ejecutar funcion para la interfaz
-				printf("Checkpoin1 \n");
-				//ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDIN);
+
+				//debemos obtener el io específico de la lista
+				sem_wait(&sem_mutex_lists_io);
+				EntradaSalida* io_stdin = encontrar_io(listStdin,string_split(instruccion_io_stdin->instruccion," ")[1]);
+				sem_post(&sem_mutex_lists_io);
+
+				//verificamos que exista
+				if( io_stdin != NULL)
+				{
+					//Una vez encontrada la io, vemos si está ocupado
+					if( io_stdin->ocupado )
+					{
+						//de estar ocupado añado el proceso a la lista de este
+						printf("La IO está ocupada, se bloqueará en su lista propia\n");
+						list_add(io_stdin->procesos_bloqueados,instruccion_io_stdin);
+					}
+					else
+					{
+						io_stdin->ocupado = true;
+						printf("El fd de este IO es %d\n",io_stdin->fd_cliente);
+						ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDIN,io_stdin->fd_cliente,instruccion_io_stdin->proceso.PID);
+					}
+				}
+				else
+				{
+					//de no existir debemos terminar el proceso
+					sem_wait(&sem_blocked);				
+					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdin->proceso.PID);
+					sem_post(&sem_blocked);	
+					printf("Este proceso ha terminado\n");
+					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
+					free(proceso_to_end->path);
+					free(proceso_to_end);
+				}
 
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
-				//
 				break;
 			//case FS_CREATE:
 				//
@@ -577,7 +604,7 @@ EntradaSalida* modificar_io_en_listas(int fd_io)
 			if( list_size(to_ret->procesos_bloqueados) > 0 )
 			{
 				Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
-				ejecutar_interfaz_stdinstdout(proceso_bloqueado_io->instruccion,GENERICA,fd_io,proceso_bloqueado_io->proceso.PID);
+				ejecutar_interfaz_stdinstdout(proceso_bloqueado_io->instruccion,STDIN,fd_io,proceso_bloqueado_io->proceso.PID);
 			}
 		}
 		else
@@ -589,7 +616,7 @@ EntradaSalida* modificar_io_en_listas(int fd_io)
 				if( list_size(to_ret->procesos_bloqueados) > 0 )
 				{
 					Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
-					ejecutar_interfaz_stdinstdout(proceso_bloqueado_io->instruccion,GENERICA,fd_io,proceso_bloqueado_io->proceso.PID);
+					ejecutar_interfaz_stdinstdout(proceso_bloqueado_io->instruccion,STDOUT,fd_io,proceso_bloqueado_io->proceso.PID);
 				}
 			}
 			else
@@ -612,7 +639,7 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 	while (control_key) {
 
 			int cod_op = recibir_operacion(*fd_io);
-
+			printf("El fd de este IO es %d\n",*fd_io);
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 			recv(*fd_io,&(paquete->buffer->size),sizeof(uint32_t),0);	
@@ -722,85 +749,6 @@ void escuchar_io()
 		pthread_create(&thread, NULL, (void*) kernel_escuchar_entradasalida_mult, fd_conexion_ptr);
 		pthread_detach(thread);
 	}
-}
-
-void kernel_escuchar_entradasalida ()
-{
-	bool control_key = 1;
-	while (control_key) {
-
-			int cod_op = recibir_operacion(fd_entradasalida);
-
-			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-			paquete->buffer = malloc(sizeof(t_newBuffer));
-			recv(fd_entradasalida,&(paquete->buffer->size),sizeof(uint32_t),0);	
-			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_entradasalida,paquete->buffer->stream, paquete->buffer->size,0);
-
-			switch (cod_op) {
-			case GENERICA:
-
-				EntradaSalida* new_io_generica = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_generica->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_generica->path);
-				
-				list_add(listGenericas,new_io_generica);
-			    break;
-			case STDIN:
-				EntradaSalida* new_io_stdin = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdin->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdin->path);
-				
-				list_add(listGenericas,new_io_stdin);			
-			    break;
-			case STDOUT:
-				EntradaSalida* new_io_stdout = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdout->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdout->path);
-				
-				list_add(listGenericas,new_io_stdout);			
-			    break;
-			case DIALFS:
-				EntradaSalida* new_io_dialfs = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_dialfs->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_dialfs->path);
-				
-				list_add(listGenericas,new_io_dialfs);
-			    break;
-			case DESPERTAR:
-				//sacamos al proceso de la cola de blocked y lo añadimos a IO
-				printf("La IO ha despertado :O\n");
-				int* pid_io = paquete->buffer->stream;
-
-				//PCB* proceso_awaken = queue_pop(cola_blocked);
-				sem_wait(&sem_blocked);
-				PCB* proceso_awaken = encontrar_por_pid(cola_blocked->elements,*pid_io);
-				sem_post(&sem_blocked);
-
-				proceso_awaken->estado = READY;
-				//meter en ready
-				sem_wait(&sem_ready);   // mutex hace wait
-				queue_push(cola_ready,proceso_awaken);	//agrega el proceso a la cola de ready
-    			sem_post(&sem_ready); 
-				sem_post(&sem_cant_ready);
-			    break;
-			case MENSAJE:
-				//
-				break;
-			case PAQUETE:
-				//
-				break;
-			case -1:
-				log_error(kernel_logger, "El cliente EntradaSalida se desconecto. Terminando servidor");
-				control_key = 0;
-			default:
-				log_warning(kernel_logger,"Operacion desconocida. No quieras meter la pata");
-				break;
-			}
-			free(paquete->buffer->stream);
-			free(paquete->buffer);
-			free(paquete);
-		}	
 }
 
 void kernel_escuchar_memoria ()
