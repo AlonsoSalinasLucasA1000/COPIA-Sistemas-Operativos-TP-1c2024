@@ -392,14 +392,45 @@ void kernel_escuchar_cpu ()
 				//
 			//	break;
 			case STDOUT:
-
+				//deserializamos
 				Instruccion_io* instruccion_io_stdout = deserializar_instruccion_io(paquete->buffer);
 				printf("La instruccion es: %s\n",instruccion_io_stdout->instruccion);
 				printf("El PID del proceso es: %d\n",instruccion_io_stdout->proceso.PID);
-				//ejecutar funcion para la interfaz
-				printf("Checkpoin de stdout \n");
-				//ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDOUT);
 
+				//debemos obtener el io específico de la lista
+				sem_wait(&sem_mutex_lists_io);
+				EntradaSalida* io_stdout = encontrar_io(listStdout,string_split(instruccion_io_stdout->instruccion," ")[1]);
+				sem_post(&sem_mutex_lists_io);
+
+				//verificamos que exista
+				if( io_stdout != NULL)
+				{
+					//existe
+					//una vez encontrada la io, vemos si está ocupado
+					if( io_stdout->ocupado )
+					{
+						//de estar ocupado añado el proceso a la lista de este
+						printf("La IO está ocupada, se bloqueará en su lista propia\n");
+						list_add(io_stdout->procesos_bloqueados,instruccion_io_stdout);
+					}
+					else
+					{
+						io_stdout->ocupado = true;
+						printf("El fd de este IO es %d\n",io_stdout->fd_cliente);
+						ejecutar_interfaz_stdinstdout(instruccion_io_stdout->instruccion,STDOUT,io_stdout->fd_cliente,instruccion_io_stdout->proceso.PID);
+					}
+				}
+				else
+				{
+					//de no existir debemos terminar el proceso
+					sem_wait(&sem_blocked);				
+					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdout->proceso.PID);
+					sem_post(&sem_blocked);	
+					printf("Este proceso ha terminado\n");
+					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
+					free(proceso_to_end->path);
+					free(proceso_to_end);
+				}
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);

@@ -79,7 +79,7 @@ void entradasalida_escuchar_memoria (){
 				char* text_to_print = malloc(paquete->buffer->size);
 				text_to_print = paquete->buffer->stream;
 				printf("%s\n",text_to_print);
-				avisar_despertar_kernel();
+				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				break;
 			case MENSAJE:
 				//
