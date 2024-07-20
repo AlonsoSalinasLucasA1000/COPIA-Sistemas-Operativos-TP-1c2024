@@ -180,6 +180,7 @@ PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
         PCB* pcb = list_get(lista, i);
         if (pcb->PID == pid_buscado) 
 		{
+			pcb = list_remove(lista, i);
             return pcb;
         }
     }
