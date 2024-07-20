@@ -27,6 +27,8 @@ int main(int argc, char* argv[])
 			perror("Algo paso con el log. No se pudo crear.");
 			exit(EXIT_FAILURE);
 		}
+	
+	cpu_logs_obligatorios = log_create(".//cpu_logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
 
 	//cambiar la ruta del archivo config a una abreviatura
 	t_config *cpu_config = config_create("src/cpu.config");

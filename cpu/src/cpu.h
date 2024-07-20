@@ -14,7 +14,7 @@ int fd_kernel_dispatch;
 int fd_kernel_interrupt;
 //lista de TLB
 t_list* listaTLB;
-
+t_list* listDireccionesFisicas;
 //Si la asignacion fue correcta es 0, de haber out of memory es 1
 int asignacion_or_out_of_memory;
 
@@ -34,7 +34,11 @@ sem_t interrupt_mutex;
 sem_t sem_mmu;
 
 t_log* cpu_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
+
+t_log* cpu_logs_obligatorios; //LOG OBLIGATORIO
+
 t_config* cpu_config;
+//t_config* 
 //creemos una variable global de instruccion actual
 char* instruccionActual;
 int* valor_leido;
@@ -249,37 +253,50 @@ void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo
 }
 
 // Función MMU, traductor de lógica a física
-int mmu(int dir_Logica, PCB* proceso)
+t_list mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8 / 4 dir fisica -> uint32
 {  			 									
-	int numero_Pagina = floor(dir_Logica/32); 					//config.TAM_PAGINA. necesitamos traer de memoria.config TAM_PAGINA
-	int desplazamiento = dir_Logica - numero_Pagina * 32;   	//dirección_lógica - número_página * tamaño_página         
-	
-	TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
+	for(int i=0; i < tamanio; i++)
+	{
+		int numero_Pagina = floor(dir_Logica/32); 					//config.TAM_PAGINA. necesitamos traer de memoria.config TAM_PAGINA
+		int desplazamiento = dir_Logica - numero_Pagina * 32;   	//dirección_lógica - número_página * tamaño_página         
 		
-	if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
-		log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
-		return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
-	} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
-		log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
-		enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
-
-		printf("Llegué hasta antes del semaforo\n");
-		//tiene que esperar que llegue el marco de memoria
-		sem_wait(&sem_mmu);
-		
-		printf("Llegué hasta despues del semaforo\n");
-		//num_marco es global
-		if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
+		TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
 			
-			printf("Voy agregar el proceso %d  a la TLB\n", proceso->PID);
-			agregar_a_TLB(proceso->PID, numero_Pagina, *num_marco);	//agregamos los datos del proceso a la TLB
-		} else{														// pero si lo esta debo implementar el algoritmo
-			//el algoritmo FIFO	y LRU
-			algoritmoSustitucion(proceso->PID, numero_Pagina, *num_marco);
-		}
-		return *num_marco + desplazamiento; //Devuelve la direccion fisica		
+		if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
+			log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
+			return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
+		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
+			log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
+			enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
+
+			//printf("Llegué hasta antes del semaforo\n");
+			//tiene que esperar que llegue el marco de memoria
+			sem_wait(&sem_mmu);
+			
+			printf("Obtuve el marco de proceso %d\n",proceso->PID);
+			//num_marco es global
+			if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
+				
+				printf("Voy agregar el proceso %d  a la TLB\n", proceso->PID);
+				agregar_a_TLB(proceso->PID, numero_Pagina, *num_marco);	//agregamos los datos del proceso a la TLB
+			} else{														// pero si lo esta debo implementar el algoritmo
+				//el algoritmo FIFO	y LRU
+				algoritmoSustitucion(proceso->PID, numero_Pagina, *num_marco);
+			}
+			//return *num_marco + desplazamiento; //Devuelve la direccion fisica		
+		} 
+		dir_Logica++;
+		int dir_fisica =  *num_marco + desplazamiento;
+		listDireccionesFisicas = list_add(dir_fisica); 
+		
 	}
-	return -1;
+	if(listDireccionesFisicas =! NULL)
+	{
+		return listDireccionesFisicas;
+	}else{
+		return -1;
+	}
+
 }
 
 
@@ -803,7 +820,7 @@ void ejecutar_proceso(PCB* proceso)
 					printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
 					//TODAVIA NO SE IMPLEMENTÓ LA MMU A ESTA INSTRUCCIÓN
-					//int direccion_fisica = mmu (direc_logica, proceso); 
+					int direccion_fisica = mmu (direc_logica, proceso); //me devuelve una lista
 
 					//contenamos la direccion fisica
 					char direccionFisica[20];
@@ -1032,7 +1049,7 @@ void ejecutar_proceso(PCB* proceso)
 		
 		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
 		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
-		{
+		{ 
 			if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 			{
 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso); //direccion
@@ -1042,7 +1059,7 @@ void ejecutar_proceso(PCB* proceso)
 					if ( esRegistroUint8(instruccion_split[1])){
 						 
 						uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1], proceso); //registor donde guardaremos
-						int direccion_fisica = mmu (direc_logica, proceso); 
+						int direccion_fisica = mmu (direc_logica, proceso);
 						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
 						sem_wait(&sem_lectura);
 						
