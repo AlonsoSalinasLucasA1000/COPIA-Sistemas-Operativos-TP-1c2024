@@ -505,7 +505,7 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				char* text_to_send = malloc(*tamanioOUT);
 				strcpy(text_to_send,espacio_usuario + *direccionFisicaOUT);
 				printf("Vamos a enviar nuevamente el siguiente texto: %s\n",text_to_send);
-				enviar_mensaje_cpu_memoria(text_to_send,fd_entradasalida,STDOUT_TOPRINT);
+				enviar_mensaje_cpu_memoria(text_to_send,*fd_io,STDOUT_TOPRINT);
 				break;
 			case DIALFS:
 
