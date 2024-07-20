@@ -798,54 +798,46 @@ void ejecutar_proceso(PCB* proceso)
 					//GUARDAMOS LA DIRECCION FÍSICA
 
 					uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
-					int *direc_logica = (int*)(registro_uint8); // Conversión explícita a int *
+					int direc_logica = (int)(*registro_uint8); // Conversión explícita a int *
 					printf("El valor del registro encontrado es: %d\n",*registro_uint8);
-					printf("al haberlo transformado en int quedó: %d\n",*direc_logica); //no se realiza la conversion correctamente
-					if( direc_logica != NULL )
-					{
-						//int direccion_fisica = mmu (direc_logica, proceso); 
+					printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
-						//contenamos la direccion fisica
-						char direccionFisica[20];
-						sprintf(direccionFisica, "%d", *direc_logica);
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccionFisica);//CONCATENAR
+					//TODAVIA NO SE IMPLEMENTÓ LA MMU A ESTA INSTRUCCIÓN
+					//int direccion_fisica = mmu (direc_logica, proceso); 
 
-					}
+					//contenamos la direccion fisica
+					char direccionFisica[20];
+					sprintf(direccionFisica, "%d", direc_logica);
+					strcat(instruccion," ");//CONCATENAR
+					strcat(instruccion, direccionFisica);//CONCATENAR
+
 
 					//GUARDAMOS EL TAMAÑO
 					if( esRegistroUint8(instruccion_split[3]) )
 					{
 						uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint8; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint8); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
-
-						}
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 					}
 					else
 					{
 						uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint32_2; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
-						}
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 					}
 			}	
 			else
@@ -856,53 +848,45 @@ void ejecutar_proceso(PCB* proceso)
 
 					uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
 					printf("El valor del registro encontrado es: %d\n",*registro_uint32);
-					int *direc_logica = (int *)registro_uint32; // Conversión explícita a int *
-					printf("al haberlo transformado en int quedó: %d\n",*direc_logica);
-					if( direc_logica != NULL )
-					{
-						//int direccion_fisica = mmu (direc_logica, proceso); 
+					int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
+					printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
-						//contenamos la direccion fisica
-						char direccionFisica[20];
-						sprintf(direccionFisica, "%d", *direc_logica);
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccionFisica);//CONCATENAR
+					//int direccion_fisica = mmu (direc_logica, proceso); 
 
-					}
+					//contenamos la direccion fisica
+					char direccionFisica[20];
+					sprintf(direccionFisica, "%d", direc_logica);
+					strcat(instruccion," ");//CONCATENAR
+					strcat(instruccion, direccionFisica);//CONCATENAR
+
 
 					//GUARDAMOS EL TAMAÑO
 					if( esRegistroUint8(instruccion_split[3]) )
 					{
 						uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint8; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint8); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 
-						}
 					}
 					else
 					{
 						uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint32_2; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
-						}
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 					}
 				}
 				else
@@ -936,54 +920,45 @@ void ejecutar_proceso(PCB* proceso)
 			{
 					//GUARDAMOS LA DIRECCION FÍSICA
 					uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
-					int *direc_logica = (int *)registro_uint8; // Conversión explícita a int *
+					int direc_logica = (int)(*registro_uint8); // Conversión explícita a int *
 					printf("El valor del registro encontrado es: %d\n",*registro_uint8);
-					printf("al haberlo transformado en int quedó: %d\n",*direc_logica);
-					if( direc_logica != NULL )
-					{
-						//int direccion_fisica = mmu (direc_logica, proceso); 
+					printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
-						//contenamos la direccion fisica
-						char direccionFisica[20];
-						sprintf(direccionFisica, "%d", *direc_logica);
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccionFisica);//CONCATENAR
+					//int direccion_fisica = mmu (direc_logica, proceso); 
 
-					}
+					//contenamos la direccion fisica
+					char direccionFisica[20];
+					sprintf(direccionFisica, "%d", direc_logica);
+					strcat(instruccion," ");//CONCATENAR
+					strcat(instruccion, direccionFisica);//CONCATENAR
+
 
 					//GUARDAMOS EL TAMAÑO
 					if( esRegistroUint8(instruccion_split[3]) )
 					{
 						uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint8; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint8); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 
-						}
 					}
 					else
 					{
 						uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint32_2; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
-
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
-						}
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 					}
 			}	
 			else
@@ -994,53 +969,45 @@ void ejecutar_proceso(PCB* proceso)
 
 					uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
 					printf("El valor del registro encontrado es: %d\n",*registro_uint32);
-					int *direc_logica = (int *)registro_uint32; // Conversión explícita a int *
-					printf("al haberlo transformado en int quedó: %d\n",*direc_logica);
-					if( direc_logica != NULL )
-					{
-						//int direccion_fisica = mmu (direc_logica, proceso); 
+					int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
+					printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
-						//contenamos la direccion fisica
-						char direccionFisica[20];
-						sprintf(direccionFisica, "%d", *direc_logica);
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccionFisica);//CONCATENAR
+					//int direccion_fisica = mmu (direc_logica, proceso); 
 
-					}
+					//contenamos la direccion fisica
+					char direccionFisica[20];
+					sprintf(direccionFisica, "%d", direc_logica);
+					strcat(instruccion," ");//CONCATENAR
+					strcat(instruccion, direccionFisica);//CONCATENAR
+
 
 					//GUARDAMOS EL TAMAÑO
 					if( esRegistroUint8(instruccion_split[3]) )
 					{
 						uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint8; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint8); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 
-						}
 					}
 					else
 					{
 						uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-						int *tamanio = (int *)registro_uint32_2; // Conversión explícita a int *
+						int tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
 						printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-						printf("al haberlo transformado en int quedó: %d\n",*tamanio);
+						printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-						if( tamanio != NULL )
-						{
-							//int direccion_fisica = mmu (direc_logica, proceso); 
-							char tamanioToSend[20];
-							sprintf(tamanioToSend, "%d", *tamanio);
-							strcat(instruccion," ");//CONCATENAR
-							strcat(instruccion, tamanioToSend);//CONCATENAR
-						}
+						//int direccion_fisica = mmu (direc_logica, proceso); 
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, tamanioToSend);//CONCATENAR
 					}
 				}
 				else
