@@ -11,6 +11,9 @@ int fd_entradasalida;
 int fd_memoria;
 int fd_kernel;
 
+//implementamos pid del proceso que se encuentra utilizando la io
+int* pid_actual;
+
 t_log* entradasalida_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_config* entradasalida_config;
 
@@ -193,8 +196,8 @@ void entradasalida_escuchar_kernel (){
 				sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO)/1000);
 
 				//DEVOLVER AL KERNEL PARA DESPERTAR
-				avisar_despertar_kernel();
-
+				//avisar_despertar_kernel();
+				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				break;
 			case STDIN:
 
@@ -221,7 +224,8 @@ void entradasalida_escuchar_kernel (){
 				enviar_stdin_to_write_memoria(direccionFisicaIN,tamanioIN,text);
 
 				free(leido);
-				avisar_despertar_kernel();
+				//avisar_despertar_kernel();
+				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				break;
 			case STDOUT:
 				
@@ -234,6 +238,11 @@ void entradasalida_escuchar_kernel (){
 				printf("La direccion física que ha llegado es: %d\n",*tamanioOUT);
 
 				enviar_stdout_to_print_memoria(direccionFisicaOUT, tamanioOUT);
+				break;
+			case NUEVOPID:
+				int* new_pid = paquete->buffer->stream;
+				*pid_actual = *new_pid;
+				printf("Esta interfaz está siendo usada actualmente por el proceso cuyo PID es %d\n",*pid_actual);
 				break;
 			case MENSAJE:
 				//

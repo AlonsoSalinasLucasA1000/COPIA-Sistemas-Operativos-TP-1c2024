@@ -51,7 +51,8 @@ typedef enum
 	ESCRITURA_NUMERICO,
 	ESCRITURA_CADENA,
 	ESCRITO,
-	GOKU
+	GOKU,
+	NUEVOPID
 }op_code;
 
 

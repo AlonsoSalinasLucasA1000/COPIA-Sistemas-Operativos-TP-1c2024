@@ -11,6 +11,8 @@ int main(int argc, char* argv[]) {
     sem_init(&sem_mutex_plani_corto,0,1);
     sem_init(&sem_mutex_plani_corto,0,1);
     sem_init(&sem_mutex_cpu_ocupada,0,1);
+    sem_init(&sem_blocked,0,1);
+    sem_init(&sem_mutex_lists_io,0,1);
 
     cpu_ocupada = false;
 

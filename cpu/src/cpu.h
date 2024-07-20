@@ -742,6 +742,10 @@ void ejecutar_proceso(PCB* proceso)
 		//CASO DE TENER UNA INSTRUCCION IO_GEN_SLEEP
 		if(strcmp(instruccion_split[0], "IO_GEN_SLEEP") == 0 )
 		{
+			//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
+			proceso->PC++;
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+
 			//debemos devolver instruccion + pcb parando el proceso actual
 			uint32_t instruccion_length = strlen(instruccion)+1;
 			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,GENERICA);
@@ -751,10 +755,12 @@ void ejecutar_proceso(PCB* proceso)
 			instruccionActual = malloc(1);
 			instruccionActual = "";
 
+			/*
 			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
 			//usleep(1000);
 			proceso->PC++;
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			*/
 			return;
 		}
 		
@@ -783,6 +789,10 @@ void ejecutar_proceso(PCB* proceso)
 		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDIN_READ") == 0 ) 
 		{
+			//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
+			proceso->PC++;
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+
 			if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 			{
 					//GUARDAMOS LA DIRECCION FÍSICA
@@ -912,16 +922,16 @@ void ejecutar_proceso(PCB* proceso)
 			instruccionActual = malloc(1);
 			instruccionActual = "";
 
-			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
-			//usleep(2000);
-			proceso->PC++;
-			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
 
 		//CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
 		{
+			//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
+			proceso->PC++;
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+
 			if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 			{
 					//GUARDAMOS LA DIRECCION FÍSICA
@@ -1050,10 +1060,6 @@ void ejecutar_proceso(PCB* proceso)
 			instruccionActual = malloc(1);
 			instruccionActual = "";
 
-			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
-			//usleep(2000);
-			proceso->PC++;
-			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 			return;
 		}
 		

@@ -37,7 +37,7 @@ PATH_BASE_DIALFS = config_get_string_value (entradasalida_config , "PATH_BASE_DI
 BLOCK_SIZE = config_get_int_value (entradasalida_config , "BLOCK_SIZE" );
 BLOCK_COUNT = config_get_int_value (entradasalida_config , "BLOCK_COUNT" );
 RETRASO_COMPACTACION = config_get_int_value (entradasalida_config , "RETRASO_COMPACTACION" );
-
+pid_actual = malloc(sizeof(int));
     
 log_info(entradasalida_logger, "TIPO_INTERFAZ: %s", TIPO_INTERFAZ);
 log_info(entradasalida_logger, "TIEMPO_UNIDAD_TRABAJO: %i", TIEMPO_UNIDAD_TRABAJO);
