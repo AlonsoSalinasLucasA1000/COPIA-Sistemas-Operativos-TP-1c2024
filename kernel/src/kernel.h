@@ -856,7 +856,7 @@ void atender_instruccion (char* leido)
         iniciar_proceso(comando_consola[1]);  
     }else if(strcmp(comando_consola [0], "EJECUTAR_SCRIPT") == 0){
 
-		ejecutar_script (comando_consola[1]);
+		//ejecutar_script (comando_consola[1]);
 		
     }else if(strcmp(comando_consola [0], "FINALIZAR_PROCESO") == 0){
     }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
