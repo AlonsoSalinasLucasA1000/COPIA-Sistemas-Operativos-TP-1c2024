@@ -61,6 +61,7 @@ typedef struct
 	char name[100];
 	int instancias;
 	t_list* listBloqueados;
+	t_list* pid_procesos; //una lista con los pid de los procesos que poseen instancias
 } Recurso;
 
 

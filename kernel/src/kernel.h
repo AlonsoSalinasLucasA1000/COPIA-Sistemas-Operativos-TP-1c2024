@@ -72,6 +72,30 @@ void removerCorchetes(char* str) {
     str[j] = '\0'; // Añadir el carácter nulo al final de la cadena resultante
 }
 
+bool es_elemento_buscado(void* elemento, void* valor_buscado) {
+    return *((uint32_t*)elemento) == *((uint32_t*)valor_buscado);
+}
+
+// Función para eliminar un elemento de la lista
+bool eliminar_elemento(t_list* lista, uint32_t valor) 
+{
+	bool to_ret;
+    uint32_t* valor_buscado = malloc(sizeof(uint32_t));
+    *valor_buscado = valor;
+
+    // Iterar sobre la lista para encontrar el elemento
+    for (int i = 0; i < list_size(lista); i++) {
+        uint32_t* elemento = list_get(lista, i);
+        if (es_elemento_buscado(elemento, valor_buscado)) {
+            list_remove_and_destroy_element(lista, i, free);
+			to_ret = true;
+            return to_ret;
+        }
+    }
+    free(valor_buscado);
+	to_ret = false;
+}
+
 t_list* generarRecursos(char* recursos, char* instancias_recursos)
 {
 	//creamos la lista a retornar
@@ -90,6 +114,7 @@ t_list* generarRecursos(char* recursos, char* instancias_recursos)
 		strncpy(to_add->name, recursos_separados[i], sizeof(to_add->name) - 1);
 		to_add->instancias = atoi(instancias_recursos_separados[i]);
 		to_add->listBloqueados = list_create();
+		to_add->pid_procesos = list_create();
 		list_add(ret,to_add);
 		i++;
 	}
@@ -192,6 +217,39 @@ PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
     return NULL; // Si no se encuentra el elemento
 }
 
+void liberar_recursos(int pid)
+{
+	for(int i = 0; i < list_size(listRecursos); i++)
+	{
+		Recurso* r = list_get(listRecursos,i);
+		bool borrado = true;
+		while( borrado )
+		{
+			borrado = eliminar_elemento(r->pid_procesos,pid);
+			if( borrado )
+			{
+				r->instancias++;
+				if (r->instancias <= 0) 
+					{
+						PCB* proceso_desbloqueado = list_remove(r->listBloqueados, 0);
+						if (proceso_desbloqueado != NULL) {
+							//añadimos que dicho proceso está usando una instancia
+							uint32_t* pid = malloc(sizeof(uint32_t));
+							*pid = proceso_desbloqueado->PID;
+							list_add(r->pid_procesos,pid);
+
+							// Enviamos el proceso a la cola de ready
+							sem_wait(&sem_ready);   // mutex hace wait
+							queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
+							sem_post(&sem_ready);
+							sem_post(&sem_cant_ready);  // mutex hace wait
+						}
+					}
+			}
+		}
+	}
+}
+
 void kernel_escuchar_cpu ()
 {
 	bool control_key = 1;
@@ -222,7 +280,7 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
 				printf("Este proceso ha terminado\n");
-
+				liberar_recursos(proceso->PID);
 				enviarPCB(proceso,fd_memoria,PROCESOFIN);
 
 				free(proceso->path);
@@ -335,6 +393,7 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_gen->proceso.PID);
 					sem_post(&sem_blocked);	
 					printf("Este proceso ha terminado\n");
+					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
@@ -379,6 +438,7 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdin->proceso.PID);
 					sem_post(&sem_blocked);	
 					printf("Este proceso ha terminado\n");
+					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
@@ -427,6 +487,7 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdout->proceso.PID);
 					sem_post(&sem_blocked);	
 					printf("Este proceso ha terminado\n");
+					liberar_recursos(proceso_to_end->PC);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
@@ -477,6 +538,12 @@ void kernel_escuchar_cpu ()
 					}
 					else
 					{
+						//indicamos que hay un proceso que tomó una instancia
+						uint32_t* pid = malloc(sizeof(uint32_t));
+						*pid = instruccion_recurso_wait->proceso.PID;
+						list_add(recurso_wait->pid_procesos, pid);
+						printf("En este momento el tamaño de la lista del recurso es de %d\n",list_size(recurso_wait->pid_procesos));
+
 						//enviamos el proceso a la cola de ready
 						PCB* proceso_recurso = malloc(sizeof(PCB));
 						*proceso_recurso = instruccion_recurso_wait->proceso;
@@ -488,6 +555,12 @@ void kernel_escuchar_cpu ()
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = false;
 						sem_post(&sem_mutex_cpu_ocupada);
+						printf("Los recursos han quedado de la siguiente forma:\n");
+						for(int i = 0; i < list_size(listRecursos); i++)
+						{
+							Recurso* got = list_get(listRecursos,i);
+							printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
+						}
 					}
 				}
 				else
@@ -498,6 +571,7 @@ void kernel_escuchar_cpu ()
 					printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_wait->proceso;
+					liberar_recursos(proceso_recurso->PID);
 					enviarPCB(proceso_recurso,fd_memoria,PROCESOFIN);
 
 					//EN ESTA PARTE, LO IDEAL SERÍA TENER UNA LISTA GLOBAL DE PROCESOS CON LA CUAL PODAMOS TENER SEGUIMIENTO TOTAL DE ELLOS.
@@ -534,14 +608,16 @@ void kernel_escuchar_cpu ()
 					// Aumentamos las instancias
 					recurso_signal->instancias++;
 
-					//ACÁ ESTÁ EL PROBLEMA, SE 
-					//devolvemos el proceso a ready
-
 					// Si hay procesos bloqueados, los desbloqueamos
 					if (recurso_signal->instancias <= 0) 
 					{
 						PCB* proceso_desbloqueado = list_remove(recurso_signal->listBloqueados, 0);
 						if (proceso_desbloqueado != NULL) {
+							//añadimos que dicho proceso está usando una instancia
+							uint32_t* pid = malloc(sizeof(uint32_t));
+							*pid = proceso_desbloqueado->PID;
+							list_add(recurso_signal->pid_procesos,pid);
+
 							// Enviamos el proceso a la cola de ready
 							sem_wait(&sem_ready);   // mutex hace wait
 							queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
@@ -549,6 +625,9 @@ void kernel_escuchar_cpu ()
 							sem_post(&sem_cant_ready);  // mutex hace wait
 						}
 					}
+					
+					//Tenemos que sacar el pid de la lista del recurso
+					eliminar_elemento(recurso_signal->pid_procesos, instruccion_recurso_signal->proceso.PID);
 
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
@@ -569,6 +648,7 @@ void kernel_escuchar_cpu ()
 					printf("Este proceso ha terminado\n");
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
+					liberar_recursos(proceso_recurso->PID);
 					enviarPCB(proceso_recurso, fd_memoria, PROCESOFIN);
 
 					// EN ESTA PARTE, LO IDEAL SERÍA TENER UNA LISTA GLOBAL DE PROCESOS CON LA CUAL PODAMOS TENER SEGUIMIENTO TOTAL DE ELLOS.
