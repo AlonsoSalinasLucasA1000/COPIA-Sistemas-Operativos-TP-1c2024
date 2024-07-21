@@ -843,6 +843,9 @@ void iniciar_proceso(char* path)
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW, funcion iniciar proceso\n", pcb->PID);
 }
 
+
+
+
 void atender_instruccion (char* leido)
 {
     char** comando_consola = string_split(leido, " ");
@@ -851,6 +854,10 @@ void atender_instruccion (char* leido)
     if((strcmp(comando_consola[0], "INICIAR_PROCESO") == 0))
 	{ 
         iniciar_proceso(comando_consola[1]);  
+    }else if(strcmp(comando_consola [0], "EJECUTAR_SCRIPT") == 0){
+
+		ejecutar_script (comando_consola[1]);
+		
     }else if(strcmp(comando_consola [0], "FINALIZAR_PROCESO") == 0){
     }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
     }else if(strcmp(comando_consola [0], "INICIAR_PLANIFICACION") == 0){
@@ -919,6 +926,49 @@ void validarFuncionesConsola(char* leido)
 	 }
 	 string_array_destroy(valorLeido);
 }
+
+/*
+char* leerArchivo(FILE* file)
+{
+	fseek(file,0,SEEK_END); //a veces falla
+	int tamanioArchivo = ftell(file);
+	rewind(file);
+
+	char* contenido = malloc((tamanioArchivo + 1) * sizeof(char) );  
+	if( contenido == NULL )
+	{
+		printf("Error al intentar reservar memoria\n");
+		return NULL;
+	}
+
+	size_t leidos = fread(contenido, sizeof(char), tamanioArchivo, file);
+	if( leidos < tamanioArchivo )
+	{
+		printf("No se pudo leer el contenido del archivo\n");
+		free(contenido);
+		return NULL;
+	}
+
+	contenido[tamanioArchivo] = '\0';
+	return contenido;
+}
+
+
+void ejecutar_script (char* path)
+{
+	FILE *script = fopen(path, "r");
+    if (file == NULL) {
+        perror("No se pudo abrir el archivo");
+        return;
+    }
+	char* content = leerArchivo(file);
+	char** newContent = string_split(content,"\n");
+	
+	atender_instruccion (newContent);
+	
+	free(content);
+	fclose(file);
+}*/
 
 void consolaInteractiva()
 {
