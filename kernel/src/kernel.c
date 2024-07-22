@@ -153,7 +153,7 @@ pthread_create (&hilo_planificador_corto_plazo, NULL, (void*)planificador_corto_
 pthread_detach (hilo_planificador_corto_plazo);
 
 pthread_t hilo_planificador_largo_plazo;
-pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_largo_plazo, NULL);
+pthread_create (&hilo_planificador_largo_plazo, NULL, (void*)planificador_de_largo_plazo, NULL);
 pthread_detach (hilo_planificador_largo_plazo);
 
 consolaInteractiva();

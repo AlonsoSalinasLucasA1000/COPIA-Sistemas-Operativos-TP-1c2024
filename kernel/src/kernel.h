@@ -1252,7 +1252,7 @@ void consolaInteractiva()
 	char* leido;
 	leido = readline("> ");
 	
-	while( strcmp(leido,"") != 0 )
+	while( strcmp(leido,"--------") != 0 )
 	{
 		validarFuncionesConsola(leido);
 		free(leido);
@@ -1289,30 +1289,32 @@ void mover_procesos_a_ready()
 	while( added != true )
 	{
 		//pido los semaforos de cada cola
+		//printf("Ingresamos a mover procesos a ready\n");
 		sem_wait(&sem_grado_mult);
 		sem_wait(&sem_blocked);
 		sem_wait(&sem_ready);
 		if( (queue_size(cola_ready) + queue_size(cola_blocked) + 1) < grado_multiprogramacion )
 		{
-			printf("Holaaa que onda\n");
+			printf("[NICE] EL GRADO DE MULTIPROGRAMACIÓN NO HA SIDO SUPERADO, UN NUEVO PROCESO ES ADMITIDO\n");
 			//si se cumple, significa que podemos incluir un nuevo proceso en ready
-			sem_wait(&sem_cant);
 			PCB* pcb = queue_pop(cola_new);
-			sem_post(&sem_cant);
 			sem_post(&sem_blocked);
 			sem_post(&sem_grado_mult);
 
 			queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
+			printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
 			sem_post(&sem_ready); 
 			sem_post(&sem_cant_ready);  // mutex hace wait
 			added = true;
 		}
 		else
 		{
+			printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
 			sem_post(&sem_grado_mult);
 			sem_post(&sem_blocked);
 			sem_post(&sem_ready);
 		}
+		sleep(1);
 	}
 
 }
