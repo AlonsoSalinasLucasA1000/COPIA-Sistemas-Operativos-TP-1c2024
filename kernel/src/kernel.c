@@ -13,7 +13,9 @@ int main(int argc, char* argv[]) {
     sem_init(&sem_mutex_cpu_ocupada,0,1);
     sem_init(&sem_blocked,0,1);
     sem_init(&sem_mutex_lists_io,0,1);
-
+    sem_init(&sem_mutex_cronometro,0,1);
+    sem_init(&sem_ready_prio,0,1);
+    sem_init(&sem_procesos,0,1);
     cpu_ocupada = false;
 
     //creamos la lista para las io genericas
@@ -22,6 +24,7 @@ int main(int argc, char* argv[]) {
     listStdout = list_create();
     listDialfs = list_create();
 
+    lista_procesos = list_create();
 
     kernel_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 	if (kernel_logger == NULL)
@@ -132,6 +135,7 @@ pthread_detach (hilo_io);
 // Creo la cola que voy a usar para guardar mis PCBs y las listas para las IO
 cola_new = queue_create();
 cola_ready = queue_create();
+cola_ready_prioridad = queue_create();
 cola_blocked = queue_create();
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);

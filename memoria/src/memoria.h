@@ -32,6 +32,7 @@ int RETARDO_RESPUESTA;
 void* espacio_usuario;
 void* espacio_pagina;
 
+
 t_list* generarListaDeMarcos(t_list* listMarcos)
 {
 	t_list* to_return = list_create();

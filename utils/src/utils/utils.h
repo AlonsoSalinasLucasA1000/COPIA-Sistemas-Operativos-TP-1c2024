@@ -16,6 +16,7 @@
 #include<commons/collections/queue.h>
 #include <semaphore.h>
 #include<commons/collections/list.h>
+#include<commons/temporal.h>
 #include <math.h>
 
 
@@ -111,7 +112,7 @@ typedef struct
 {
 	uint32_t PID;
 	uint32_t PC;
-	uint32_t quantum; //es para VRR
+	int quantum; //es para VRR
 	RegistrosCPU registro;//descomente para implementarlo
 	estado_proceso estado;
 	uint32_t path_length;
