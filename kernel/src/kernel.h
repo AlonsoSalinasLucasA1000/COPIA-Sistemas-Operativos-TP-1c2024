@@ -1059,6 +1059,17 @@ void proceso_estado(){
 	{
 		PCB* pcb = list_get(lista_procesos,i);
 		printf("El proceso %d esta en estado %s\n",pcb->PID,pcb->estado);
+		if (pcb->estado == 0){
+			printf("El proceso %d esta en estado <NEW>\n",pcb->PID);
+		}else if(pcb->estado == 1){
+			printf("El proceso %d esta en estado <READY>\n",pcb->PID);
+		}else if(pcb->estado == 2){
+			printf("El proceso %d esta en estado <BLOCKED>\n",pcb->PID);
+		}else if(pcb->estado == 3){
+			printf("El proceso %d esta en estado <EXEC>\n",pcb->PID);
+		}else if(pcb->estado == 4){
+			printf("El proceso %d esta en estado <EXIT>\n",pcb->PID);
+		}
 	}
 	sem_post(&sem_procesos);
 }

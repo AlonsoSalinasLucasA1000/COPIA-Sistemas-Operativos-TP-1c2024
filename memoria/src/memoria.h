@@ -312,12 +312,12 @@ void memoria_escuchar_cpu (){
 				memcpy(tamanioDato,copy_stream,sizeof(int));
 
 				printf("Recibimos la direccion fisica: %d\n",*direccionFisica);
-				printf("Recibimos la del tamaño del dato: %d\n",*tamanioDato);
+				printf("Recibimos la del tamaño del dato: %d\n",*tamanioDato);//no seria necesario porque lee por cantidad de direcciones
 
 
 				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
 				int* datoObtenido = malloc(sizeof(int));
-				memcpy(datoObtenido,espacio_usuario + *direccionFisica,*tamanioDato);
+				memcpy(datoObtenido,espacio_usuario + *direccionFisica,*tamanioDato);//no se como seria aca, deberia copiar de a un byte
 				printf("Enviaremos %d\n",*datoObtenido);
 				enviarEntero(datoObtenido,fd_cpu,LECTURA);
 				//
