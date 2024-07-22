@@ -16,6 +16,7 @@ int main(int argc, char* argv[]) {
     sem_init(&sem_mutex_cronometro,0,1);
     sem_init(&sem_ready_prio,0,1);
     sem_init(&sem_procesos,0,1);
+    sem_init(&sem_grado_mult,0,1);
     cpu_ocupada = false;
 
     //creamos la lista para las io genericas
@@ -66,6 +67,7 @@ int main(int argc, char* argv[]) {
     log_info(kernel_logger, "INSTANCIAS_RECURSOS: %s", INSTANCIAS_RECURSOS);
     log_info(kernel_logger, "GRADO_MULTIPROGRAMACION: %s", GRADO_MULTIPROGRAMACION);
 
+grado_multiprogramacion = atoi(GRADO_MULTIPROGRAMACION);
 //creamos los recursos
 listRecursos = generarRecursos(RECURSOS,INSTANCIAS_RECURSOS);
 
