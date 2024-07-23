@@ -246,6 +246,55 @@ void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, in
 	
 }
 
+void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfaz, int fd_io, int pid_actual)
+{
+	printf("This is the first checkpoint\n");
+	//debemos enviar la instrucción entero + su tamaño
+	char* to_send = string_duplicate(instruccion);
+	int* tamanio = malloc(sizeof(int));
+	*tamanio = strlen(to_send)+1;
+	
+	printf("This is the second checkpoint\n");
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(int) + *tamanio;
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+	printf("This is the third checkpoint\n");
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
+    buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset,to_send, *tamanio);
+
+	printf("This is the fourth checkpoint\n");
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = tipoDeInterfaz;
+    paquete->buffer = buffer;
+
+	printf("This is the fifth checkpoint\n");
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+	printf("Lo mande\n");
+	printf("This is the sixth checkpoint\n");
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
 //Se buscan las IO dentro de la lista
 EntradaSalida* encontrar_io(t_list* lista, const char* nombre_buscado) {
     for (int i = 0; i < list_size(lista); i++) 
@@ -562,10 +611,12 @@ void kernel_escuchar_cpu ()
 				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
 				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
 
+				printf("Checkpoint de stdin1 \n");
 				//debemos obtener el io específico de la lista
 				sem_wait(&sem_mutex_lists_io);
 				EntradaSalida* io_stdin = encontrar_io(listStdin,string_split(instruccion_io_stdin->instruccion," ")[1]);
 				sem_post(&sem_mutex_lists_io);
+				printf("Checkpoint de stdin2 \n");
 
 				//verificamos que exista
 				if( io_stdin != NULL)
@@ -581,7 +632,7 @@ void kernel_escuchar_cpu ()
 					{
 						io_stdin->ocupado = true;
 						printf("El fd de este IO es %d\n",io_stdin->fd_cliente);
-						ejecutar_interfaz_stdinstdout(instruccion_io_stdin->instruccion,STDIN,io_stdin->fd_cliente,instruccion_io_stdin->proceso.PID);
+						new_ejecutar_interfaz_stdin_stdout(instruccion_io_stdin->instruccion,STDIN,io_stdin->fd_cliente,instruccion_io_stdin->proceso.PID);
 					}
 				}
 				else

@@ -200,32 +200,15 @@ void entradasalida_escuchar_kernel (){
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				break;
 			case STDIN:
-
 				//DESEMPAQUETAMOS
-				int* direccionFisicaIN = malloc(sizeof(int));
-				direccionFisicaIN = paquete->buffer->stream;
-				int* tamanioIN = malloc(sizeof(int));
-				tamanioIN = paquete->buffer->stream + sizeof(int);
-				printf("La direccion física que ha llegado es: %d\n",*direccionFisicaIN);
-				printf("La direccion física que ha llegado es: %d\n",*tamanioIN);
+				int* tamanio = malloc(sizeof(int));
+				tamanio = paquete->buffer->stream;
+				char* instruccion = malloc(*tamanio);
+				instruccion = paquete->buffer->stream + sizeof(int);
 
-				//ESCRIBIMOS
-				printf("Vamos a llevar a cabo STDIN\n");
-				printf("Ingrese un texto por teclado: \n");
-				char* leido;
-				leido = readline(">> ");
+				//mostremos por pantalla
+				printf("La instruccion que ha llegado es: %s\n",instruccion);
 
-				//mostramos de vuelta por pantalla
-				//guardamos en una nueva variable
-				char* text = malloc(*tamanioIN+1);
-				strncpy(text,leido,*tamanioIN);
-				printf("El texto ingresado fue el siguiente: %s\n",text);
-
-				enviar_stdin_to_write_memoria(direccionFisicaIN,tamanioIN,text);
-
-				free(leido);
-				//avisar_despertar_kernel();
-				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				break;
 			case STDOUT:
 				
