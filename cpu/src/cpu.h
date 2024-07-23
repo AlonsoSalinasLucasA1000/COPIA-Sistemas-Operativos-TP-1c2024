@@ -284,19 +284,20 @@ void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo
 t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8 / 4 dir fisica -> uint32
 {  	
 	listDireccionesFisicas = list_create();
-			 									
+	int dir_fisica=0;	 									
 	for(int i=0; i < tamanio; i++)
 	{
 		int numero_Pagina = floor(dir_Logica/32); 					//config.TAM_PAGINA. necesitamos traer de memoria.config TAM_PAGINA
-		int desplazamiento = dir_Logica - numero_Pagina * 32;   	//dirección_lógica - número_página * tamaño_página         
-		int* dir_fisica;
+		int desplazamiento = dir_Logica - numero_Pagina * 32;   	//dirección_lógica - número_página * tamaño_página     TAM_PAGINA    
+		
+		printf("El desplazamiento es: %d, numero pagina: %d\n",desplazamiento,numero_Pagina);
 		
 		TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
 			
 		if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
 			log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
 			
-			*dir_fisica = retorno_TLB->marco + desplazamiento;//se calcula la direccion fisica
+			dir_fisica = retorno_TLB->marco * 32 + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
 			log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
@@ -316,14 +317,16 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 				//el algoritmo FIFO	y LRU
 				algoritmoSustitucion(proceso->PID, numero_Pagina, *num_marco);
 			}
-			*dir_fisica =  *num_marco + desplazamiento;
+
+			dir_fisica =  *num_marco * 32 + desplazamiento;
 			//return *num_marco + desplazamiento; //Devuelve la direccion fisica		
 		} 
-		
-		list_add(listDireccionesFisicas, *dir_fisica); //
+		printf("La direccion fisica %d es: %d\n",i , dir_fisica);
+		list_add(listDireccionesFisicas, dir_fisica); //
 		dir_Logica++;
 	}
-	if(listDireccionesFisicas =! NULL)
+
+	if(list_size(listDireccionesFisicas) > 0)
 	{
 		return listDireccionesFisicas;
 	}else{
@@ -908,24 +911,29 @@ void ejecutar_proceso(PCB* proceso)
 		 		}
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
-					
-		 		char tamanioToSend[20];
-		 		sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
-					
-		 		strcat(instruccion," ");//CONCATENAR
-		 		strcat(instruccion, tamanioToSend);
 
-		 		for(int i=0; i < list_size(direcciones_fisicas);i++)
-		 		{
-		 			int direc_fisica = list_get(direcciones_fisicas,i);
-					printf("La direccion fisica %d es: %d\n",i, direc_fisica);
-		 			//contenamos la direccion fisica
-		 			char direccionFisica[20];
-		 			sprintf(direccionFisica, "%d", direc_fisica);
+				if(list_size(direcciones_fisicas) > 0)
+				{
+					char tamanioToSend[20];
+					sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
 						
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, direccionFisica);//CONCATENAR
-		 		}
+					strcat(instruccion," ");//CONCATENAR
+					strcat(instruccion, tamanioToSend);
+					
+					for(int i=0; i < list_size(direcciones_fisicas);i++)
+					{
+						int direc_fisica = list_get(direcciones_fisicas,i);
+						printf("La direccion fisica %d es: %d\n",i, direc_fisica);
+						//contenamos la direccion fisica
+						char direccionFisica[20];
+						sprintf(direccionFisica, "%d", direc_fisica);
+							
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, direccionFisica);//CONCATENAR
+					}
+				}else{
+					printf("NO HAY ELEMENTOS EN LA LISTA\n");
+				}
 		 	}	
 		 	else
 		 	{
