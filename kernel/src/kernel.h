@@ -94,6 +94,19 @@ PCB* encontrarProceso(t_list* lista, uint32_t pid)
 	return ret;
 }
 
+
+char* estado_proceso_to_string(estado_proceso estado) {
+    switch (estado) {
+        case NEW: return "NEW";
+        case READY: return "READY";
+        case BLOCKED: return "BLOCKED";
+        case EXEC: return "EXEC";
+        case EXIT: return "EXIT";
+        default: return "UNKNOWN";
+    }
+}
+
+
 void removerCorchetes(char* str) {
     int len = strlen(str);
     int j = 0;
@@ -122,13 +135,15 @@ bool eliminar_elemento(t_list* lista, uint32_t valor)
     for (int i = 0; i < list_size(lista); i++) {
         uint32_t* elemento = list_get(lista, i);
         if (es_elemento_buscado(elemento, valor_buscado)) {
-            list_remove_and_destroy_element(lista, i, free);
+            list_remove(lista, i);
 			to_ret = true;
+			printf("Se ha borrado un elemento con éxito con pid %d\n",valor);
             return to_ret;
         }
     }
     free(valor_buscado);
 	to_ret = false;
+	printf("F chabon, NO se ha borrado un elemento con éxito con pid %d\n",valor);
 	return to_ret;
 }
 
@@ -284,6 +299,10 @@ void liberar_recursos(int pid)
 	for(int i = 0; i < list_size(listRecursos); i++)
 	{
 		Recurso* r = list_get(listRecursos,i);
+		if( eliminar_elemento(r->listBloqueados,pid) )
+		{
+			r->instancias++;
+		}
 		bool borrado = true;
 		while( borrado )
 		{
@@ -293,7 +312,14 @@ void liberar_recursos(int pid)
 				r->instancias++;
 				if (r->instancias <= 0) 
 				{
+					//PCB* to_ready = malloc(sizeof(PCB));
 					PCB* proceso_desbloqueado = list_remove(r->listBloqueados, 0);
+					//*to_ready = *proceso_desbloqueado;
+
+					printf("El proceso desbloqueado es el siguiente: \n");
+					printf("PID: %d\n", proceso_desbloqueado->PID);
+					printf("QUANTUM: %d\n",proceso_desbloqueado->quantum);
+					printf("PATH: %s\n",proceso_desbloqueado->path);
 					//el proceso ya no queda bloquedo, lo sacamos de la cola general de bloqueados
 					sem_wait(&sem_blocked);
 					eliminar_elemento(cola_blocked->elements,proceso_desbloqueado->PID);
@@ -315,6 +341,7 @@ void liberar_recursos(int pid)
 						else
 						{
 							sem_wait(&sem_ready);   // mutex hace wait
+							printf("En este momento en la cola de ready se ha pusheado al pid: %d\n", proceso_desbloqueado->PID);
 							queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
 							sem_post(&sem_ready);
 							sem_post(&sem_cant_ready);  // mutex hace wait
@@ -343,7 +370,9 @@ void kernel_escuchar_cpu ()
 			case PROCESOFIN:
 			//recibo el proceso de la CPU
 			    PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
+				char* estado_anterior = estado_proceso_to_string(proceso->estado);
 				proceso->estado = EXIT;
+				char* estado_actual = estado_proceso_to_string(proceso->estado);
 				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
 				printf("Recibimos el proceso con el quantum en: %d\n",proceso->quantum);
 				printf("Recibimos el proceso con el AX: %d\n",proceso->registro.AX);//cambios
@@ -357,6 +386,7 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n",proceso->PID);
+				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso->PID, estado_anterior, estado_actual);
 
 				//ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
@@ -564,7 +594,9 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_procesos);
 					PCB* actualizado_in = encontrarProceso(lista_procesos,instruccion_io_stdin->proceso.PID);
 					actualizado_in->estado = EXIT;
-					sem_post(&sem_procesos);
+					//log_info (kernel_logs_obligatorios,"Finaliza el proceso <%d> - Motivo: <INVALID_INTERFACE>",
+					//sem_post(&PID);sem_procesos);
+					sem_wait(&sem_procesos);
 
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
@@ -806,6 +838,7 @@ void kernel_escuchar_cpu ()
 							{
 								// Enviamos el proceso a la cola de ready
 								sem_wait(&sem_ready);   // mutex hace wait
+								printf("En este momento en la cola de ready se ha pusheado al pid: %d\n", proceso_desbloqueado->PID);
 								queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
 								sem_post(&sem_ready);
 								sem_post(&sem_cant_ready);  // mutex hace wait
@@ -853,7 +886,10 @@ void kernel_escuchar_cpu ()
 					printf("Este proceso ha terminado\n");
 					sem_wait(&sem_procesos);
 					PCB* actualizado_signal = encontrarProceso(lista_procesos,instruccion_recurso_signal->proceso.PID);
+					
 					actualizado_signal->estado = EXIT;
+					
+					
 					sem_post(&sem_procesos);
 
 					PCB* proceso_recurso = malloc(sizeof(PCB));
@@ -1176,6 +1212,7 @@ void iniciar_proceso(char* path)
 	pcb->registro.DI = 0;//cambios
 	pcb->registro.SI = 0;//cambios
 	pcb->estado = NEW;
+	pcb->path_length = strlen(path)+1;
 	pcb->path = string_duplicate(path); //consejo
 
 	//en este punto aprovecho para enviarlo a memoria
@@ -1205,72 +1242,131 @@ void iniciar_proceso(char* path)
 
 	//procesos_en_new++;
 	
-	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW, funcion iniciar proceso\n", pcb->PID);
+	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);
 }
 
+
 /*
-void finalizar_proceso (char* pid){
-	pid_t pid_modificado = atoi(pid);
-	if (kill(pid_modificado,SIGTERM)== 0){
-		printf ("Proceso %d finalizado correctamente\n", pid_modificado);
-	} else {
-		perror ("Error al finalizar el proceso\n");
-	}
+void finalizar_proceso (char* pid) {
+    sem_wait(&sem_procesos);
+	sem_wait(&sem_blocked);
+    sem_wait(&sem_ready);
+    sem_wait(&sem);
+
+    uint32_t pid_to_eliminar = (uint32_t)atoi(pid);
+	printf("El pid solicitado a eliminar es %d\n",pid_to_eliminar);
+    PCB* proceso_a_terminar = encontrarProceso(lista_procesos, pid_to_eliminar);
+	//
+	printf("El proceso a terminar luce de la siguiente forma: \n");
+	printf("PID: %d\n",proceso_a_terminar->PID);
+	printf("Length del path: %d\n",proceso_a_terminar->path_length);
+	printf("Path: %s\n",proceso_a_terminar->path);
+
+	char* estado_anterior = estado_proceso_to_string(proceso_a_terminar->estado);
+
+    switch (proceso_a_terminar->estado) {
+        case NEW:
+            printf("El proceso de pid %d es eliminado estando en NEW\n", proceso_a_terminar->PID);
+			liberar_recursos(pid_to_eliminar);
+            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
+			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
+			eliminar_elemento(cola_new->elements, pid_to_eliminar);
+            break;
+        case READY:
+            printf("El proceso de pid %d es eliminado estando en READY\n", proceso_a_terminar->PID);
+			liberar_recursos(pid_to_eliminar);
+            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
+			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
+			eliminar_elemento(cola_ready->elements, pid_to_eliminar);
+            break;
+        case EXEC:
+            // FALTA VERIFICAR EL CASO DE QUE SE ENCUENTRE EN EJECUCIÓN.
+            int* pid_del_proceso = malloc(sizeof(int));
+            *pid_del_proceso = proceso_a_terminar->PID;
+            enviarEntero(pid_del_proceso, fd_cpu_interrupt, FINALIZAR_PROCESO);
+			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
+            break;
+        case BLOCKED:
+			printf("[1]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
+            printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
+            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
+			printf("[2]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
+            liberar_recursos(pid_to_eliminar);
+			printf("[3]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
+			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
+			eliminar_elemento(cola_blocked->elements, pid_to_eliminar);
+			printf("[4]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
+            break;
+    }
+
+	printf("[5]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
+    proceso_a_terminar->estado = EXIT;
+	char* estado_actual = estado_proceso_to_string(proceso_a_terminar->estado);
+
+	log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_a_terminar->PID,estado_anterior,estado_actual);
+
+    sem_post(&sem_blocked);
+    sem_post(&sem_ready);
+    sem_post(&sem);
+    sem_post(&sem_procesos);
+	printf("[6]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
 }
 */
 
-void finalizar_proceso (char* pid)
-{
-	sem_wait(&sem_procesos);
-	uint32_t pid_to_eliminar = (uint32_t)atoi(pid);
-	PCB* proceso_a_terminar = encontrarProceso(lista_procesos,pid_to_eliminar);
+void finalizar_proceso (char* pid) {
+    uint32_t pid_to_eliminar = (uint32_t)atoi(pid);
+    printf("El pid solicitado a eliminar es %d\n", pid_to_eliminar);
 
-	sem_wait(&sem_blocked);
-	sem_wait(&sem_ready);
-	sem_wait(&sem);
+    sem_wait(&sem_procesos);
+    PCB* proceso_a_terminar = encontrarProceso(lista_procesos, pid_to_eliminar);
+    sem_post(&sem_procesos);
 
-	switch( proceso_a_terminar->estado )
-	{
-		case NEW:
-			printf("El proceso de pid %d es eliminado estando en NEW\n");
-			eliminar_elemento(cola_new->elements,pid_to_eliminar);
-			enviarPCB(proceso_a_terminar,fd_memoria,PROCESOFIN);
+    printf("El proceso a terminar luce de la siguiente forma: \n");
+    printf("PID: %d\n", proceso_a_terminar->PID);
+    printf("Length del path: %d\n", proceso_a_terminar->path_length);
+    printf("Path: %s\n", proceso_a_terminar->path);
+
+    char* estado_anterior = estado_proceso_to_string(proceso_a_terminar->estado);
+
+    switch (proceso_a_terminar->estado) {
+        case NEW:
+            printf("El proceso de pid %d es eliminado estando en NEW\n", proceso_a_terminar->PID);
+            liberar_recursos(pid_to_eliminar);
+            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
+            sem_wait(&sem);
+            eliminar_elemento(cola_new->elements, pid_to_eliminar);
+            sem_post(&sem);
+            break;
+        case READY:
+            printf("El proceso de pid %d es eliminado estando en READY\n", proceso_a_terminar->PID);
+            liberar_recursos(pid_to_eliminar);
+            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
+            sem_wait(&sem_ready);
+            eliminar_elemento(cola_ready->elements, pid_to_eliminar);
+            sem_post(&sem_ready);
+            break;
+        case EXEC:
+            // FALTA VERIFICAR EL CASO DE QUE SE ENCUENTRE EN EJECUCIÓN.
+            int* pid_del_proceso = malloc(sizeof(int));
+            *pid_del_proceso = proceso_a_terminar->PID;
+            enviarEntero(pid_del_proceso, fd_cpu_interrupt, FINALIZAR_PROCESO);
+            break;
+        case BLOCKED:
+            printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
 			liberar_recursos(pid_to_eliminar);
-			sem_post(&sem_blocked);
-			sem_post(&sem_ready);
-			sem_post(&sem);
-			
-		break;
-		case READY:
-			printf("El proceso de pid %d es eliminado estando en READY\n");
-			eliminar_elemento(cola_ready->elements,pid_to_eliminar);
-			enviarPCB(proceso_a_terminar,fd_memoria,PROCESOFIN);
-			liberar_recursos(pid_to_eliminar);
-			sem_post(&sem_blocked);
-			sem_post(&sem_ready);
-			sem_post(&sem);
-			
-		break;
-		case EXEC:
-		//FALTA VERIFICAR EL CASO DE QUE SE ENCUENTRE EN EJECUCIÓN.
-			int* pid_del_proceso = malloc(sizeof(int));
-			*pid_del_proceso = proceso_a_terminar->PID;
-			enviarEntero(pid_del_proceso,fd_cpu_interrupt,FINALIZAR_PROCESO);
-		break;
-		case BLOCKED:
-			printf("El proceso de pid %d es eliminado estando en BLOCKED\n");
-			eliminar_elemento(cola_ready->elements,pid_to_eliminar);
-			enviarPCB(proceso_a_terminar,fd_memoria,PROCESOFIN);
-			liberar_recursos(pid_to_eliminar);
-			sem_post(&sem_blocked);
-			sem_post(&sem_ready);
-			sem_post(&sem);
-			sem_post(&sem_procesos);
-		break;
-		proceso_a_terminar->estado = EXIT;
-		sem_post(&sem_procesos);
-	}
+            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
+            sem_wait(&sem_blocked);
+            eliminar_elemento(cola_blocked->elements, pid_to_eliminar);
+            sem_post(&sem_blocked);
+            break;
+    }
+    proceso_a_terminar->estado = EXIT;
+    char* estado_actual = estado_proceso_to_string(proceso_a_terminar->estado);
+
+    log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_a_terminar->PID, estado_anterior, estado_actual);
 }
+
+
 
 void proceso_estado(){
 	sem_wait(&sem_procesos);
@@ -1278,28 +1374,19 @@ void proceso_estado(){
 	{
 
 		PCB* pcb = list_get(lista_procesos,i);
-//		printf("El proceso %d esta en estado %s\n",pcb->PID,pcb->estado);
-		if (pcb->estado == 0){
-			printf("El proceso %d esta en estado <NEW>\n",pcb->PID);
-		}else if(pcb->estado == 1){
-			printf("El proceso %d esta en estado <READY>\n",pcb->PID);
-		}else if(pcb->estado == 2){
-			printf("El proceso %d esta en estado <BLOCKED>\n",pcb->PID);
-		}else if(pcb->estado == 3){
-			printf("El proceso %d esta en estado <EXEC>\n",pcb->PID);
-		}else if(pcb->estado == 4){
-			printf("El proceso %d esta en estado <EXIT>\n",pcb->PID);
-		}
+		char* estado = estado_proceso_to_string (pcb->estado);
+		printf("El proceso %d esta en estado <%s>\n",pcb->PID,estado);
+		
 	}
 	sem_post(&sem_procesos);
 }
 
 void cambio_multiprogramacion (char* valor){
 	int valor_nuevo = atoi (valor);
-	printf ("Grado de multiprogramacio ANTES: %d\n",grado_multiprogramacion);
+	printf ("Grado de multiprogramacion ANTES: %d\n",grado_multiprogramacion);
 	sem_wait(&sem_grado_mult);
 	grado_multiprogramacion = valor_nuevo;
-	printf ("Grado de multiprogramacio DESPUES: %d\n",grado_multiprogramacion);
+	printf ("Grado de multiprogramacion DESPUES: %d\n",grado_multiprogramacion);
 	sem_post(&sem_grado_mult);
 }
 
@@ -1448,12 +1535,14 @@ void consolaInteractiva()
 		validarFuncionesConsola(leido);
 		free(leido);
 		leido = readline("> ");
+		/*
 		sem_wait(&sem_blocked);
 		sem_wait(&sem_ready);
 		printf("Ahora la cola de READY tiene %d procesos\n",queue_size(cola_ready));
 		printf("Ahora la cola de BLOCKED tiene %d procesos\n",queue_size(cola_blocked));
 		sem_post(&sem_blocked);
 		sem_post(&sem_ready);
+		*/
 	}
 }
 
@@ -1462,6 +1551,8 @@ void mover_procesos_a_ready()
 	bool added = false;
 	while( added != true )
 	{
+		sem_wait(&sem_cant);   // mutex hace wait
+		sem_wait(&sem);   // mutex hace wait
 		if (iniciar_planificacion == true){
 			//pido los semaforos de cada cola
 			//printf("Ingresamos a mover procesos a ready\n");
@@ -1478,23 +1569,28 @@ void mover_procesos_a_ready()
 
 				sem_wait(&sem_procesos);
 				PCB* actualizado = encontrarProceso(lista_procesos,pcb->PID);
+				char* estado_anterior = estado_proceso_to_string (actualizado->estado);
 				actualizado->estado = READY;
+				char* estado_actual = estado_proceso_to_string (actualizado->estado);
 				sem_post(&sem_procesos);
 
 				queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
 				printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
+				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", pcb->PID, estado_anterior, estado_actual);
+				
 				sem_post(&sem_ready); 
 				sem_post(&sem_cant_ready);  // mutex hace wait
 				added = true;
 			}
+			else
+			{
+				printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
+				sem_post(&sem_grado_mult);
+				sem_post(&sem_blocked);
+				sem_post(&sem_ready);
+			}
 		}
-		else
-		{
-			printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
-			sem_post(&sem_grado_mult);
-			sem_post(&sem_blocked);
-			sem_post(&sem_ready);
-		}
+		sem_post(&sem);   // mutex hace signal
 		sleep(1);
 	}
 
@@ -1507,12 +1603,12 @@ void planificador_de_largo_plazo()
 	{	
 		if (iniciar_planificacion == true){
 		
-			sem_wait(&sem_cant);   // mutex hace wait
-			sem_wait(&sem);   // mutex hace wait
+			//sem_wait(&sem_cant);   // mutex hace wait
+			//sem_wait(&sem);   // mutex hace wait
 
 			mover_procesos_a_ready();
 			
-			sem_post(&sem);   // mutex hace signal
+			//sem_post(&sem);   // mutex hace signal
 		}
 	}	
 }
@@ -1648,6 +1744,9 @@ void enviar_pcb_a_cpu()
 	sem_wait(&sem_ready);   // mutex hace wait
 
 	PCB* pcb_cola = queue_pop(cola_ready); //saca el proceso de la cola de ready
+	printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->PID);
+	printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->quantum);
+	printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->path_length);
 			
 	sem_post(&sem_ready); // mutex hace signal
 	

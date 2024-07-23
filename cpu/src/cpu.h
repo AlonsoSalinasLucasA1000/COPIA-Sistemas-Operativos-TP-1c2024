@@ -1382,13 +1382,24 @@ void ejecutar_proceso(PCB* proceso)
 		
 		//preguntamos por el valor de la variable interrupcion
 		sem_wait(&interrupt_mutex);
-		if( *any_interrupcion == 1 )//fin de quantum
+		if( *any_interrupcion == (-1) )//fin de quantum
 		{
 			printf("AL PROCESO SE LE HA ACABADO EL QUANTUM\n");
 			enviarPCB(proceso,fd_kernel_dispatch,FIN_DE_QUANTUM);
 			*any_interrupcion = 0;
 			sem_post(&interrupt_mutex);
 			return;
+		}
+		else
+		{
+			//si la variable tiene el pid del proceso, se debe finalizar.
+			if( *any_interrupcion == proceso->PID)
+			{
+				enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
+				*any_interrupcion = 0;
+				sem_post(&interrupt_mutex);
+				return;
+			}
 		}
 		sem_post(&interrupt_mutex);
 
@@ -1473,7 +1484,14 @@ void cpu_escuchar_kernel_interrupt (){
 				//printf("RECIBI FIN DE QUANTUM\n");
 				//si es fin de quantum es un 1
 				sem_wait(&interrupt_mutex);
-				*any_interrupcion = 1;
+				*any_interrupcion = (-1);
+				sem_post(&interrupt_mutex);
+				break;
+			case FINALIZAR_PROCESO:
+				//
+				int* pid_a_finalizar = paquete->buffer->stream;
+				sem_wait(&interrupt_mutex);
+				*any_interrupcion = *pid_a_finalizar;
 				sem_post(&interrupt_mutex);
 				break;
 			case MENSAJE:
