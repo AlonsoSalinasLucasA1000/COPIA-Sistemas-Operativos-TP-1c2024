@@ -53,7 +53,8 @@ typedef enum
 	ESCRITURA_CADENA,
 	ESCRITO,
 	GOKU,
-	NUEVOPID
+	NUEVOPID,
+	FINALIZAR_PROCESO
 }op_code;
 
 

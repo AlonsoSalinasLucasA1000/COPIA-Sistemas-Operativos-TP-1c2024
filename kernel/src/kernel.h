@@ -14,6 +14,8 @@ int fd_memoria;
 int fd_entradasalida;
 bool cpu_ocupada; //0 si no, 1 si sí
 int grado_multiprogramacion;
+bool iniciar_planificacion;
+bool iniciar_planificacion = true;
 
 //colas y pid
 int procesos_en_new = 0;
@@ -75,6 +77,22 @@ char *QUANTUM; //Da segmentation fault si lo defino como int
 char* RECURSOS;
 char* INSTANCIAS_RECURSOS;
 char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
+
+PCB* encontrarProceso(t_list* lista, uint32_t pid)
+{
+	PCB* ret;
+	int i = 0;
+	while( i < list_size(lista) )
+	{
+		PCB* got = list_get(lista,i);
+		if( got->PID == pid)
+		{
+			ret = got;
+		}
+		i++;
+	}
+	return ret;
+}
 
 void removerCorchetes(char* str) {
     int len = strlen(str);
@@ -276,6 +294,10 @@ void liberar_recursos(int pid)
 				if (r->instancias <= 0) 
 				{
 					PCB* proceso_desbloqueado = list_remove(r->listBloqueados, 0);
+					//el proceso ya no queda bloquedo, lo sacamos de la cola general de bloqueados
+					sem_wait(&sem_blocked);
+					eliminar_elemento(cola_blocked->elements,proceso_desbloqueado->PID);
+					sem_post(&sem_blocked);
 					if (proceso_desbloqueado != NULL) 
 					{
 						//añadimos que dicho proceso está usando una instancia
@@ -285,7 +307,6 @@ void liberar_recursos(int pid)
 
 						//añadimos a una cola dependiendo si le queda quantum o no
 						// Enviamos el proceso a la cola de ready
-
 
 						if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 						{
@@ -336,6 +357,13 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n",proceso->PID);
+
+				//ACTUALIZAMOS EN LA LISTA GENERAL
+				sem_wait(&sem_procesos);
+				PCB* actualizado_fin = encontrarProceso(lista_procesos,proceso->PID);
+				actualizado_fin->estado = EXIT;
+				sem_post(&sem_procesos);
+
 				liberar_recursos(proceso->PID);
 				enviarPCB(proceso,fd_memoria,PROCESOFIN);
 
@@ -372,6 +400,12 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso_io->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso_io->registro.DI);//cambios
 				printf("Este SE HA BLOQUEADO\n");
+
+				//ACTUALIZAMOS EN LA LISTA GENERAL
+				sem_wait(&sem_procesos);
+				PCB* actualizado_io = encontrarProceso(lista_procesos,proceso_io->PID);
+				actualizado_io->estado = BLOCKED;
+				sem_post(&sem_procesos);
 
 				//PARA VIRTUAL ROUND ROBIN
 				//En caso de darse esto, debemos actualizar los valores del quantum
@@ -413,6 +447,13 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso_fin_de_quantum->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso_fin_de_quantum->registro.DI);//cambios
 				printf("SE HA ACABADO EL QUANTUM DE ESTE PROCESO\n");
+
+				sem_wait(&sem_procesos);
+				PCB* actualizado_quantum = encontrarProceso(lista_procesos,proceso_fin_de_quantum->PID);
+				actualizado_quantum->estado = READY;
+				sem_post(&sem_procesos);
+
+				
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Desalojado por fin de Quantum", proceso_fin_de_quantum->PID);
 
 				//el quantum vuelve al valor original
@@ -467,6 +508,13 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_blocked);				
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_gen->proceso.PID);
 					sem_post(&sem_blocked);	
+
+					sem_wait(&sem_procesos);
+					PCB* actualizado_gen = encontrarProceso(lista_procesos,instruccion_io_gen->proceso.PID);
+					actualizado_gen->estado = EXIT;
+					sem_post(&sem_procesos);
+
+					
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
@@ -512,6 +560,12 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_blocked);				
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdin->proceso.PID);
 					sem_post(&sem_blocked);	
+
+					sem_wait(&sem_procesos);
+					PCB* actualizado_in = encontrarProceso(lista_procesos,instruccion_io_stdin->proceso.PID);
+					actualizado_in->estado = EXIT;
+					sem_post(&sem_procesos);
+
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
@@ -560,7 +614,13 @@ void kernel_escuchar_cpu ()
 					//de no existir debemos terminar el proceso
 					sem_wait(&sem_blocked);				
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdout->proceso.PID);
-					sem_post(&sem_blocked);	
+					sem_post(&sem_blocked);
+
+					sem_wait(&sem_procesos);
+					PCB* actualizado_out = encontrarProceso(lista_procesos,instruccion_io_stdout->proceso.PC);
+					actualizado_out->estado = EXIT;
+					sem_post(&sem_procesos);
+
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PC);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
@@ -601,18 +661,31 @@ void kernel_escuchar_cpu ()
 					//si es menor a cero, se bloquea
 					if( recurso_wait->instancias < 0 )
 					{
-						//de lo contrario lo añadimos a la cola de bloqueados del recurso
+						//de lo contrario lo añadimos a la cola de bloqueados del recurso y también a la cola de bloqueados general
 						PCB* proceso_recurso = malloc(sizeof(PCB));
 						*proceso_recurso = instruccion_recurso_wait->proceso;
 						list_add(recurso_wait->listBloqueados,proceso_recurso);
+						
+						sem_wait(&sem_blocked);
+						queue_push(cola_blocked,proceso_recurso);
+						sem_post(&sem_blocked);
+
+						sem_wait(&sem_procesos);
+						PCB* actualizado_wait = encontrarProceso(lista_procesos,instruccion_recurso_wait->proceso.PID);
+						actualizado_wait->estado = BLOCKED;
+						sem_post(&sem_procesos);
+
 						printf("El proceso se ha bloqueado porque no hay instancias disponibles\n");
+
+						//CPU desocupada
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = false;
 						sem_post(&sem_mutex_cpu_ocupada);
-						printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
+						//printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
 					}
 					else
 					{
+						//SI EL PROCESO TOMÓ LA INSTANCIA, DEBE VOLVER A EJECUTARSE.
 						//indicamos que hay un proceso que tomó una instancia
 						uint32_t* pid = malloc(sizeof(uint32_t));
 						*pid = instruccion_recurso_wait->proceso.PID;
@@ -623,6 +696,7 @@ void kernel_escuchar_cpu ()
 						PCB* proceso_recurso = malloc(sizeof(PCB));
 						*proceso_recurso = instruccion_recurso_wait->proceso;
 
+						/*
 						if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 						{
 							encolar_procesos_vrr(proceso_recurso);
@@ -634,10 +708,19 @@ void kernel_escuchar_cpu ()
 							sem_post(&sem_ready); 
 							sem_post(&sem_cant_ready);  // mutex hace wait
 						}
-					
+						*/
+						printf("Enviaremos un proceso\n");
+						printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
+						enviarPCB(proceso_recurso, fd_cpu_dispatch,PROCESO);
+						sem_wait(&sem_mutex_cpu_ocupada);
+						cpu_ocupada = true;
+						sem_post(&sem_mutex_cpu_ocupada);
+
+						/*
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = false;
 						sem_post(&sem_mutex_cpu_ocupada);
+						*/
 						printf("Los recursos han quedado de la siguiente forma:\n");
 						for(int i = 0; i < list_size(listRecursos); i++)
 						{
@@ -651,7 +734,13 @@ void kernel_escuchar_cpu ()
 					//el recurso no existe, debemos terminarlo
 					printf("El recurso no existe\n");
 					printf("Este proceso ha terminado\n");
-					printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
+
+					sem_wait(&sem_procesos);
+					PCB* actualizado_wait = encontrarProceso(lista_procesos,instruccion_recurso_wait->proceso.PID);
+					actualizado_wait->estado = EXIT;
+					sem_post(&sem_procesos);
+
+					//printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_wait->proceso;
 					liberar_recursos(proceso_recurso->PID);
@@ -695,11 +784,19 @@ void kernel_escuchar_cpu ()
 					if (recurso_signal->instancias <= 0) 
 					{
 						PCB* proceso_desbloqueado = list_remove(recurso_signal->listBloqueados, 0);
+						sem_wait(&sem_blocked);
+						eliminar_elemento(cola_blocked->elements,proceso_desbloqueado->PID);
+						sem_post(&sem_blocked);
 						if (proceso_desbloqueado != NULL) {
 							//añadimos que dicho proceso está usando una instancia
 							uint32_t* pid = malloc(sizeof(uint32_t));
 							*pid = proceso_desbloqueado->PID;
 							list_add(recurso_signal->pid_procesos,pid);
+
+							sem_wait(&sem_procesos);
+							PCB* actualizado_signal = encontrarProceso(lista_procesos,instruccion_recurso_signal->proceso.PID);
+							actualizado_signal->estado = READY;
+							sem_post(&sem_procesos);
 
 							if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 							{
@@ -722,6 +819,14 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
 
+					//debe volver a ejecutarse
+					printf("Enviaremos un proceso\n");
+					printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
+					enviarPCB(proceso_recurso, fd_cpu_dispatch,PROCESO);
+					sem_wait(&sem_mutex_cpu_ocupada);
+					cpu_ocupada = true;
+					sem_post(&sem_mutex_cpu_ocupada);
+					/*
 					if( strcmp(ALGORITMO_PLANIFICACION, "VRR") == 0 )
 					{
 						encolar_procesos_vrr(proceso_recurso);
@@ -738,12 +843,19 @@ void kernel_escuchar_cpu ()
 						cpu_ocupada = false;
 						sem_post(&sem_mutex_cpu_ocupada);
 					}
+					*/
+
 				} 
 				else 
 				{
 					// El recurso no existe, debemos terminarlo
 					printf("El recurso no existe\n");
 					printf("Este proceso ha terminado\n");
+					sem_wait(&sem_procesos);
+					PCB* actualizado_signal = encontrarProceso(lista_procesos,instruccion_recurso_signal->proceso.PID);
+					actualizado_signal->estado = EXIT;
+					sem_post(&sem_procesos);
+
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
 					liberar_recursos(proceso_recurso->PID);
@@ -917,6 +1029,12 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 				
 				//ACÁ METERÉ EN READY DEPENDIENDO DEL QUANTUM DEL PROCESO
 				proceso_awaken->estado = READY;
+
+				sem_wait(&sem_procesos);
+				PCB* actualizado = encontrarProceso(lista_procesos,proceso_awaken->PID);
+				actualizado->estado = READY;
+				sem_post(&sem_procesos);
+
 				//si el quantum del proceso es mayor a cero, debe ir a la cola de mayor prioridad
 				//meter en ready
 				if( strcmp(ALGORITMO_PLANIFICACION, "VRR") == 0 )
@@ -1090,7 +1208,7 @@ void iniciar_proceso(char* path)
 	log_info (kernel_logs_obligatorios, "Se crea el proceso %d en NEW, funcion iniciar proceso\n", pcb->PID);
 }
 
-
+/*
 void finalizar_proceso (char* pid){
 	pid_t pid_modificado = atoi(pid);
 	if (kill(pid_modificado,SIGTERM)== 0){
@@ -1099,24 +1217,90 @@ void finalizar_proceso (char* pid){
 		perror ("Error al finalizar el proceso\n");
 	}
 }
+*/
+
+void finalizar_proceso (char* pid)
+{
+	sem_wait(&sem_procesos);
+	uint32_t pid_to_eliminar = (uint32_t)atoi(pid);
+	PCB* proceso_a_terminar = encontrarProceso(lista_procesos,pid_to_eliminar);
+
+	sem_wait(&sem_blocked);
+	sem_wait(&sem_ready);
+	sem_wait(&sem);
+
+	switch( proceso_a_terminar->estado )
+	{
+		case NEW:
+			printf("El proceso de pid %d es eliminado estando en NEW\n");
+			eliminar_elemento(cola_new->elements,pid_to_eliminar);
+			enviarPCB(proceso_a_terminar,fd_memoria,PROCESOFIN);
+			liberar_recursos(pid_to_eliminar);
+			sem_post(&sem_blocked);
+			sem_post(&sem_ready);
+			sem_post(&sem);
+			
+		break;
+		case READY:
+			printf("El proceso de pid %d es eliminado estando en READY\n");
+			eliminar_elemento(cola_ready->elements,pid_to_eliminar);
+			enviarPCB(proceso_a_terminar,fd_memoria,PROCESOFIN);
+			liberar_recursos(pid_to_eliminar);
+			sem_post(&sem_blocked);
+			sem_post(&sem_ready);
+			sem_post(&sem);
+			
+		break;
+		case EXEC:
+		//FALTA VERIFICAR EL CASO DE QUE SE ENCUENTRE EN EJECUCIÓN.
+			int* pid_del_proceso = malloc(sizeof(int));
+			*pid_del_proceso = proceso_a_terminar->PID;
+			enviarEntero(pid_del_proceso,fd_cpu_interrupt,FINALIZAR_PROCESO);
+		break;
+		case BLOCKED:
+			printf("El proceso de pid %d es eliminado estando en BLOCKED\n");
+			eliminar_elemento(cola_ready->elements,pid_to_eliminar);
+			enviarPCB(proceso_a_terminar,fd_memoria,PROCESOFIN);
+			liberar_recursos(pid_to_eliminar);
+			sem_post(&sem_blocked);
+			sem_post(&sem_ready);
+			sem_post(&sem);
+			sem_post(&sem_procesos);
+		break;
+		proceso_a_terminar->estado = EXIT;
+		sem_post(&sem_procesos);
+	}
+}
 
 void proceso_estado(){
 	sem_wait(&sem_procesos);
-	//t_link_element* actual = lista_procesos->head;
-	/*
-	while (actual != NULL){
-		PCB* pcb = actual;
-		printf("El proceso %d esta en estado %s",pcb->PID,pcb->estado);
-		actual = actual->next;
-	}
-	*/
-	//
 	for(int i = 0; i < list_size(lista_procesos); i++)
 	{
+
 		PCB* pcb = list_get(lista_procesos,i);
-		printf("El proceso %d esta en estado %s\n",pcb->PID,pcb->estado);
+//		printf("El proceso %d esta en estado %s\n",pcb->PID,pcb->estado);
+		if (pcb->estado == 0){
+			printf("El proceso %d esta en estado <NEW>\n",pcb->PID);
+		}else if(pcb->estado == 1){
+			printf("El proceso %d esta en estado <READY>\n",pcb->PID);
+		}else if(pcb->estado == 2){
+			printf("El proceso %d esta en estado <BLOCKED>\n",pcb->PID);
+		}else if(pcb->estado == 3){
+			printf("El proceso %d esta en estado <EXEC>\n",pcb->PID);
+		}else if(pcb->estado == 4){
+			printf("El proceso %d esta en estado <EXIT>\n",pcb->PID);
+		}
 	}
 	sem_post(&sem_procesos);
+}
+
+void cambio_multiprogramacion (char* valor){
+	int valor_nuevo = atoi (valor);
+	printf ("Grado de multiprogramacio ANTES: %d\n",grado_multiprogramacion);
+	sem_wait(&sem_grado_mult);
+	grado_multiprogramacion = valor_nuevo;
+	printf ("Grado de multiprogramacio DESPUES: %d\n",grado_multiprogramacion);
+	sem_post(&sem_grado_mult);
 }
 
 
@@ -1136,8 +1320,14 @@ void atender_instruccion (char* leido)
 		finalizar_proceso(comando_consola[1]);
 
     }else if(strcmp(comando_consola [0], "DETENER_PLANIFICACION") == 0){
+		iniciar_planificacion = false;
+
     }else if(strcmp(comando_consola [0], "INICIAR_PLANIFICACION") == 0){
-    }else if(strcmp(comando_consola [0], "MULTIPROGRAMACION") == 0){ 
+		iniciar_planificacion = true;
+
+    }else if(strcmp(comando_consola [0], "MULTIPROGRAMACION") == 0){
+		cambio_multiprogramacion(comando_consola[1]);
+		 
     }else if(strcmp(comando_consola [0], "PROCESO_ESTADO") == 0){
 		proceso_estado();
 		
@@ -1173,25 +1363,27 @@ void validarFuncionesConsola(char* leido)
 	        {  
 		        printf("Comando válido\n");
 				atender_instruccion(leido);
-
 	        }
 			else
 			{
 				if(strcmp(valorLeido[0], "DETENER_PLANIFICACION") == 0)
 	            {  
-		             printf("Comando válido\n");
+		            printf("Comando válido\n");
+					atender_instruccion(leido);
 	            }
 				else
 				{
 					if(strcmp(valorLeido[0], "INICIAR_PLANIFICACION") == 0)
 	                {  
 		                printf("Comando válido\n");
+						atender_instruccion(leido);
 	                }
 					else
 					{
 						if(strcmp(valorLeido[0], "MULTIPROGRAMACION") == 0)
 	                    {  
 		                       printf("Comando válido\n");
+							   atender_instruccion(leido);
 	                    }
 						else
 						{
@@ -1199,7 +1391,6 @@ void validarFuncionesConsola(char* leido)
 	                        {  
 		                       printf("Comando válido\n");
 							   atender_instruccion(leido);
-
 	                        }
 						}
 					}
@@ -1239,8 +1430,8 @@ void ejecutar_script (char* path)
     while (fgets(linea, sizeof(linea), file)) {
 		printf("La linea leida es: %s", linea);
 		char* linea_modificada = remove_last_two_chars(linea);
-		printf("La linea modificada leida es: %s", linea_modificada);
-		atender_instruccion (linea_modificada);
+		printf("La linea modificada leida es: %s\n", linea_modificada);
+		validarFuncionesConsola(linea_modificada);
 		free(linea_modificada);
 		sleep (1);
     }
@@ -1257,9 +1448,76 @@ void consolaInteractiva()
 		validarFuncionesConsola(leido);
 		free(leido);
 		leido = readline("> ");
+		sem_wait(&sem_blocked);
+		sem_wait(&sem_ready);
+		printf("Ahora la cola de READY tiene %d procesos\n",queue_size(cola_ready));
+		printf("Ahora la cola de BLOCKED tiene %d procesos\n",queue_size(cola_blocked));
+		sem_post(&sem_blocked);
+		sem_post(&sem_ready);
 	}
 }
 
+void mover_procesos_a_ready()
+{
+	bool added = false;
+	while( added != true )
+	{
+		if (iniciar_planificacion == true){
+			//pido los semaforos de cada cola
+			//printf("Ingresamos a mover procesos a ready\n");
+			sem_wait(&sem_grado_mult);
+			sem_wait(&sem_blocked);
+			sem_wait(&sem_ready);
+			if( (queue_size(cola_ready) + queue_size(cola_blocked) + 1) < grado_multiprogramacion )
+			{
+				printf("[NICE] EL GRADO DE MULTIPROGRAMACIÓN NO HA SIDO SUPERADO, UN NUEVO PROCESO ES ADMITIDO\n");
+				//si se cumple, significa que podemos incluir un nuevo proceso en ready
+				PCB* pcb = queue_pop(cola_new);
+				sem_post(&sem_blocked);
+				sem_post(&sem_grado_mult);
+
+				sem_wait(&sem_procesos);
+				PCB* actualizado = encontrarProceso(lista_procesos,pcb->PID);
+				actualizado->estado = READY;
+				sem_post(&sem_procesos);
+
+				queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
+				printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
+				sem_post(&sem_ready); 
+				sem_post(&sem_cant_ready);  // mutex hace wait
+				added = true;
+			}
+		}
+		else
+		{
+			printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
+			sem_post(&sem_grado_mult);
+			sem_post(&sem_blocked);
+			sem_post(&sem_ready);
+		}
+		sleep(1);
+	}
+
+}
+
+void planificador_de_largo_plazo()
+{
+	
+	while(1)
+	{	
+		if (iniciar_planificacion == true){
+		
+			sem_wait(&sem_cant);   // mutex hace wait
+			sem_wait(&sem);   // mutex hace wait
+
+			mover_procesos_a_ready();
+			
+			sem_post(&sem);   // mutex hace signal
+		}
+	}	
+}
+
+//FUNCIÓN OBSOLETA
 void informar_memoria_nuevo_procesoNEW()
 {
 	//CREAMOS BUFFER
@@ -1283,95 +1541,8 @@ void informar_memoria_nuevo_procesoNEW()
 	
 }
 
-void mover_procesos_a_ready()
-{
-	bool added = false;
-	while( added != true )
-	{
-		//pido los semaforos de cada cola
-		//printf("Ingresamos a mover procesos a ready\n");
-		sem_wait(&sem_grado_mult);
-		sem_wait(&sem_blocked);
-		sem_wait(&sem_ready);
-		if( (queue_size(cola_ready) + queue_size(cola_blocked) + 1) < grado_multiprogramacion )
-		{
-			printf("[NICE] EL GRADO DE MULTIPROGRAMACIÓN NO HA SIDO SUPERADO, UN NUEVO PROCESO ES ADMITIDO\n");
-			//si se cumple, significa que podemos incluir un nuevo proceso en ready
-			PCB* pcb = queue_pop(cola_new);
-			sem_post(&sem_blocked);
-			sem_post(&sem_grado_mult);
-
-			queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
-			printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
-			sem_post(&sem_ready); 
-			sem_post(&sem_cant_ready);  // mutex hace wait
-			added = true;
-		}
-		else
-		{
-			printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
-			sem_post(&sem_grado_mult);
-			sem_post(&sem_blocked);
-			sem_post(&sem_ready);
-		}
-		sleep(1);
-	}
-
-}
-
-void mover_procesos_ready(int grado_multiprogramacion)
-{
-	//CONSULTA. TENDREMOS QUE USAR SEMAFOROS?
-    //Cantidad de procesos en las colas de NEW y READY
-    int cantidad_procesos_new = queue_size(cola_new);
-    int cantidad_procesos_ready = queue_size(cola_ready);
-
-    //El grado de multiprogramación lo permite?
-    if (cantidad_procesos_ready < grado_multiprogramacion)
-    {
-        // Mover procesos de la cola de NEW a la cola de READY
-        while (cantidad_procesos_new > 0 && cantidad_procesos_ready < grado_multiprogramacion)
-        {
-            // Seleccionar el primer proceso de la cola de NEW y los borramos de la cola
-            PCB* proceso_nuevo = queue_pop(cola_new);
-           // queue_pop(cola_new);
-
-            // Cambiar el estado del proceso a READY
-            proceso_nuevo->estado = READY;
-
-            // Agregar el proceso a la cola de READY
-		
-
-			queue_push(cola_ready, proceso_nuevo);
-            cantidad_procesos_ready++;
-			
-		
-           
-
-            // Reducir la cantidad de procesos en la cola de NEW
-            cantidad_procesos_new--;
-        }
-    }
-    else
-    {
-        printf("El grado de multiprogramación máximo ha sido alcanzado. %d procesos permanecerán en la cola de NEW.\n",cantidad_procesos_new);
-    }
-}
-
-void planificador_de_largo_plazo()
-{
-	while(1)
-	{	
-		    sem_wait(&sem_cant);   // mutex hace wait
-		    sem_wait(&sem);   // mutex hace wait
-
-			mover_procesos_a_ready();
-			
-			sem_post(&sem);   // mutex hace signal
-	}	
-}
-
-void planificador_largo_plazo()
+//FUNCIÓN OBSOLETA
+void VIEJO_planificador_largo_plazo()
 {
     // //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
     // //int grado_multiprogramacion = config_get_int_value(kernel_config, "GRADO_MULTIPROGRAMACION");
@@ -1492,6 +1663,13 @@ void enviar_pcb_a_cpu()
 
 	to_send->path = string_duplicate( pcb_cola->path);
 
+	//ACTUALIZAMOS EN LA LISTA GENERAL
+	sem_wait(&sem_procesos);
+	PCB* actualizado = encontrarProceso(lista_procesos,pcb_cola->PID);
+	actualizado->estado = EXEC;
+	sem_post(&sem_procesos);
+
+
 	printf("Enviaremos un proceso\n");
 	printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
@@ -1549,6 +1727,12 @@ void enviar_pcb_a_cpu_vrr()
 
 	to_send->path = string_duplicate( pcb_cola->path);
 
+	//ACTUALIZAMOS EN LA LISTA GENERAL
+	sem_wait(&sem_procesos);
+	PCB* actualizado = encontrarProceso(lista_procesos,pcb_cola->PID);
+	actualizado->estado = EXEC;
+	sem_post(&sem_procesos);
+
 	printf("Enviaremos un proceso\n");
 	printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
@@ -1563,16 +1747,20 @@ void enviar_pcb_a_cpu_vrr()
 
 void planificador_corto_plazo()
 {
-
+	if (iniciar_planificacion == true){
+	
 		if(strcmp(ALGORITMO_PLANIFICACION,"FIFO")==0)
 		{
 			printf("Planificare por FIFO\n");
 			while(1)
 			{
-				//PLANIFICAR POR FIFO
-				sem_wait(&sem_mutex_plani_corto);
-				enviar_pcb_a_cpu();
-				sem_post(&sem_mutex_plani_corto);
+				if (iniciar_planificacion == true){
+
+					//PLANIFICAR POR FIFO
+					sem_wait(&sem_mutex_plani_corto);
+					enviar_pcb_a_cpu();
+					sem_post(&sem_mutex_plani_corto);
+				}
 			}
 		}
 		
@@ -1582,10 +1770,13 @@ void planificador_corto_plazo()
 			//PLANIFICAR POR RR
 			while(1)
 			{
-				sem_wait(&sem_mutex_plani_corto);
-				enviar_pcb_a_cpu();
-				sem_post(&sem_mutex_plani_corto);
-				//interrumpir_por_quantum();
+				if (iniciar_planificacion == true){
+
+					sem_wait(&sem_mutex_plani_corto);
+					enviar_pcb_a_cpu();
+					sem_post(&sem_mutex_plani_corto);
+					//interrumpir_por_quantum();
+				}
 			}
 		}
 		if(strcmp(ALGORITMO_PLANIFICACION,"VRR")==0)
@@ -1595,12 +1786,15 @@ void planificador_corto_plazo()
 			//PLANIFICAR POR VRR
 			while(1)
 			{
+				if (iniciar_planificacion == true){
+
 				sem_wait(&sem_mutex_plani_corto);
 				enviar_pcb_a_cpu_vrr();
 				sem_post(&sem_mutex_plani_corto);
+				}
 			}
 		}
-
+	}
 }
 	
 
