@@ -170,8 +170,21 @@ liberar_conexion(fd_cpu_interrupt);
 liberar_conexion(fd_cpu_dispatch);
 liberar_conexion(fd_kernel);
 liberar_conexion(fd_entradasalida);
+
 sem_destroy(&sem);
 sem_destroy(&sem_cant);
+sem_destroy(&sem_ready);
+sem_destroy(&sem_cant_ready);
+sem_destroy(&sem_mutex_plani_corto);
+sem_destroy(&sem_mutex_plani_corto);
+sem_destroy(&sem_mutex_cpu_ocupada);
+sem_destroy(&sem_blocked);
+sem_destroy(&sem_mutex_lists_io);
+sem_destroy(&sem_mutex_cronometro);
+sem_destroy(&sem_ready_prio);
+sem_destroy(&sem_procesos);
+sem_destroy(&sem_grado_mult);
+
 
 return (EXIT_SUCCESS);
 }

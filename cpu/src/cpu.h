@@ -649,16 +649,11 @@ void ejecutar_proceso(PCB* proceso)
 	instruccionActual = "Goku";
 	enviar_pcb_memoria(proceso->PID,proceso->PC);
 
-	*any_interrupcion = 0;
+	*any_interrupcion = 0;	
 	sem_wait(&sem_exe_b);
 	while( strcmp(instruccionActual,"") != 0 )
 	{
 		//
-		/*
-		sem_wait(&interrupt_mutex);
-		printf("En estos momentos la variable de interrupcion tiene el valor: %d\n",*any_interrupcion);
-		sem_post(&interrupt_mutex);
-		*/
 		//obtengo instruccion actual
 		char* instruccion = string_duplicate(instruccionActual);
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
@@ -1347,53 +1342,43 @@ void ejecutar_proceso(PCB* proceso)
 		// 		printf("El registro no se encontró en el proceso.\n");				
 		// 	}
 		// }
-		// //CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
-		// //Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
-		// if (strcmp(instruccion_split[0], "IO_FS_CREATE") == 0)
-		// {
-		// 	//debemos devolver instruccion + pcb parando el proceso actual
-		// 	uint32_t instruccion_length = strlen(instruccion)+1;
-		// 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,FS_CREATE);
+		//  //CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
+		 //Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
+		 //if (strcmp(instruccion_split[0], "IO_FS_CREATE") == 0)
+		 //{
+		 	//debemos devolver instruccion + pcb parando el proceso actual
+		 	//uint32_t instruccion_length = strlen(instruccion)+1;
+		 	//enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,FS_CREATE);
 	
 			
 		
 		// }
 		
-		
-		
-		// */
-
-		// if(strcmp(instruccion_split[0], "WAIT") == 0)
-		// {
-		// 	//debemos devolver el proceso al kernel
-		// 	proceso->PC++;
-		// 	uint32_t instruccion_length = strlen(instruccion)+1;
-		// 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,WAIT);
+		 if(strcmp(instruccion_split[0], "WAIT") == 0)
+		 {
+		 	//debemos devolver el proceso al kernel
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,WAIT);
 			
-		// 	//se bloquea el proceso, devolvemos al kernel
-		// 	free(instruccionActual);
-		// 	instruccionActual = malloc(1);
-		// 	instruccionActual = "";
-		// 	return;
-		// }
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+		 	return;
+		 }
 
-		// if(strcmp(instruccion_split[0], "SIGNAL") == 0)
-		// {
-		// 	//debemos devolver el proceso al kernel
-		// 	proceso->PC++;
-		// 	uint32_t instruccion_length = strlen(instruccion)+1;
-		// 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,SIGNAL);
+		 if(strcmp(instruccion_split[0], "SIGNAL") == 0)
+		 {
+		 	//debemos devolver el proceso al kernel
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,SIGNAL);
 			
-		// 	//se bloquea el proceso, devolvemos al kernel
-		// 	free(instruccionActual);
-		// 	instruccionActual = malloc(1);
-		// 	instruccionActual = "";
-		// 	return;
-		// }
-		
-
-	
-		//AUMENTAMOS EL PC Y PEDIMOS NUEVAMENTE
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+		 	return;
+		 }
 		
 		//preguntamos por el valor de la variable interrupcion
 		sem_wait(&interrupt_mutex);
