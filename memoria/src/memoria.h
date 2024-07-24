@@ -301,6 +301,7 @@ void memoria_escuchar_cpu (){
 
 				}
 				break;
+				/*
 			case LECTURA:
 				
 				void* copy_stream = paquete->buffer->stream;
@@ -316,12 +317,43 @@ void memoria_escuchar_cpu (){
 
 
 				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
-				int* datoObtenido = malloc(sizeof(int));
-				memcpy(datoObtenido,espacio_usuario + *direccionFisica,*tamanioDato);
-				printf("Enviaremos %d\n",*datoObtenido);
+				int* datoObtenido = malloc(sizeof(*tamanioDato));
+				memcpy(datoObtenido, espacio_usuario + *direccionFisica,*tamanioDato);
+				printf("Enviaremos %d\n",*(int*)datoObtenido);
 				enviarEntero(datoObtenido,fd_cpu,LECTURA);
 				//
+				free (direccionFisica);
+				free (tamanioDato);
+				free (datoObtenido);
+				
 				break;
+				*/
+			case LECTURA:
+				void* copy_stream = paquete->buffer->stream;
+				printf("He recibido un pedido de LECTURA\n");
+
+				int* direccionFisica = malloc(sizeof(int));
+				int* tamanioDato = malloc(sizeof(int)); // puede que sea int*
+				memcpy(direccionFisica, copy_stream, sizeof(int));
+				copy_stream += sizeof(int);
+				memcpy(tamanioDato, copy_stream, sizeof(int));
+
+				printf("Recibimos la direccion fisica: %d\n", *direccionFisica);
+				printf("Recibimos el tamaño del dato: %d\n", *tamanioDato);
+
+				// OBTENER LO ALMACENADO EN LA DIRECCION FISICA
+				void* datoObtenido = malloc(*tamanioDato);
+				memcpy(datoObtenido, espacio_usuario + *direccionFisica, *tamanioDato);
+				printf("Enviaremos %d\n", *(uint32_t*)datoObtenido);
+				enviarEntero(datoObtenido, fd_cpu, LECTURA);
+
+				// liberar memoria
+				free(direccionFisica);
+				free(tamanioDato);
+				free(datoObtenido);
+
+   				 break;
+
 			/*
 			case ESCRITURA_CADENA:
 				void* copia_stream = paquete->buffer->stream;
@@ -376,7 +408,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 
 				int hola = 20;
 				char* to_send = malloc(hola);
-				strncpy(to_send, "vegeta", hola - 1);
+				strncpy(to_send, "vegeta", hola - 1);//mensaje aleatorio
 				to_send[hola - 1] = '\0';
 				enviar_mensaje_cpu_memoria(to_send,fd_cpu,ESCRITO);
 				free(to_send);
@@ -441,6 +473,45 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 		}
 }
 
+void enviar_texto_io(char* text, int fd_io)
+{
+	int* tamanio = malloc(sizeof(int));
+	*tamanio = strlen(text)+1;
+
+	//Preparamos el buffer
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	buffer->offset = 0;
+	buffer->size = sizeof(int) + *tamanio;
+	buffer->stream = malloc(buffer->size);
+
+	//vamos reservando la memoria
+	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
+    buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset,text, *tamanio);
+
+	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = STDOUT_TOPRINT;
+	paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
 void memoria_escuchar_entradasalida_mult(int* fd_io){
 	bool control_key = 1;
 	while (control_key) {
@@ -466,22 +537,22 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 
 				int* direccionFisicaIN = malloc(sizeof(int));
 				direccionFisicaIN = paquete->buffer->stream;
-				int* tamanioIN = malloc(sizeof(int));
-				tamanioIN = paquete->buffer->stream + sizeof(int);
-				char* text = malloc(*tamanioIN);
-				text = paquete->buffer->stream + sizeof(int)*2;
+				char* caracter_to_write = malloc(sizeof(char));
+				caracter_to_write = paquete->buffer->stream + sizeof(int);
 
-				//imprimamos los valores que llegaron
-				printf("direccion fisica que llego fue: %d\n",*direccionFisicaIN);
-				printf("el tamanio que llego fue: %d\n",*tamanioIN);
-				printf("el texto a escribir es: %s\n",text);
-
-				memmove(espacio_usuario + *direccionFisicaIN, text, *tamanioIN);
-
-				char* hola = malloc(*tamanioIN);
-				strcpy(hola,espacio_usuario + *direccionFisicaIN);
-
-				printf("Leyendo nuevamente de la dirección física obtuvimos: %s\n",hola);
+				if( *direccionFisicaIN == -1 )
+				{
+					int* random = malloc(sizeof(int));
+					*random = 10;
+					enviarEntero(random,*fd_io,DESPERTAR);
+					free(random);
+				}
+				else
+				{
+					printf("*/*/*/*/ EN LA DIRECCIÓN %d escribiremos el caracter %c\n",*direccionFisicaIN,*caracter_to_write);
+					memmove(espacio_usuario + *direccionFisicaIN, caracter_to_write, 1);
+					//usleep(atoi(RETARDO_RESPUESTA)*1000);
+				}
 
 				//
 				break;
@@ -496,17 +567,38 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				break;
 			case STDOUT_TOPRINT:
 
-				int* direccionFisicaOUT = malloc(sizeof(int));
-				direccionFisicaOUT = paquete->buffer->stream;
-				int* tamanioOUT = malloc(sizeof(int));
-				tamanioOUT = paquete->buffer->stream + sizeof(int);
-				printf("direccion fisica que llego fue: %d\n",*direccionFisicaOUT);
-				printf("el tamanio que llego fue: %d\n",*tamanioOUT);
+				int* tamanio_out = (int*)paquete->buffer->stream;
+				printf("El tamanio es el siguiente %d\n", *tamanio_out);
 
-				char* text_to_send = malloc(*tamanioOUT);
-				strcpy(text_to_send,espacio_usuario + *direccionFisicaOUT);
-				printf("Vamos a enviar nuevamente el siguiente texto: %s\n",text_to_send);
-				enviar_mensaje_cpu_memoria(text_to_send,*fd_io,STDOUT_TOPRINT);
+				t_list* direcciones_fisicas = list_create();
+				for (int i = 1; i < *(tamanio_out) + 1; i++) {
+					list_add(direcciones_fisicas, paquete->buffer->stream + sizeof(int) * i);
+				}
+
+				for (int i = 0; i < list_size(direcciones_fisicas); i++) {
+					int* df = list_get(direcciones_fisicas, i);
+					printf("Las direcciones fisicas que he obtenido es: %d\n", *df);
+				}
+
+				// debemos leer las direcciones y concatenarlas
+				char* text = (char*)malloc(*tamanio_out + 1); // +1 para el carácter nulo
+				text[0] = '\0'; // inicializar la cadena
+
+				for (int i = 0; i < *tamanio_out; i++) {
+					int* df = list_get(direcciones_fisicas, i);
+					char caracter = *(char*)(espacio_usuario + *df);
+					text[i] = caracter; // asignar directamente el carácter
+				}
+				text[*tamanio_out] = '\0'; // añadir el carácter nulo al final
+
+				printf("El texto quedó de la siguiente forma: %s\n", text);
+				
+				enviar_texto_io(text,*fd_io);
+
+				// liberar memoria
+				free(text);
+				list_destroy(direcciones_fisicas);
+
 				break;
 			case DIALFS:
 
@@ -550,97 +642,6 @@ void escuchar_io()
 	}
 }
 
-void memoria_escuchar_entradasalida (){
-	bool control_key = 1;
-	while (control_key) {
-			int cod_op = recibir_operacion(fd_entradasalida);
-
-			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-			paquete->buffer = malloc(sizeof(t_newBuffer));
-			recv(fd_entradasalida,&(paquete->buffer->size),sizeof(uint32_t),0);	
-			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_entradasalida,paquete->buffer->stream, paquete->buffer->size,0);
-
-			switch (cod_op) {
-			case STDIN:
-
-				EntradaSalida* new_io_stdin = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdin->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdin->path);
-				
-				list_add(listStdin,new_io_stdin);
-				//
-				break;
-			case STDIN_TOWRITE:
-
-				int* direccionFisicaIN = malloc(sizeof(int));
-				direccionFisicaIN = paquete->buffer->stream;
-				int* tamanioIN = malloc(sizeof(int));
-				tamanioIN = paquete->buffer->stream + sizeof(int);
-				char* text = malloc(*tamanioIN);
-				text = paquete->buffer->stream + sizeof(int)*2;
-
-				//imprimamos los valores que llegaron
-				printf("direccion fisica que llego fue: %d\n",*direccionFisicaIN);
-				printf("el tamanio que llego fue: %d\n",*tamanioIN);
-				printf("el texto a escribir es: %s\n",text);
-
-				memmove(espacio_usuario + *direccionFisicaIN, text, *tamanioIN);
-
-				char* hola = malloc(*tamanioIN);
-				strcpy(hola,espacio_usuario + *direccionFisicaIN);
-
-				printf("Leyendo nuevamente de la dirección física obtuvimos: %s\n",hola);
-
-				//
-				break;
-			case STDOUT:
-
-				EntradaSalida* new_io_stdout = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_stdout->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_stdout->path);
-				
-				list_add(listStdout,new_io_stdout);
-				//
-				break;
-			case STDOUT_TOPRINT:
-
-				int* direccionFisicaOUT = malloc(sizeof(int));
-				direccionFisicaOUT = paquete->buffer->stream;
-				int* tamanioOUT = malloc(sizeof(int));
-				tamanioOUT = paquete->buffer->stream + sizeof(int);
-				printf("direccion fisica que llego fue: %d\n",*direccionFisicaOUT);
-				printf("el tamanio que llego fue: %d\n",*tamanioOUT);
-
-				char* text_to_send = malloc(*tamanioOUT);
-				strcpy(text_to_send,espacio_usuario + *direccionFisicaOUT);
-				printf("Vamos a enviar nuevamente el siguiente texto: %s\n",text_to_send);
-				enviar_mensaje_cpu_memoria(text_to_send,fd_entradasalida,STDOUT_TOPRINT);
-				break;
-			case DIALFS:
-
-				EntradaSalida* new_io_dialfs = deserializar_entrada_salida(paquete->buffer);
-				printf("Llego una IO cuyo nombre es: %s\n",new_io_dialfs->nombre);
-		   		printf("Llego una IO cuyo path es: %s\n",new_io_dialfs->path);
-				
-				list_add(listStdin,new_io_dialfs);
-				//
-				break;
-			case MENSAJE:
-				//
-				break;
-			case PAQUETE:
-				//
-				break;
-			case -1:
-				log_error(memoria_logger, "El cliente EntradaSalida se desconecto. Terminando servidor\n");
-				control_key = 0;
-			default:
-				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
-				break;
-			}
-		}
-}
 
 void iterator(char* value) 
 {

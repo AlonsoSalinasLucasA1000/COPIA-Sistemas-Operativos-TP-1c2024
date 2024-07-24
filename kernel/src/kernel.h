@@ -80,6 +80,7 @@ char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 
 PCB* encontrarProceso(t_list* lista, uint32_t pid)
 {
+	printf("Holisasdjadsj\n");
 	PCB* ret;
 	int i = 0;
 	while( i < list_size(lista) )
@@ -137,13 +138,11 @@ bool eliminar_elemento(t_list* lista, uint32_t valor)
         if (es_elemento_buscado(elemento, valor_buscado)) {
             list_remove(lista, i);
 			to_ret = true;
-			printf("Se ha borrado un elemento con éxito con pid %d\n",valor);
             return to_ret;
         }
     }
     free(valor_buscado);
 	to_ret = false;
-	printf("F chabon, NO se ha borrado un elemento con éxito con pid %d\n",valor);
 	return to_ret;
 }
 
@@ -248,13 +247,16 @@ void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, in
 
 void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfaz, int fd_io, int pid_actual)
 {
-	printf("This is the first checkpoint\n");
 	//debemos enviar la instrucción entero + su tamaño
 	char* to_send = string_duplicate(instruccion);
 	int* tamanio = malloc(sizeof(int));
 	*tamanio = strlen(to_send)+1;
+
+	//antes que todo enviamos del pid del proceso que actualmente lo usa
+	int* pid = malloc(sizeof(int));
+	*pid = pid_actual;
+	enviarEntero(pid,fd_io,NUEVOPID);
 	
-	printf("This is the second checkpoint\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
@@ -262,20 +264,17 @@ void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfa
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
-	printf("This is the third checkpoint\n");
     //Movemos los valores al buffer
     memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
     buffer->offset += sizeof(int);
 	memcpy(buffer->stream + buffer->offset,to_send, *tamanio);
 
-	printf("This is the fourth checkpoint\n");
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
     //Podemos usar una constante por operación
     paquete->codigo_operacion = tipoDeInterfaz;
     paquete->buffer = buffer;
 
-	printf("This is the fifth checkpoint\n");
 	//Empaquetamos el Buffer
     void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
     int offset = 0;
@@ -287,7 +286,7 @@ void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfa
     //Por último enviamos
     send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 	printf("Lo mande\n");
-	printf("This is the sixth checkpoint\n");
+	
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
     free(paquete->buffer->stream);
@@ -309,6 +308,7 @@ EntradaSalida* encontrar_io(t_list* lista, const char* nombre_buscado) {
 
 //Busca una PCB en base a su pid en una lista. La usamos para eliminar procesos de la cola de bloqueados.
 PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
+	printf("kakaroto\n");
     for (int i = 0; i < list_size(lista); i++) 
 	{
         PCB* pcb = list_get(lista, i);
@@ -611,16 +611,15 @@ void kernel_escuchar_cpu ()
 				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
 				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
 
-				printf("Checkpoint de stdin1 \n");
 				//debemos obtener el io específico de la lista
 				sem_wait(&sem_mutex_lists_io);
 				EntradaSalida* io_stdin = encontrar_io(listStdin,string_split(instruccion_io_stdin->instruccion," ")[1]);
 				sem_post(&sem_mutex_lists_io);
-				printf("Checkpoint de stdin2 \n");
 
 				//verificamos que exista
 				if( io_stdin != NULL)
 				{
+					printf("Entré acá first\n");
 					//Una vez encontrada la io, vemos si está ocupado
 					if( io_stdin->ocupado )
 					{
@@ -642,12 +641,14 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdin->proceso.PID);
 					sem_post(&sem_blocked);	
 
+					printf("1Another checkpoint\n");
 					sem_wait(&sem_procesos);
 					PCB* actualizado_in = encontrarProceso(lista_procesos,instruccion_io_stdin->proceso.PID);
 					actualizado_in->estado = EXIT;
 					//log_info (kernel_logs_obligatorios,"Finaliza el proceso <%d> - Motivo: <INVALID_INTERFACE>",
 					//sem_post(&PID);sem_procesos);
-					sem_wait(&sem_procesos);
+					sem_post(&sem_procesos);
+					printf("2Another checkpoint\n");
 
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
@@ -689,7 +690,7 @@ void kernel_escuchar_cpu ()
 					{
 						io_stdout->ocupado = true;
 						printf("El fd de este IO es %d\n",io_stdout->fd_cliente);
-						ejecutar_interfaz_stdinstdout(instruccion_io_stdout->instruccion,STDOUT,io_stdout->fd_cliente,instruccion_io_stdout->proceso.PID);
+						new_ejecutar_interfaz_stdin_stdout(instruccion_io_stdout->instruccion,STDOUT,io_stdout->fd_cliente,instruccion_io_stdout->proceso.PID);
 					}
 				}
 				else
@@ -1295,74 +1296,6 @@ void iniciar_proceso(char* path)
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);
 }
-
-
-/*
-void finalizar_proceso (char* pid) {
-    sem_wait(&sem_procesos);
-	sem_wait(&sem_blocked);
-    sem_wait(&sem_ready);
-    sem_wait(&sem);
-
-    uint32_t pid_to_eliminar = (uint32_t)atoi(pid);
-	printf("El pid solicitado a eliminar es %d\n",pid_to_eliminar);
-    PCB* proceso_a_terminar = encontrarProceso(lista_procesos, pid_to_eliminar);
-	//
-	printf("El proceso a terminar luce de la siguiente forma: \n");
-	printf("PID: %d\n",proceso_a_terminar->PID);
-	printf("Length del path: %d\n",proceso_a_terminar->path_length);
-	printf("Path: %s\n",proceso_a_terminar->path);
-
-	char* estado_anterior = estado_proceso_to_string(proceso_a_terminar->estado);
-
-    switch (proceso_a_terminar->estado) {
-        case NEW:
-            printf("El proceso de pid %d es eliminado estando en NEW\n", proceso_a_terminar->PID);
-			liberar_recursos(pid_to_eliminar);
-            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
-			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <NEW> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
-			eliminar_elemento(cola_new->elements, pid_to_eliminar);
-            break;
-        case READY:
-            printf("El proceso de pid %d es eliminado estando en READY\n", proceso_a_terminar->PID);
-			liberar_recursos(pid_to_eliminar);
-            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
-			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <READY> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
-			eliminar_elemento(cola_ready->elements, pid_to_eliminar);
-            break;
-        case EXEC:
-            // FALTA VERIFICAR EL CASO DE QUE SE ENCUENTRE EN EJECUCIÓN.
-            int* pid_del_proceso = malloc(sizeof(int));
-            *pid_del_proceso = proceso_a_terminar->PID;
-            enviarEntero(pid_del_proceso, fd_cpu_interrupt, FINALIZAR_PROCESO);
-			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <EXEC> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
-            break;
-        case BLOCKED:
-			printf("[1]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
-            printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
-            enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
-			printf("[2]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
-            liberar_recursos(pid_to_eliminar);
-			printf("[3]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
-			//log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <BLOCKED> - Estado Actual: <EXIT>\n", proceso_a_terminar->PID);
-			eliminar_elemento(cola_blocked->elements, pid_to_eliminar);
-			printf("[4]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
-            break;
-    }
-
-	printf("[5]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
-    proceso_a_terminar->estado = EXIT;
-	char* estado_actual = estado_proceso_to_string(proceso_a_terminar->estado);
-
-	log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_a_terminar->PID,estado_anterior,estado_actual);
-
-    sem_post(&sem_blocked);
-    sem_post(&sem_ready);
-    sem_post(&sem);
-    sem_post(&sem_procesos);
-	printf("[6]CHECKPOINT DE INDICACION FINALIZAR PROCESO\n");
-}
-*/
 
 void finalizar_proceso (char* pid) {
     uint32_t pid_to_eliminar = (uint32_t)atoi(pid);

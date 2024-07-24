@@ -279,7 +279,6 @@ void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo
     free(paquete);
 }
 
-
 // Función MMU, traductor de lógica a física
 t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8 / 4 dir fisica -> uint32
 {  	
@@ -287,7 +286,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 	int dir_fisica=0;	 									
 	for(int i=0; i < tamanio; i++)
 	{
-		int numero_Pagina = floor(dir_Logica/32); 					//config.TAM_PAGINA. necesitamos traer de memoria.config TAM_PAGINA
+		int numero_Pagina = floor(dir_Logica/32); 					//config.TAM_PAGINA. necesitamos traer de memoria.config
 		int desplazamiento = dir_Logica - numero_Pagina * 32;   	//dirección_lógica - número_página * tamaño_página     TAM_PAGINA    
 		
 		printf("El desplazamiento es: %d, numero pagina: %d\n",desplazamiento,numero_Pagina);
@@ -336,7 +335,6 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 }
 
 
-
 void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
 {
 	int* entero_a_enviar = malloc(sizeof(int));
@@ -381,6 +379,7 @@ void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
     free(paquete);
 
 }
+
 
 void pedido_escritura_numerico (int direccion_fisica, int valor_a_escribir)
 {
@@ -810,7 +809,6 @@ void ejecutar_proceso(PCB* proceso)
 				
 			}
 		}
-	
 		//CASO DE TENER UNA INSTRUCCION IO_GEN_SLEEP
 		if(strcmp(instruccion_split[0], "IO_GEN_SLEEP") == 0 )
 		{
@@ -834,7 +832,6 @@ void ejecutar_proceso(PCB* proceso)
 			*/
 			return;
 		}
-		
 		//CASO DE TERNER UNA INSTRUCCION RESIZE
 		if(strcmp(instruccion_split[0], "RESIZE") == 0 )
 		{
@@ -856,7 +853,6 @@ void ejecutar_proceso(PCB* proceso)
 				printf("Asignacion realizada");
 			}
 		}		
-		
 		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_STDIN_READ") == 0 ) 
 		{
@@ -1021,339 +1017,420 @@ void ejecutar_proceso(PCB* proceso)
 		 	return;
 		}
 
-		// //CASO DE TENER UNA INSTRUCCION IO_STDOUT_WRITE (Interfaz, Registro Dirección, Registro Tamaño)
-		// if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
-		// {
-		// 	//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
-		// 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+		//CASO DE TENER UNA INSTRUCCION IO_STDIN_READ (Interfaz, Registro Dirección, Registro Tamaño)
+		if (strcmp(instruccion_split[0], "IO_STDOUT_WRITE") == 0 ) 
+		{
+		 	//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
+		 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
 
-		// 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
-		// 	{
-		// 			//GUARDAMOS LA DIRECCION FÍSICA
-		// 			uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
-		// 			int direc_logica = (int)(*registro_uint8); // Conversión explícita a int *
-		// 			printf("El valor del registro encontrado es: %d\n",*registro_uint8);
-		// 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
+		 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
+		 	{
+		 		//GUARDAMOS LA DIRECCION FÍSICA
+				int tamanio;
+		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
+		 		int direc_logica = (int)(*registro_uint8); // Conversión explícita a int *
+		 		printf("El valor del registro encontrado es: %d\n",*registro_uint8);
+		 		printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
-		// 			/*int direccion_fisica = mmu (direc_logica, proceso); 
+		 		//TODAVIA NO SE IMPLEMENTÓ LA MMU A ESTA INSTRUCCIÓN
+		 		//IO_STDIN_READ Int1 BX CX
+		 		//IO_STDIN_READ Int1 BX CX 10 1 2 3 4 5 6 7 8 9 10
+		 		//GUARDAMOS EL TAMAÑO
+		 		if( esRegistroUint8(instruccion_split[3]) )
+		 		{
+		 			uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);
+		 			tamanio = (int)(*registro_uint8); // Conversión explícita a int *
+		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		// 			//contenamos la direccion fisica
-		// 			char direccionFisica[20];
-		// 			sprintf(direccionFisica, "%d", direc_logica);
-		// 			strcat(instruccion," ");//CONCATENAR
-		// 			strcat(instruccion, direccionFisica);//CONCATENAR*/
+		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
+		 			char tamanioToSend[20];
+		 			sprintf(tamanioToSend, "%d", tamanio);
+		 			strcat(instruccion," ");//CONCATENAR
+		 			strcat(instruccion, tamanioToSend);   //CONCATENAR
+					*/
+		 		}
+		 		else
+		 		{
+		 			uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);
+		 			tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
+		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
+		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
+		 			char tamanioToSend[20];
+		 			sprintf(tamanioToSend, "%d", tamanio);
+		 			strcat(instruccion," ");//CONCATENAR
+		 			strcat(instruccion, tamanioToSend);  //CONCATENAR
+					*/
+		 		}
 
-		// 			//GUARDAMOS EL TAMAÑO
-		// 			if( esRegistroUint8(instruccion_split[3]) )
-		// 			{
-		// 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-		// 				int tamanio = (int)(*registro_uint8); // Conversión explícita a int *
-		// 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-		// 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 
-		// 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		// 				char tamanioToSend[20];
-		// 				sprintf(tamanioToSend, "%d", tamanio);
-		// 				strcat(instruccion," ");//CONCATENAR
-		// 				strcat(instruccion, tamanioToSend);//CONCATENAR*/
-
-		// 			}
-		// 			else
-		// 			{
-		// 				uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-		// 				int tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
-		// 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-		// 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
-		// 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		// 				char tamanioToSend[20];
-		// 				sprintf(tamanioToSend, "%d", tamanio);
-		// 				strcat(instruccion," ");//CONCATENAR
-		// 				strcat(instruccion, tamanioToSend);//CONCATENAR*/
-		// 			}
-		// 			t_list* direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
-					
-		// 			char tamanioToSend[20];
-		// 			sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
-					
-		// 			strcat(instruccion," ");//CONCATENAR
-		// 			strcat(instruccion, tamanioToSend);
-
-		// 			//no llegue a leer perdon, estaba distraida
-		// 			for(int i=0; i < list_size(direcciones_fisicas);i++)
-		// 			{
-		// 				int direc_fisica = list_get(direcciones_fisica,i);
-		// 				//contenamos la direccion fisica
-		// 				char direccionFisica[20];
-		// 				sprintf(direccionFisica, "%d", direc_fisica);
+				if(list_size(direcciones_fisicas) > 0)
+				{
+					char tamanioToSend[20];
+					sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
 						
-		// 				strcat(instruccion," ");//CONCATENAR
-		// 				strcat(instruccion, direccionFisica);//CONCATENAR
-		// 			}
-		// 	}	
-		// 	else
-		// 	{
-		// 		if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
-		// 		{
-		// 			//GUARDAMOS LA DIRECCION FÍSICA
-
-		// 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
-		// 			printf("El valor del registro encontrado es: %d\n",*registro_uint32);
-		// 			int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
-		// 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
-
-		// 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-
-		// 			//contenamos la direccion fisica
-		// 			char direccionFisica[20];
-		// 			sprintf(direccionFisica, "%d", direc_logica);
-		// 			strcat(instruccion," ");//CONCATENAR
-		// 			strcat(instruccion, direccionFisica);//CONCATENAR*/
-
-
-		// 			//GUARDAMOS EL TAMAÑO
-		// 			if( esRegistroUint8(instruccion_split[3]) )
-		// 			{
-		// 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-		// 				int tamanio = (int)(*registro_uint8); // Conversión explícita a int *
-		// 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-		// 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
-
-		// 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		// 				char tamanioToSend[20];
-		// 				sprintf(tamanioToSend, "%d", tamanio);
-		// 				strcat(instruccion," ");//CONCATENAR
-		// 				strcat(instruccion, tamanioToSend);//CONCATENAR*/
-
-		// 			}
-		// 			else
-		// 			{
-		// 				uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
-		// 				int tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
-		// 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-		// 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
-
-		// 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		// 				char tamanioToSend[20];
-		// 				sprintf(tamanioToSend, "%d", tamanio);
-		// 				strcat(instruccion," ");//CONCATENAR
-		// 				strcat(instruccion, tamanioToSend);//CONCATENAR*/
-		// 			}
+					strcat(instruccion," ");//CONCATENAR
+					strcat(instruccion, tamanioToSend);
 					
-		// 			t_list* direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
-					
-		// 			char tamanioToSend[20];
-		// 			sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
-					
-		// 			strcat(instruccion," ");//CONCATENAR
-		// 			strcat(instruccion, tamanioToSend);
-
-		// 			//no llegue a leer perdon, estaba distraida
-		// 			for(int i=0; i < list_size(direcciones_fisicas);i++)
-		// 			{
-		// 				int direc_fisica = list_get(direcciones_fisica,i);
-		// 				//contenamos la direccion fisica
-		// 				char direccionFisica[20];
-		// 				sprintf(direccionFisica, "%d", direc_fisica);
-						
-		// 				strcat(instruccion," ");//CONCATENAR
-		// 				strcat(instruccion, direccionFisica);//CONCATENAR
-		// 			}
-		// 		}
-		// 		else
-		// 		{
-		// 			printf("El registro no se encontró en el proceso.\n");
-		// 		}	
-		// 	}
-
-		// 	printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
-
-		// 	//debemos devolver instruccion + pcb parando el proceso actual
-		// 	uint32_t instruccion_length = strlen(instruccion)+1;
-		// 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, STDOUT);
-			
-		// 	//se bloquea el proceso, devolvemos al kernel
-		// 	free(instruccionActual);
-		// 	instruccionActual = malloc(1);
-		// 	instruccionActual = "";
-
-		// 	return;
-		// }
-	
-		// /*
-		// //CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
-		// if (strcmp(instruccion_split[0], "MOV_IN") == 0)
-		// { 
-		// 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
-		// 	{
-		// 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso); //direccion
-		// 		int direc_logica = (int)*registro_uint8;
-				
-		// 			//REGISTRO DATOS
-		// 			if ( esRegistroUint8(instruccion_split[1])){
-						 
-		// 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1], proceso); //registor donde guardaremos
-		// 				int direccion_fisica = mmu (direc_logica, proceso);
-		// 				pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
-		// 				sem_wait(&sem_lectura);
-						
-		// 				registro_datos = (uint8_t*) valor_leido; //asigna ese valor al registro
-		// 				//*registro_datos = valor_leido;//asigna ese valor al registro
-		// 			}
-		// 			else 
-		// 			{	//REGISTRO DATOS
-		// 				if ( esRegistroUint32(instruccion_split[1])){
+					for(int i=0; i < list_size(direcciones_fisicas);i++)
+					{
+						int direc_fisica = list_get(direcciones_fisicas,i);
+						printf("La direccion fisica %d es: %d\n",i, direc_fisica);
+						//contenamos la direccion fisica
+						char direccionFisica[20];
+						sprintf(direccionFisica, "%d", direc_fisica);
 							
-		// 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
-		// 					int direccion_fisica = mmu(direc_logica, proceso); //fc a implementar (MMU)
-		// 					pedido_lectura_numerico (direccion_fisica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
-		// 					sem_wait(&sem_lectura);
-		// 					//int* valor = ( int*) valor_leido;
-		// 					registro_datos = (uint32_t*)valor_leido;//asigna ese valor al registro
-		
-		// 				}
-		// 			}
-				 
-		// 	}
-		// 	else
-		// 	{
-		// 		if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
-		// 		{
-		// 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
-		// 			int direc_logica = (int)*registro_uint32;
+						strcat(instruccion," ");//CONCATENAR
+						strcat(instruccion, direccionFisica);//CONCATENAR
+					}
+				}else{
+					printf("NO HAY ELEMENTOS EN LA LISTA\n");
+				}
+		 	}	
+		 	else
+		 	{
+		 		if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
+		 		{
+		 			//GUARDAMOS LA DIRECCION FÍSICA
+					int tamanio;
+		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
+		 			printf("El valor del registro encontrado es: %d\n",*registro_uint32);
+		 			int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
+		 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
-		// 				//REGISTRO TAMAÑO UNIT8
-		// 				if ( esRegistroUint8(instruccion_split[1])){
-		// 					uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
-		// 					int direccion_fisica = mmu (direc_logica, proceso); 
-		// 					pedido_lectura_numerico (direccion_fisica,sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
-		// 					sem_wait(&sem_lectura);
-		// 					registro_datos = (uint8_t*)valor_leido;//asigna ese valor al registro
-		// 				}
-		// 				else 
-		// 				{	//REGISTRO TAMAÑO UINT32
-		// 					if ( esRegistroUint32(instruccion_split[1])){
-		// 						uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
-		// 						int direccion_fisica = mmu (direc_logica, proceso);
-		// 						pedido_lectura_numerico (direccion_fisica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
-		// 						sem_wait(&sem_lectura);
-		// 						registro_datos = (uint32_t*)valor_leido;//asigna ese valor al registro
-		// 					}
-		// 				}	
-		// 		}
-		// 		else 
-		// 		{
-		// 			printf("El registro no se encontró en el proceso.\n");
-		// 		}
-				
-		// 	}
-		// }
-		// */
-		// /*
-		// //CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
-		// if (strcmp(instruccion_split[0], "MOV_OUT") == 0)
-		// {
-		// 	if( esRegistroUint8(instruccion_split[1])) //REGISTRO DIRECCION UNIT8
-		// 	{
-		// 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[1],proceso); //REGISTRO DONDE SE GUARDARA
-		// 		//int* direc_logica = (int*)registro_uint8;
-		// 		int direc_logica = (int)*registro_uint8;
+		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
 
-		// 			//REGISTRO DATOS
-		// 			if ( esRegistroUint8(instruccion_split[2])){
-		// 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS
-		// 				//int direccion_fisica = mmu (direc_logica, proceso); 
-		// 				printf("Enviaremos lo siguiente: %d\n",direc_logica);
-		// 				printf("Enviaremos lo siguiente: %d\n",*registro_datos);
-		// 				pedido_escritura_numerico (direc_logica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
-		// 				sem_wait(&sem_escritura);
-		// 			}
-		// 			else 
-		// 			{	//REGISTRO DATOS
-		// 				if ( esRegistroUint32(instruccion_split[2])){
-		// 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
-		// 					//int direccion_fisica = mmu (direc_logica, proceso); //fc a implementar (MMU)
+		 			//contenamos la direccion fisica
+		 			char direccionFisica[20];
+					sprintf(direccionFisica, "%d", direc_logica);
+		 			strcat(instruccion," ");//CONCATENAR
+		 			strcat(instruccion, direccionFisica);//CONCATENAR
+					*/
 
-		// 					pedido_escritura_numerico (direc_logica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
-		// 					sem_wait(&sem_escritura);
+		 			//GUARDAMOS EL TAMAÑO
+		 			if( esRegistroUint8(instruccion_split[3]) )
+		 			{
+		 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
+						tamanio = (int)(*registro_uint8); // Conversión explícita a int *
+		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		// 				}
-		// 			}
-		// 	}
-		
-			
-		// 	else
-		// 	{
-		// 		if( esRegistroUint32(instruccion_split[1])) //REGISTRO DIRECCION UNIT32
-		// 		{
-		// 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
-		// 			int direc_logica = (int)*registro_uint32;
+		 				/*int direccion_fisica = mmu (direc_logica, proceso); 
+		 				char tamanioToSend[20];
+		 				sprintf(tamanioToSend, "%d", tamanio);
+		 				strcat(instruccion," ");//CONCATENAR
+		 				strcat(instruccion, tamanioToSend);//CONCATENAR
+						*/
+		 			}
+		 			else
+		 			{
+		 				uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
+		 				tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
+		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		// 				//REGISTRO TAMAÑO UNIT8
-		// 				if ( esRegistroUint8(instruccion_split[2])){
-		// 					uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
-		// 					//int direccion_fisica = mmu (direc_logica, proceso); 
-		// 					pedido_escritura_numerico (direc_logica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
-		// 					sem_wait(&sem_escritura);
-		// 				}
-		// 				else 
-		// 				{	//REGISTRO TAMAÑO UINT32
-		// 					if ( esRegistroUint32(instruccion_split[2])){
-		// 						uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
-		// 						//int direccion_fisica = mmu (direc_logica, proceso); 
-		// 						pedido_escritura_numerico (direc_logica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
-		// 						sem_wait(&sem_escritura);
-		// 					}
-		// 				}
-		// 		}
-		// 		else 
-		// 		{
-		// 			printf("El registro no se encontró en el proceso.\n");
-		// 		}
-				
-		// 	}
-		// }
+		 				/*int direccion_fisica = mmu (direc_logica, proceso); 
+		 				char tamanioToSend[20];
+		 				sprintf(tamanioToSend, "%d", tamanio);
+		 				strcat(instruccion," ");//CONCATENAR
+		 				strcat(instruccion, tamanioToSend);//CONCATENAR
+						*/
+		 			}
+					
+		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
+					
+		 			char tamanioToSend[20];
+		 			sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
+					
+		 			strcat(instruccion," ");//CONCATENAR
+		 			strcat(instruccion, tamanioToSend);
 
-		// //CASO DE TENER UNA INSTRUCCION COPY_STRING (Tamaño) tamaño = cantidad de bytes a copiar
-		// if (strcmp(instruccion_split[0], "COPY_STRING") == 0)
-		// {
-		// 	uint32_t *registro_uint32_si = (uint32_t*)obtener_registro("SI",proceso);
-		// 	int* direc_logica_si = (int *)registro_uint32_si;
+		 			for(int i=0; i < list_size(direcciones_fisicas);i++)
+		 			{
+		 				int direc_fisica = list_get(direcciones_fisicas,i);
+		 				//contenamos la direccion fisica
+		 				char direccionFisica[20];
+		 				sprintf(direccionFisica, "%d", direc_fisica);
+						
+		 				strcat(instruccion," ");//CONCATENAR
+		 				strcat(instruccion, direccionFisica);//CONCATENAR
+		 			}
+					
+					
+		 		}
+		 		else
+		 		{
+		 			printf("El registro no se encontró en el proceso.\n");
+		 		}	
+		 	}
 
-		// 	uint32_t *registro_uint32_di = (uint32_t*)obtener_registro("DI",proceso);
-		// 	int* direc_logica_di = (int *)registro_uint32_di;
-		
-		// 	if( direc_logica_si != NULL || direc_logica_di != NULL) //DIRECCION SI y DIRECCION DI
-		// 	{
-		// 		int tamanio = atoi (instruccion_split[1]);
-		// 		//direccion_fisica_si = mmu (direc_logica_si, proceso);
-		// 		direccion_fisica_si = 2000;
-		// 		size_t tamanio_en_bytes = sizeof(uint8_t)* tamanio;
-		// 		pedido_lectura (direccion_fisica_si, tamanio_en_bytes);//devuelve el valor de lo que esta en la posicion de memoria SI				
-		// 		sem_wait(&sem_lectura);
-		// 		//direccion_fisica_di = mmu (direc_logica_di, proceso); 
-		// 		direccion_fisica_di = 1500;
-		// 		pedido_escritura_cadena (direccion_fisica_di, valor_leido);//envio a memoria lo que tiene que escribir y en donde lo escribira				
-		// 		sem_wait(&sem_escritura);
-		// 		//copiar el contenido de la direccion contenida en si y lo pone en la direccion contenida en di
-		// 	}
-		// 	else
-		// 	{
-		// 		printf("El registro no se encontró en el proceso.\n");				
-		// 	}
-		// }
-		//  //CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
-		 //Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
-		 //if (strcmp(instruccion_split[0], "IO_FS_CREATE") == 0)
-		 //{
+		 	printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
+
 		 	//debemos devolver instruccion + pcb parando el proceso actual
-		 	//uint32_t instruccion_length = strlen(instruccion)+1;
-		 	//enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,FS_CREATE);
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, STDOUT);
+			
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+
+		 	return;
+		}
+
+		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
+		//Lee el valor de memoria correspondiente a la Dirección Lógica que se encuentra en el Registro Dirección y 
+		//lo almacena en el Registro Datos.
+
+		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
+		{ 
+		 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
+		 	{
+		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso); //direccion
+		 		int direc_logica = (int)*registro_uint8;
+				
+		 			//REGISTRO DATOS
+		 			if ( esRegistroUint8(instruccion_split[1])){
+						int direccion_fisica;
+		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1], proceso); //registor donde guardaremos
+		 				direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t));
+		 				
+						for(int i=0; i < list_size(direcciones_fisicas);i++)
+						{
+							direccion_fisica = list_get(direcciones_fisicas,i);
+						}
+
+						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
+		 				sem_wait(&sem_lectura);
+					
+		 				registro_datos = (uint8_t*) valor_leido; //asigna ese valor al registro
+		 			}
+		 			else 
+		 			{	//REGISTRO DATOS
+		 				if ( esRegistroUint32(instruccion_split[1])){
+							
+		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
+		 					direcciones_fisicas = mmu(direc_logica, proceso, sizeof(uint32_t)); //fc a implementar (MMU)
+
+							char valores_leidos[32];
+							for(int i=0; i < list_size(direcciones_fisicas);i++)
+							{
+								int direccion_fisica = list_get(direcciones_fisicas,i);
+								pedido_lectura_numerico (direccion_fisica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
+								
+								sem_wait(&sem_lectura);
+
+								sprintf(valores_leidos, "%d", valor_leido);
+							}
+							int valor_registroDato = atoi(valores_leidos);
+
+							registro_datos = (uint32_t*) valor_registroDato;//asigna ese valor al registro
+
+		 					
+		
+		 				}
+		 			}
+				 
+		 	}
+		 	else
+		 	{
+		 		if( esRegistroUint32(instruccion_split[2])) //REGISTRO DIRECCION UNIT32
+		 		{
+		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+		 			int direc_logica = (int)*registro_uint32;
+
+		 				//REGISTRO DATOS UNIT8
+		 				if ( esRegistroUint8(instruccion_split[1])){
+						int direccion_fisica;
+		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1], proceso); //registor donde guardaremos
+		 				direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t));
+		 				
+						for(int i=0; i < list_size(direcciones_fisicas);i++)
+						{
+							direccion_fisica = list_get(direcciones_fisicas,i);
+						}
+
+						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
+		 				sem_wait(&sem_lectura);
+					
+		 				registro_datos = (uint8_t*) valor_leido; //asigna ese valor al registro
+						
+		
+		 				}
+		 				else 
+		 				{	//REGISTRO DATOS UINT32
+		 					if ( esRegistroUint32(instruccion_split[1])){
+							uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
+		 					direcciones_fisicas = mmu(direc_logica, proceso, sizeof(uint32_t)); //fc a implementar (MMU)
+
+							char valores_leidos[32];
+							for(int i=0; i < list_size(direcciones_fisicas);i++)
+							{
+								int direccion_fisica = list_get(direcciones_fisicas,i);
+								pedido_lectura_numerico (direccion_fisica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
+								
+								sem_wait(&sem_lectura);
+
+								sprintf(valores_leidos, "%d", valor_leido);
+							}
+							int valor_registroDato = atoi(valores_leidos);
+
+							registro_datos = (uint32_t*) valor_registroDato;//asigna ese valor al registro
+
+		 					}
+		 				}	
+		 		}
+		 		else 
+		 		{
+		 			printf("El registro no se encontró en el proceso.\n");
+		 		}
+				
+		 	}
+		}
+
+
+		 //CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
+		 //Lee el valor del Registro Datos y lo escribe en la dirección física de memoria obtenida 
+		 //a partir de la Dirección Lógica almacenada en el Registro Dirección.
+		 
+		 if (strcmp(instruccion_split[0], "MOV_OUT") == 0)
+		 {
+		 	if( esRegistroUint8(instruccion_split[1])) //REGISTRO DIRECCION UNIT8
+		 	{
+		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[1],proceso); //REGISTRO DONDE SE GUARDARA
+		 		int direc_logica = (int)*registro_uint8;
+
+		 			//REGISTRO DATOS
+		 			if ( esRegistroUint8(instruccion_split[2])){
+		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
+		 				direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
+		 				
+						int direccion_fisica;
+						for(int i=0; i < list_size(direcciones_fisicas);i++)
+						{
+							direccion_fisica = list_get(direcciones_fisicas,i);
+						}
+
+						printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
+		 				printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
+
+		 				pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
+		 				sem_wait(&sem_escritura);
+
+		 			}
+		 			else 
+		 			{	//REGISTRO DATOS
+		 				if ( esRegistroUint32(instruccion_split[2])){
+		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+		 					direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
+
+							
+							for(int i=0; i < list_size(direcciones_fisicas);i++)
+							{
+								int direccion_fisica = list_get(direcciones_fisicas,i);
+								pedido_escritura_numerico (direccion_fisica, *registro_datos);//devuelve el valor de lo que esta en esa posicion de memoria
+								
+								sem_wait(&sem_escritura);
+				
+							}
+
+		 				}
+		 			}
+		 	}
+		 	else
+		 	{
+		 		if( esRegistroUint32(instruccion_split[1])) //REGISTRO DIRECCION UNIT32
+		 		{
+		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
+		 			int direc_logica = (int)*registro_uint32;
+
+		 			//REGISTRO DATOS UNIT8
+		 			if ( esRegistroUint8(instruccion_split[2])){
+		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
+						direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
+							
+						int direccion_fisica;
+						for(int i=0; i < list_size(direcciones_fisicas);i++)
+						{
+							direccion_fisica = list_get(direcciones_fisicas,i);
+						}
+
+						printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
+						printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
+
+						pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
+						sem_wait(&sem_escritura);
+
+		 			}
+		 			else 
+		 			{	//REGISTRO DATO UINT32
+		 				if ( esRegistroUint32(instruccion_split[2])){
+		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+							direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
+
+								
+							for(int i=0; i < list_size(direcciones_fisicas);i++)
+							{
+								int direccion_fisica = list_get(direcciones_fisicas,i);
+								pedido_escritura_numerico (direccion_fisica, *registro_datos);//devuelve el valor de lo que esta en esa posicion de memoria
+									
+								sem_wait(&sem_escritura);
+				
+							}
+		 				}
+		 			}
+		 		}
+		 		else 
+		 		{
+		 			printf("El registro no se encontró en el proceso.\n");
+		 		}
+				
+		 	}
+		 }
+
+		//CASO DE TENER UNA INSTRUCCION COPY_STRING (Tamaño) tamaño = cantidad de bytes a copiar
+/*		if (strcmp(instruccion_split[0], "COPY_STRING") == 0)
+		{
+		 	uint32_t *registro_uint32_si = (uint32_t*)obtener_registro("SI",proceso);
+		 	int* direc_logica_si = (int *)registro_uint32_si;
+
+		 	uint32_t *registro_uint32_di = (uint32_t*)obtener_registro("DI",proceso);
+		 	int* direc_logica_di = (int *)registro_uint32_di;
+		
+		 	if( direc_logica_si != NULL || direc_logica_di != NULL) //DIRECCION SI y DIRECCION DI
+		 	{
+		 		int tamanio = atoi (instruccion_split[1]);
+		 		//direccion_fisica_si = mmu (direc_logica_si, proceso);
+		 		direccion_fisica_si = 2000;
+		 		size_t tamanio_en_bytes = sizeof(uint8_t)* tamanio;
+				pedido_lectura (direccion_fisica_si, tamanio_en_bytes);//devuelve el valor de lo que esta en la posicion de memoria SI				
+		 		sem_wait(&sem_lectura);
+		 		//direccion_fisica_di = mmu (direc_logica_di, proceso); 
+		 		direccion_fisica_di = 1500;
+		 		pedido_escritura_cadena (direccion_fisica_di, valor_leido);//envio a memoria lo que tiene que escribir y en donde lo escribira				
+		 		sem_wait(&sem_escritura);
+		 		//copiar el contenido de la direccion contenida en si y lo pone en la direccion contenida en di
+		 	}
+		 	else
+		 	{
+		 		printf("El registro no se encontró en el proceso.\n");				
+		 	}
+		}
+		CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
+		 Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
+		 if (strcmp(instruccion_split[0], "IO_FS_CREATE") == 0)
+		 {
+		 	debemos devolver instruccion + pcb parando el proceso actual
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,FS_CREATE);
 	
 			
 		
-		// }
-		
+		// }*/
+
 		 if(strcmp(instruccion_split[0], "WAIT") == 0)
 		 {
 		 	//debemos devolver el proceso al kernel
@@ -1559,7 +1636,7 @@ void cpu_escuchar_memoria (){
 				break;
 			case LECTURA:
 
-				printf("Lei el valor en memoria\n");
+				printf("Lei el valor en memoria MOV_IN\n");
 				valor_leido = malloc(sizeof(int));
 				int* leidoQueLlego = paquete->buffer->stream;
 				memcpy(valor_leido, leidoQueLlego, sizeof(int));  
@@ -1567,6 +1644,7 @@ void cpu_escuchar_memoria (){
 				sem_post(&sem_lectura);
 				break;
 			case ESCRITO:
+				printf("Teoricamente se ha escrito el valor en la direccion fisica\n");
 				sem_post(&sem_escritura);
 				//
 				break;
@@ -1582,6 +1660,7 @@ void cpu_escuchar_memoria (){
 				break;
 			case PAQUETE:
 				//pop aca se enviará el num_pagina
+
 				break;
 			case -1:
 				log_error(cpu_logger, "Desconexion de memoria.\n");

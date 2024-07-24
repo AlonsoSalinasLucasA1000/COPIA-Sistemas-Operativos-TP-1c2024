@@ -34,7 +34,10 @@ int main(int argc, char* argv[]) {
     PATH_INSTRUCCIONES = config_get_string_value (memoria_config , "PATH_INSTRUCCIONES" );
     RETARDO_RESPUESTA = config_get_int_value (memoria_config , "RETARDO_RESPUESTA" );
 
-	//TAMANIO_PAGINA = TAM_PAGINA;
+	/*
+	//enviar a cpu TAM_PAGINA
+	enviarEntero(TAM_PAGINA,fd_cpu,PAQUETE);
+	*/
 
     log_info(memoria_logger, "PUERTO_ESCUCHA: %s", PUERTO_ESCUCHA);
     log_info(memoria_logger, "TAM_MEMORIA: %i", TAM_MEMORIA);
