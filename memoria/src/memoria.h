@@ -344,15 +344,17 @@ void memoria_escuchar_cpu (){
 				// OBTENER LO ALMACENADO EN LA DIRECCION FISICA
 				void* datoObtenido = malloc(*tamanioDato);
 				memcpy(datoObtenido, espacio_usuario + *direccionFisica, *tamanioDato);
-				printf("Enviaremos %d\n", *(uint32_t*)datoObtenido);
-				enviarEntero(datoObtenido, fd_cpu, LECTURA);
+				printf("Enviaremos %d\n", *(uint8_t*)datoObtenido);
+				uint8_t* to_enviar = malloc(sizeof(uint8_t));
+				*to_enviar = *(uint8_t*)datoObtenido;
+				enviarUint8(to_enviar, fd_cpu, LECTURA);
 
 				// liberar memoria
 				free(direccionFisica);
 				free(tamanioDato);
 				free(datoObtenido);
 
-   				 break;
+   				break;
 
 			/*
 			case ESCRITURA_CADENA:
@@ -391,20 +393,20 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				void* copy_stream_e_n = paquete->buffer->stream;
 				printf("He recibido un pedido de ESCRITURA_NUMERICO\n");
 				int* direccionFisica_e_n = malloc(sizeof(int));
-				int* valor = malloc(sizeof(int));
+				uint8_t* valor = malloc(sizeof(uint8_t));
 				memcpy(direccionFisica_e_n,copy_stream_e_n,sizeof(int));
 				copy_stream_e_n += sizeof(int);
-				memcpy(valor,copy_stream_e_n,sizeof(int));
+				memcpy(valor,copy_stream_e_n,sizeof(uint8_t));
 				
 				printf("Recibimos la siguiente direccion: %d\n",*direccionFisica_e_n);//BX
 				printf("Recibimos el siguiente valor a escribir: %d\n",*valor);//AX
-				memmove(espacio_usuario + *direccionFisica_e_n, valor, sizeof(int));
+				memmove(espacio_usuario + *direccionFisica_e_n, valor, sizeof(uint8_t));
 
-				void* to_show_n = malloc(sizeof(int));
-				memcpy(to_show_n,espacio_usuario + *direccionFisica_e_n, sizeof(int));
+				void* to_show_n = malloc(sizeof(uint8_t));
+				memcpy(to_show_n,espacio_usuario + *direccionFisica_e_n, sizeof(uint8_t));
 
-				int* show_n = (int*)to_show_n;
-				printf("Mostrar lo escrito %d\n",*show_n);
+				uint8_t* show_n = (uint8_t*)to_show_n;
+				printf("Mostrar lo escrito %u\n",*show_n);
 
 				int hola = 20;
 				char* to_send = malloc(hola);

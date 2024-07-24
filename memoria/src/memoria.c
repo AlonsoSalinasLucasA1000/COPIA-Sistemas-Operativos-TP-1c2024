@@ -34,10 +34,9 @@ int main(int argc, char* argv[]) {
     PATH_INSTRUCCIONES = config_get_string_value (memoria_config , "PATH_INSTRUCCIONES" );
     RETARDO_RESPUESTA = config_get_int_value (memoria_config , "RETARDO_RESPUESTA" );
 
-	/*
-	//enviar a cpu TAM_PAGINA
-	enviarEntero(TAM_PAGINA,fd_cpu,PAQUETE);
-	*/
+	
+	
+	
 
     log_info(memoria_logger, "PUERTO_ESCUCHA: %s", PUERTO_ESCUCHA);
     log_info(memoria_logger, "TAM_MEMORIA: %i", TAM_MEMORIA);
@@ -64,6 +63,7 @@ int main(int argc, char* argv[]) {
 	fd_cpu = esperar_cliente (fd_memoria, memoria_logger, "CPU");
 	handshakeServer(fd_cpu);
 
+
 	//espero conexion kernel
 	log_info (memoria_logger, "Esperando a conectar con Kernel.");
 	fd_kernel = esperar_cliente (fd_memoria, memoria_logger, "KERNEL");
@@ -81,6 +81,11 @@ int main(int argc, char* argv[]) {
 	pthread_create (&hilo_cpu, NULL, (void*)memoria_escuchar_cpu, NULL);
 	pthread_detach (hilo_cpu);
 
+	//enviar a cpu TAM_PAGINA
+	int* tam_pag = malloc(sizeof(int));
+	*tam_pag = TAM_PAGINA;
+	enviarEntero(tam_pag,fd_cpu,TAMPAGINA);
+	
 	/*
 	//escuchar mensajes de entradasalida
 	pthread_t hilo_entradasalida;
@@ -111,5 +116,6 @@ int main(int argc, char* argv[]) {
 	liberar_conexion(fd_entradasalida);
 
 	free(espacio_usuario);
+	free(tam_pag);
 	return (EXIT_SUCCESS);
 }

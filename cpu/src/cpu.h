@@ -16,6 +16,8 @@ int fd_kernel_interrupt;
 t_list* listaTLB;
 t_list* listDireccionesFisicas;
 t_list* direcciones_fisicas;
+int* TAM_PAGINA;
+
 //Si la asignacion fue correcta es 0, de haber out of memory es 1
 int asignacion_or_out_of_memory;
 
@@ -32,6 +34,8 @@ sem_t sem_escritura;
 
 //semaforo para ver si hay interrupcion
 sem_t interrupt_mutex;
+
+//semaforo para recibir el marco de memoria
 sem_t sem_mmu;
 
 t_log* cpu_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
@@ -42,7 +46,7 @@ t_config* cpu_config;
 //t_config* 
 //creemos una variable global de instruccion actual
 char* instruccionActual;
-int* valor_leido;
+uint8_t* valor_leido;
 int* num_marco;
 
 char* IP_MEMORIA;
@@ -225,11 +229,10 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 			}
 		}
 	}
-	*/
-		//else   
-	//{
-    //   	printf("Algoritmo de TLB no reconocido\n");
-    //}
+	else   
+	{
+      	printf("Algoritmo de TLB no reconocido\n");
+    }*/
 } 
 	
 // Función para enviar solicitud a la memoria para recibir el marco correspondiente al proceso
@@ -286,8 +289,8 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 	int dir_fisica=0;	 									
 	for(int i=0; i < tamanio; i++)
 	{
-		int numero_Pagina = floor(dir_Logica/32); 					//config.TAM_PAGINA. necesitamos traer de memoria.config
-		int desplazamiento = dir_Logica - numero_Pagina * 32;   	//dirección_lógica - número_página * tamaño_página     TAM_PAGINA    
+		int numero_Pagina = floor(dir_Logica/ *TAM_PAGINA); 					//config.TAM_PAGINA. necesitamos traer de memoria.config
+		int desplazamiento = dir_Logica - numero_Pagina * *TAM_PAGINA;   	//dirección_lógica - número_página * tamaño_página     TAM_PAGINA    
 		
 		printf("El desplazamiento es: %d, numero pagina: %d\n",desplazamiento,numero_Pagina);
 		
@@ -296,7 +299,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 		if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
 			log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
 			
-			dir_fisica = retorno_TLB->marco * 32 + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
+			dir_fisica = retorno_TLB->marco * *TAM_PAGINA + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
 			log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
@@ -317,7 +320,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 				algoritmoSustitucion(proceso->PID, numero_Pagina, *num_marco);
 			}
 
-			dir_fisica =  *num_marco * 32 + desplazamiento;
+			dir_fisica =  *num_marco * *TAM_PAGINA + desplazamiento;
 			//return *num_marco + desplazamiento; //Devuelve la direccion fisica		
 		} 
 		printf("La direccion fisica %d es: %d\n",i , dir_fisica);
@@ -381,25 +384,25 @@ void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
 }
 
 
-void pedido_escritura_numerico (int direccion_fisica, int valor_a_escribir)
+void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
 {
 	int* direccion_a_enviar = malloc(sizeof(int));
 	*direccion_a_enviar = direccion_fisica;
 	
-	int* entero_a_enviar = malloc(sizeof(int));
+	uint8_t* entero_a_enviar = malloc(sizeof(uint8_t));
 	*entero_a_enviar = valor_a_escribir;
 
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-	buffer->size = sizeof(int)*2;
+	buffer->size = sizeof(int) + sizeof(uint8_t);
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
     //Movemos los valores al buffer
     memcpy(buffer->stream + buffer->offset,direccion_a_enviar, sizeof(int));
     buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(int));
+	memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(uint8_t));
 
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -652,7 +655,6 @@ void ejecutar_proceso(PCB* proceso)
 	sem_wait(&sem_exe_b);
 	while( strcmp(instruccionActual,"") != 0 )
 	{
-		//
 		//obtengo instruccion actual
 		char* instruccion = string_duplicate(instruccionActual);
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
@@ -1206,7 +1208,7 @@ void ejecutar_proceso(PCB* proceso)
 						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
 		 				sem_wait(&sem_lectura);
 					
-		 				registro_datos = (uint8_t*) valor_leido; //asigna ese valor al registro
+		 				*registro_datos = *valor_leido; //asigna ese valor al registro
 		 			}
 		 			else 
 		 			{	//REGISTRO DATOS
@@ -1215,22 +1217,28 @@ void ejecutar_proceso(PCB* proceso)
 		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
 		 					direcciones_fisicas = mmu(direc_logica, proceso, sizeof(uint32_t)); //fc a implementar (MMU)
 
-							char valores_leidos[32];
+							uint8_t valores_leidos[4];
 							for(int i=0; i < list_size(direcciones_fisicas);i++)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
-								pedido_lectura_numerico (direccion_fisica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
+								pedido_lectura_numerico (direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
 								
 								sem_wait(&sem_lectura);
 
-								sprintf(valores_leidos, "%d", valor_leido);
+								valores_leidos[i] =  *valor_leido;
+								printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
 							}
-							int valor_registroDato = atoi(valores_leidos);
-
-							registro_datos = (uint32_t*) valor_registroDato;//asigna ese valor al registro
-
 		 					
-		
+							/*
+							uint8_t a = ...; // Primer byte
+							uint8_t b = ...; // Segundo byte
+							uint8_t c = ...; // Tercer byte
+							uint8_t d = ...; // Cuarto byte
+							*/
+						
+							uint32_t valor_uint32 = ((uint32_t)valores_leidos[3] << 24) | ((uint32_t)valores_leidos[2] << 16) | ((uint32_t)valores_leidos[1] << 8) | valores_leidos[0];
+							*registro_datos = valor_uint32;
+							printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
 		 				}
 		 			}
 				 
@@ -1242,8 +1250,8 @@ void ejecutar_proceso(PCB* proceso)
 		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 		 			int direc_logica = (int)*registro_uint32;
 
-		 				//REGISTRO DATOS UNIT8
-		 				if ( esRegistroUint8(instruccion_split[1])){
+		 				//REGISTRO DATOS
+		 			if ( esRegistroUint8(instruccion_split[1])){
 						int direccion_fisica;
 		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[1], proceso); //registor donde guardaremos
 		 				direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t));
@@ -1256,32 +1264,39 @@ void ejecutar_proceso(PCB* proceso)
 						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
 		 				sem_wait(&sem_lectura);
 					
-		 				registro_datos = (uint8_t*) valor_leido; //asigna ese valor al registro
-						
-		
-		 				}
-		 				else 
-		 				{	//REGISTRO DATOS UINT32
-		 					if ( esRegistroUint32(instruccion_split[1])){
-							uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
+		 				*registro_datos = *valor_leido; //asigna ese valor al registro
+		 			}
+		 			else 
+		 			{	//REGISTRO DATOS
+		 				if ( esRegistroUint32(instruccion_split[1])){
+							
+		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
 		 					direcciones_fisicas = mmu(direc_logica, proceso, sizeof(uint32_t)); //fc a implementar (MMU)
 
-							char valores_leidos[32];
+							uint8_t valores_leidos[4];
 							for(int i=0; i < list_size(direcciones_fisicas);i++)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
-								pedido_lectura_numerico (direccion_fisica, sizeof(uint32_t));//devuelve el valor de lo que esta en esa posicion de memoria
+								pedido_lectura_numerico (direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
 								
 								sem_wait(&sem_lectura);
 
-								sprintf(valores_leidos, "%d", valor_leido);
+								valores_leidos[i] =  *valor_leido;
+								printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
 							}
-							int valor_registroDato = atoi(valores_leidos);
-
-							registro_datos = (uint32_t*) valor_registroDato;//asigna ese valor al registro
-
-		 					}
-		 				}	
+		 					
+							/*
+							uint8_t a = ...; // Primer byte
+							uint8_t b = ...; // Segundo byte
+							uint8_t c = ...; // Tercer byte
+							uint8_t d = ...; // Cuarto byte
+							*/
+						
+							uint32_t valor_uint32 = ((uint32_t)valores_leidos[3] << 24) | ((uint32_t)valores_leidos[2] << 16) | ((uint32_t)valores_leidos[1] << 8) | valores_leidos[0];
+							*registro_datos = valor_uint32;
+							printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
+		 				}
+		 			}
 		 		}
 		 		else 
 		 		{
@@ -1303,42 +1318,49 @@ void ejecutar_proceso(PCB* proceso)
 		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[1],proceso); //REGISTRO DONDE SE GUARDARA
 		 		int direc_logica = (int)*registro_uint8;
 
-		 			//REGISTRO DATOS
-		 			if ( esRegistroUint8(instruccion_split[2])){
-		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
-		 				direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
-		 				
-						int direccion_fisica;
+				//REGISTRO DATOS
+				if ( esRegistroUint8(instruccion_split[2])){
+					uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
+					direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
+					
+					int direccion_fisica;
+					for(int i=0; i < list_size(direcciones_fisicas);i++)
+					{
+						direccion_fisica = list_get(direcciones_fisicas,i);
+					}
+
+					printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
+					printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
+
+					pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
+					sem_wait(&sem_escritura);
+
+				}
+				else 
+				{	//REGISTRO DATOS
+					if ( esRegistroUint32(instruccion_split[2])){
+						uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+						direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
+
+						
+						//uint32_t* v = ...; // Tu puntero uint32_t
+						uint8_t* ptr_registro_datos = (uint8_t *)registro_datos;
+						uint8_t byte[4];
+						byte[0] = ptr_registro_datos[0]; // Primer byte
+						byte[1] = ptr_registro_datos[1]; // Segundo byte
+						byte[2] = ptr_registro_datos[2]; // Tercer byte
+						byte[3] = ptr_registro_datos[3]; // Cuarto byte
+
 						for(int i=0; i < list_size(direcciones_fisicas);i++)
 						{
-							direccion_fisica = list_get(direcciones_fisicas,i);
+							int direccion_fisica = list_get(direcciones_fisicas,i);
+							printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
+							pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
+							sem_wait(&sem_escritura);
 						}
 
-						printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
-		 				printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
-
-		 				pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
-		 				sem_wait(&sem_escritura);
-
-		 			}
-		 			else 
-		 			{	//REGISTRO DATOS
-		 				if ( esRegistroUint32(instruccion_split[2])){
-		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
-		 					direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
-
-							
-							for(int i=0; i < list_size(direcciones_fisicas);i++)
-							{
-								int direccion_fisica = list_get(direcciones_fisicas,i);
-								pedido_escritura_numerico (direccion_fisica, *registro_datos);//devuelve el valor de lo que esta en esa posicion de memoria
-								
-								sem_wait(&sem_escritura);
-				
-							}
-
-		 				}
-		 			}
+					}
+				}
 		 	}
 		 	else
 		 	{
@@ -1368,17 +1390,24 @@ void ejecutar_proceso(PCB* proceso)
 		 			else 
 		 			{	//REGISTRO DATO UINT32
 		 				if ( esRegistroUint32(instruccion_split[2])){
-		 					uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+							uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 							direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
 
-								
+							
+							//uint32_t* v = ...; // Tu puntero uint32_t
+							uint8_t* ptr_registro_datos = (uint8_t *)registro_datos;
+							uint8_t byte[4];
+							byte[0] = ptr_registro_datos[0]; // Primer byte
+							byte[1] = ptr_registro_datos[1]; // Segundo byte
+							byte[2] = ptr_registro_datos[2]; // Tercer byte
+							byte[3] = ptr_registro_datos[3]; // Cuarto byte
+
 							for(int i=0; i < list_size(direcciones_fisicas);i++)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
-								pedido_escritura_numerico (direccion_fisica, *registro_datos);//devuelve el valor de lo que esta en esa posicion de memoria
-									
+								printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
+								pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
 								sem_wait(&sem_escritura);
-				
 							}
 		 				}
 		 			}
@@ -1390,9 +1419,12 @@ void ejecutar_proceso(PCB* proceso)
 				
 		 	}
 		 }
-
+/*
 		//CASO DE TENER UNA INSTRUCCION COPY_STRING (Tamaño) tamaño = cantidad de bytes a copiar
-/*		if (strcmp(instruccion_split[0], "COPY_STRING") == 0)
+		//Toma del string apuntado por el registro SI y copia la cantidad de bytes indicadas en el 
+		//parámetro tamaño a la posición de memoria apuntada por el registro DI. 
+		
+		if (strcmp(instruccion_split[0], "COPY_STRING") == 0)
 		{
 		 	uint32_t *registro_uint32_si = (uint32_t*)obtener_registro("SI",proceso);
 		 	int* direc_logica_si = (int *)registro_uint32_si;
@@ -1602,17 +1634,19 @@ void cpu_escuchar_memoria (){
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 
+			printf("RECIBI EL CÓDIGO DE OPERACIÓN: %d\n",cod_op);
+
             //deserializamos el mensaje, primero el tamaño del buffer, luego el offset
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			
-			if( cod_op != 8 && cod_op != 20 ) 		//los cod_op reciben datos de tipo ENTERO
+			if( cod_op != 8 && cod_op != 20 && cod_op != 21 && cod_op != 28) 		//los cod_op reciben datos de tipo ENTERO
 			{
 				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			}
-
-			recv(fd_memoria,paquete->buffer->stream,paquete->buffer->size,0);
 			
+			recv(fd_memoria,paquete->buffer->stream,paquete->buffer->size,0);
+
 			switch (cod_op) {
 			case MENSAJE:
 			    sem_wait(&sem_exe_a);
@@ -1635,12 +1669,10 @@ void cpu_escuchar_memoria (){
 				sem_post(&sem_memoria_aviso_cpu);
 				break;
 			case LECTURA:
-
-				printf("Lei el valor en memoria MOV_IN\n");
-				valor_leido = malloc(sizeof(int));
-				int* leidoQueLlego = paquete->buffer->stream;
-				memcpy(valor_leido, leidoQueLlego, sizeof(int));  
-				printf("El valor leido que llego fue: %d\n",*valor_leido); //no imprime el valor leido
+				valor_leido = malloc(sizeof(uint8_t));
+				uint8_t* leidoQueLlego = paquete->buffer->stream;
+				memcpy(valor_leido, leidoQueLlego, sizeof(uint8_t));  
+				printf("El valor leido que llego fue: %u\n",*valor_leido); //no imprime el valor leido
 				sem_post(&sem_lectura);
 				break;
 			case ESCRITO:
@@ -1660,7 +1692,18 @@ void cpu_escuchar_memoria (){
 				break;
 			case PAQUETE:
 				//pop aca se enviará el num_pagina
+				/*
+			
+				*/
+				break;
+			case TAMPAGINA:
+				
+				TAM_PAGINA = malloc(sizeof(int));
 
+				int* tamaño = paquete->buffer->stream;
+				memcpy(TAM_PAGINA, tamaño, sizeof(int));
+
+				printf("El tamaño de la pagina de memoria es: %d\n", *TAM_PAGINA);
 				break;
 			case -1:
 				log_error(cpu_logger, "Desconexion de memoria.\n");

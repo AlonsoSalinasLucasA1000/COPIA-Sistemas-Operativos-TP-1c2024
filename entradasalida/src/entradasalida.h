@@ -64,8 +64,10 @@ void entradasalida_escuchar_memoria (){
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_memoria);
 			printf("Codigo de operación de memoria recibido\n");
+
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
+			
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);	
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			if( cod_op == 14 ) //ojo con este hardcodeo, de añadir mas codigos de operacion pueden modificarse

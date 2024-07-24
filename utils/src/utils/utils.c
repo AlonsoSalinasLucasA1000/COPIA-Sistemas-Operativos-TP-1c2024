@@ -560,3 +560,42 @@ void enviarEntero(int* entero_a_enviar, int fd_cliente, op_code codigoDeOperacio
     free(paquete->buffer);
     free(paquete);
 }
+
+void enviarUint8(uint8_t* entero_a_enviar, int fd_cliente, op_code codigoDeOperacion)
+{
+	printf("Voy a mandar algo\n");
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(uint8_t);
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+	printf("Ahora mismo estoy mandando %u\n",*entero_a_enviar);
+
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, entero_a_enviar, sizeof(uint8_t));
+
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigoDeOperacion;
+    paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_cliente, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+	printf("Lo mande\n");
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}

@@ -47,14 +47,16 @@ typedef enum
 	ASIGNACION_CORRECTA,
 	OUT_OF_MEMORY,
 
-	LECTURA, //recibe un Entero
+	LECTURA, //recibe un Entero, 
 	//LEIDO,
 	ESCRITURA_NUMERICO,
 	ESCRITURA_CADENA,
 	ESCRITO,
 	GOKU,
 	NUEVOPID,
-	FINALIZAR_PROCESO
+	FINALIZAR_PROCESO,
+
+	TAMPAGINA //tamaño de pagina
 }op_code;
 
 
