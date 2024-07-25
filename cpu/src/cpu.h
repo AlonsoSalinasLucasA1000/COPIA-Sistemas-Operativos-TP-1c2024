@@ -98,6 +98,7 @@ void enviar_instruccion_kernel (char* instruccion, uint32_t tam_instruccion, PCB
     free(a_enviar);
     free(paquete->buffer->stream);
     free(paquete->buffer);
+	//free(buffer);
     free(paquete);
 }
 
@@ -153,6 +154,7 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 	list_add(listaTLB, nueva_entrada);
 	printf("Agregué el proceso %d a la TLB\n", nueva_entrada->PID);
 
+	//
 	for(int i=0; i < list_size(listaTLB); i++){
 		
 		TLB* entrada_tlb = list_get(listaTLB, i);
@@ -240,14 +242,9 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
     //}
 } 
 	
-// Función para enviar solicitud a la memoria para recibir el marco correspondiente al proceso
+// Función de serialización para enviar solicitud a la memoria para recibir el marco correspondiente al proceso
 void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo_operacion) 
 {
-	// Aquí se implementaría la lógica para enviar la solicitud a la memoria
-	// usando el descriptor de archivo fd_memoria y recibir la respuesta.
-	// Esto puede variar dependiendo de cómo se implemente la comunicación
-	// con el subsistema de memoria en tu aplicación.
-	
 	//Creamos un Buffer
     t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 	
@@ -262,7 +259,6 @@ void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo
     memcpy(buffer->stream + buffer->offset, &pid, sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
 
-    
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
     //Podemos usar una constante por operación
@@ -280,7 +276,7 @@ void enviar_paginaypid_a_memoria(int numero_pagina, uint32_t pid, op_code codigo
     //Por último enviamos
     send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
-    // No nos olvidamos de liberar la memoria que ya no usaremos
+    //No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
     free(paquete->buffer->stream);
     free(paquete->buffer);
@@ -307,7 +303,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 			dir_fisica = retorno_TLB->marco * *TAM_PAGINA + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
-			//log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
+			//log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina ); ---------------------------------------> chequear
 			enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
 
 			//printf("Llegué hasta antes del semaforo\n");
@@ -433,54 +429,6 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
     free(paquete);
 }
 
-void pedido_escritura_cadena (int direccion_fisica, char* valor_a_escribir)
-{
-	int* direccion_a_enviar = malloc(sizeof(int));
-	*direccion_a_enviar = direccion_fisica;
-	
-	int* tamanioCadena = malloc(sizeof(int));
-	*tamanioCadena = strlen(valor_a_escribir)+1;
-
-	char* cadena_a_enviar = malloc(*tamanioCadena);
-	*cadena_a_enviar = *valor_a_escribir;
-
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-
-    //Calculamos su tamaño
-	buffer->size = sizeof(int)*2 + *tamanioCadena;
-    buffer->offset = 0;
-    buffer->stream = malloc(buffer->size);
-	
-    //Movemos los valores al buffer
-    memcpy(buffer->stream + buffer->offset, direccion_a_enviar, sizeof(int));
-    buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset, tamanioCadena, sizeof(int));
-	buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset, cadena_a_enviar, *tamanioCadena);
-
-	//Creamos un Paquete
-    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = ESCRITURA_CADENA;
-    paquete->buffer = buffer;
-
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
 
 void* obtener_registro(char* registro, PCB* proceso)
 {
@@ -1235,9 +1183,6 @@ void ejecutar_proceso(PCB* proceso)
 		}
 
 		//CASO DE TENER UNA INSTRUCCION MOV_IN (Registro Datos, Registro Dirección)
-		//Lee el valor de memoria correspondiente a la Dirección Lógica que se encuentra en el Registro Dirección y 
-		//lo almacena en el Registro Datos.
-
 		if (strcmp(instruccion_split[0], "MOV_IN") == 0)
 		{ 
 		 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
@@ -1359,9 +1304,6 @@ void ejecutar_proceso(PCB* proceso)
 
 
 		 //CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
-		 //Lee el valor del Registro Datos y lo escribe en la dirección física de memoria obtenida 
-		 //a partir de la Dirección Lógica almacenada en el Registro Dirección.
-		 
 		 if (strcmp(instruccion_split[0], "MOV_OUT") == 0)
 		 {
 		 	if( esRegistroUint8(instruccion_split[1])) //REGISTRO DIRECCION UNIT8
@@ -1497,51 +1439,87 @@ void ejecutar_proceso(PCB* proceso)
 		} 
 
 
-
-/*
-		//CASO DE TENER UNA INSTRUCCION COPY_STRING (Tamaño) tamaño = cantidad de bytes a copiar
-		//Toma del string apuntado por el registro SI y copia la cantidad de bytes indicadas en el 
-		//parámetro tamaño a la posición de memoria apuntada por el registro DI. 
-		
-		if (strcmp(instruccion_split[0], "COPY_STRING") == 0)
-		{
-		 	uint32_t *registro_uint32_si = (uint32_t*)obtener_registro("SI",proceso);
-		 	int* direc_logica_si = (int *)registro_uint32_si;
-
-		 	uint32_t *registro_uint32_di = (uint32_t*)obtener_registro("DI",proceso);
-		 	int* direc_logica_di = (int *)registro_uint32_di;
-		
-		 	if( direc_logica_si != NULL || direc_logica_di != NULL) //DIRECCION SI y DIRECCION DI
-		 	{
-		 		int tamanio = atoi (instruccion_split[1]);
-		 		//direccion_fisica_si = mmu (direc_logica_si, proceso);
-		 		direccion_fisica_si = 2000;
-		 		size_t tamanio_en_bytes = sizeof(uint8_t)* tamanio;
-				pedido_lectura (direccion_fisica_si, tamanio_en_bytes);//devuelve el valor de lo que esta en la posicion de memoria SI				
-		 		sem_wait(&sem_lectura);
-		 		//direccion_fisica_di = mmu (direc_logica_di, proceso); 
-		 		direccion_fisica_di = 1500;
-		 		pedido_escritura_cadena (direccion_fisica_di, valor_leido);//envio a memoria lo que tiene que escribir y en donde lo escribira				
-		 		sem_wait(&sem_escritura);
-		 		//copiar el contenido de la direccion contenida en si y lo pone en la direccion contenida en di
-		 	}
-		 	else
-		 	{
-		 		printf("El registro no se encontró en el proceso.\n");				
-		 	}
-		}
-		CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
-		 Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
+		//CASO DE TENER UNA INSTRUCCION IO_FS_CREATE (Interfaz, Nombre Archivo): 
+		 //Esta instrucción solicita al Kernel que, mediante la interfaz seleccionada, se cree un archivo en el FS montado en dicha interfaz.
 		 if (strcmp(instruccion_split[0], "IO_FS_CREATE") == 0)
 		 {
-		 	debemos devolver instruccion + pcb parando el proceso actual
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			//debemos devolver instruccion + pcb parando el proceso actual
 		 	uint32_t instruccion_length = strlen(instruccion)+1;
-		 	enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,FS_CREATE);
-	
+		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
 			
-		
-		// }*/
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
 
+		 	return;
+		 }
+
+		//CASO DE TENER UNA INSTRUCCION IO_FS_DELETE (Interfaz, Nombre Archivo)
+		if (strcmp(instruccion_split[0], "IO_FS_DELETE") == 0){
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			//debemos devolver instruccion + pcb parando el proceso actual
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
+			
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+
+		 	return;
+		}
+
+		//CASO DE TENER UNA INSTRUCCION IO_FS_TRUNCATE(Interfaz, Nombre Archivo, Registro Tamaño)
+		if (strcmp(instruccion_split[0], "IO_FS_TRUNCATE") == 0){
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			//debemos devolver instruccion + pcb parando el proceso actual
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
+			
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+
+		 	return;
+		}	
+
+		//CASO DE TENER UNA INSTRUCCION IO_FS_WRITE(Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo)
+		if (strcmp(instruccion_split[0], "IO_FS_WRITE") == 0){
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			//debemos devolver instruccion + pcb parando el proceso actual
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
+			
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+
+		 	return;
+		}
+
+		//CASO DE TENER UNA INSTRUCCION IO_FS_READ (Interfaz, Nombre Archivo, Registro Dirección, Registro Tamaño, Registro Puntero Archivo)
+		if (strcmp(instruccion_split[0], "IO_FS_READ") == 0){
+			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			//debemos devolver instruccion + pcb parando el proceso actual
+		 	uint32_t instruccion_length = strlen(instruccion)+1;
+		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
+			
+		 	//se bloquea el proceso, devolvemos al kernel
+		 	free(instruccionActual);
+		 	instruccionActual = malloc(1);
+		 	instruccionActual = "";
+
+		 	return;
+		}
+
+
+
+
+		//CASO DE TENER UNA INSTRUCCION WAIT (Recurso): 
 		 if(strcmp(instruccion_split[0], "WAIT") == 0)
 		 {
 		 	//debemos devolver el proceso al kernel
@@ -1554,7 +1532,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	instruccionActual = "";
 		 	return;
 		 }
-
+		//CASO DE TENER UNA INSTRUCCION SIGNAL (Recurso): 
 		 if(strcmp(instruccion_split[0], "SIGNAL") == 0)
 		 {
 		 	//debemos devolver el proceso al kernel

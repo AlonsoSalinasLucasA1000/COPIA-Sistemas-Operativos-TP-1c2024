@@ -464,7 +464,7 @@ void kernel_escuchar_cpu ()
 			case PROCESOIO:
 
 				PCB* proceso_io = deserializar_proceso_cpu(paquete->buffer);
-
+				//char* estado_anterior_1 = estado_proceso_to_string(proceso->estado);
 				proceso_io->estado = BLOCKED;
 				printf("Recibimos el proceso con el pid: %d\n",proceso_io->PID);
 				printf("Recibimos el proceso con el siguiente quantum: %d\n",proceso_io->quantum);
@@ -660,6 +660,7 @@ void kernel_escuchar_cpu ()
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
+				free(instruccion_io_stdin);
 				break;
 			//case FS_CREATE:
 				//
@@ -714,6 +715,7 @@ void kernel_escuchar_cpu ()
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
+				free(instruccion_io_stdout);
 				break;
 			case WAIT:
 				//Deserializamos el recurso
@@ -957,7 +959,97 @@ void kernel_escuchar_cpu ()
 					sem_post(&sem_mutex_cpu_ocupada);
 				}
 
-				break;	
+				break;
+				
+			case DIALFS:
+				
+				// Deserializamos
+					Instruccion_io* instruccion_io_fs = deserializar_instruccion_io(paquete->buffer);
+					printf("La instrucción es: %s\n", instruccion_io_fs->instruccion);
+					printf("El PID del proceso es: %d\n", instruccion_io_fs->proceso.PID);
+
+					// Debemos obtener la IO específica de la lista
+					sem_wait(&sem_mutex_lists_io);
+					EntradaSalida* io_fs = encontrar_io(listDialfs, string_split(instruccion_io_fs->instruccion, " ")[1]);
+					sem_post(&sem_mutex_lists_io);
+
+					// Verificamos que exista
+					if (io_fs != NULL)
+					{
+						// Existe
+						// Una vez encontrada la IO, vemos si está ocupada
+						if (io_fs->ocupado)
+						{
+							// Si está ocupada, añadimos el proceso a la lista de bloqueados
+							printf("La IO está ocupada, se bloqueará en su lista propia\n");
+							list_add(io_fs->procesos_bloqueados, instruccion_io_fs);
+						}
+						else
+						{
+							io_fs->ocupado = true;
+							printf("El fd de esta IO es %d\n", io_fs->fd_cliente);
+							char** instruccion_partida_dialfs = string_split(instruccion_io_fs->instruccion," ");
+							if( strcmp(instruccion_partida_dialfs[0], "IO_FS_CREATE") == 0 )
+							{
+								//crear archivo 
+								new_ejecutar_interfaz_stdin_stdout(instruccion_io_fs->instruccion, IO_FS_CREATE, io_fs->fd_cliente, instruccion_io_fs->proceso.PID);
+							}
+							else
+							{
+								if( strcmp(instruccion_partida_dialfs[0], "IO_FS_DELETE") == 0 )
+								{
+									//archivo borrar
+									new_ejecutar_interfaz_stdin_stdout(instruccion_io_fs->instruccion, IO_FS_DELETE, io_fs->fd_cliente, instruccion_io_fs->proceso.PID);
+								}
+								else
+								{
+									if( strcmp(instruccion_partida_dialfs[0], "IO_FS_TRUNCATE") == 0 )
+									{
+										//archivo truncar
+										new_ejecutar_interfaz_stdin_stdout(instruccion_io_fs->instruccion, IO_FS_TRUNCATE, io_fs->fd_cliente, instruccion_io_fs->proceso.PID);
+									}
+									else
+									{
+										if( strcmp(instruccion_partida_dialfs[0], "IO_FS_WRITE") == 0 )
+										{
+											//archivo escribir
+											new_ejecutar_interfaz_stdin_stdout(instruccion_io_fs->instruccion, IO_FS_WRITE, io_fs->fd_cliente, instruccion_io_fs->proceso.PID);
+										}
+										else
+										{
+											//archivo leer	
+											new_ejecutar_interfaz_stdin_stdout(instruccion_io_fs->instruccion, IO_FS_READ, io_fs->fd_cliente, instruccion_io_fs->proceso.PID);
+										}
+									}
+								}
+							}
+						}
+					}
+					else
+					{
+						// Si no existe, debemos terminar el proceso
+						sem_wait(&sem_blocked);
+						PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements, instruccion_io_fs->proceso.PID);
+						sem_post(&sem_blocked);
+
+						sem_wait(&sem_procesos);
+						PCB* actualizado_fs = encontrarProceso(lista_procesos, instruccion_io_fs->proceso.PC);
+						actualizado_fs->estado = EXIT;
+						sem_post(&sem_procesos);
+
+						printf("Este proceso ha terminado\n");
+						liberar_recursos(proceso_to_end->PC);
+						enviarPCB(proceso_to_end, fd_memoria, PROCESOFIN);
+						free(proceso_to_end->path);
+						free(proceso_to_end);
+					}
+
+					sem_wait(&sem_mutex_cpu_ocupada);
+					cpu_ocupada = false;
+					sem_post(&sem_mutex_cpu_ocupada);
+					free(instruccion_io_fs);
+					break;
+   
 			case MENSAJE:
 				//
 				break;
@@ -1291,7 +1383,7 @@ void iniciar_proceso(char* path)
     // Señalar (incrementar) el semáforo
     sem_post(&sem);
 	sem_post(&sem_cant);
-
+	
 	//procesos_en_new++;
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);

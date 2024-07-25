@@ -6,10 +6,18 @@
 #include<utils/utils.h>
 #include <utils/utils.c>
 
+//semaforo de activacion
+sem_t sem_activacion;
+
+//lista de archivos
+t_list* lista_archivos;
+
 //file descriptors de entradasalida y los modulos que se conectaran con el
 int fd_entradasalida;
 int fd_memoria;
 int fd_kernel;
+int fd_bloque;
+int fd_bitmap;
 
 //implementamos pid del proceso que se encuentra utilizando la io
 int* pid_actual;
@@ -27,6 +35,128 @@ char* PATH_BASE_DIALFS;
 int BLOCK_SIZE;
 int BLOCK_COUNT;
 int RETRASO_COMPACTACION;
+
+//en caso de tener un FS
+void* bloques;
+void* espacio_bit_map;
+
+t_bitarray* bit_map;
+
+void levantarArchivoDeBloques() {
+
+	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
+	strcpy(path_copia,PATH_BASE_DIALFS);
+    strcat(path_copia, "/bloques.dat");
+
+    printf("%s\n", path_copia);
+    printf("Hola, entré acá\n");
+
+    // Abre el archivo en modo lectura/escritura
+	fd_bloque = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+	// Aseguramos que el archivo tenga el tamaño adecuado
+    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+	// Mapeamos el archivo en memoria
+    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+	
+    printf("Archivo mapeado correctamente\n");
+}
+
+void levantarArchivoBitMap()
+{
+	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
+	strcpy(path_copia,PATH_BASE_DIALFS);
+    strcat(path_copia, "/bitmap.dat");
+
+    printf("%s\n", path_copia);
+    printf("Hola, entré acá\n");
+
+    // Abre el archivo en modo lectura/escritura
+	fd_bitmap = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bitmap == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+	// Aseguramos que el archivo tenga el tamaño adecuado
+    if (ftruncate(fd_bitmap, BLOCK_COUNT/8) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        exit(EXIT_FAILURE);
+    }
+
+	int tamanio_bit_map = BLOCK_COUNT/8;
+	int* random = malloc(sizeof(int));
+
+	// Mapeamos el archivo en memoria
+    espacio_bit_map = mmap(NULL, tamanio_bit_map, PROT_WRITE, MAP_SHARED, fd_bitmap, 0);
+    if (espacio_bit_map == MAP_FAILED) {
+        perror("Error en mmap");
+        exit(EXIT_FAILURE);
+    }
+
+
+	bit_map = bitarray_create_with_mode(random,tamanio_bit_map,LSB_FIRST);
+    // Liberamos el mapeo y cerramos el archivo
+    printf("Archivo mapeado correctamente\n");
+}
+
+void crear_archivo(char* nombre)
+{
+	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
+	strcpy(path_copia,PATH_BASE_DIALFS);
+	strcat(path_copia, "/");
+    strcat(path_copia, nombre);
+
+	int fd_random = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	
+	//Creamos el archivo y lo añadimos a la lista
+	Archivo* archivo = malloc(sizeof(Archivo));
+	archivo->path_length = strlen(path_copia)+1;
+	archivo->path = path_copia;
+	archivo->fd_archivo = fd_random;
+	list_add(lista_archivos,archivo);
+
+	//le asignamos un bloque:
+	int i = 0;
+	while( i < BLOCK_COUNT)
+	{
+		int value = bitarray_test_bit(bit_map,i); //obtenemos el valor actual de dicho bit array en la posición i
+		if( value == 0 )
+		{
+			//si es cero, está libre, así que lo ocupamos
+			bitarray_set_bit(bit_map, i);
+		}
+		i++;
+	}
+
+	//escribimos en el archivo los datos obtenidos
+	char* to_write = "BLOQUE_INICIAL=\nTAMANIO_ARCHIVO=";
+	void* mapeo = mmap(NULL,strlen(to_write)+1, PROT_WRITE, MAP_SHARED, fd_random, 0);
+	ftruncate(fd_random, strlen(to_write)+1);
+	memcpy(mapeo,to_write,strlen(mapeo)+1);
+	msync(mapeo,strlen(mapeo)+1,MS_SYNC);
+	//msync (void *__addr, size_t __len, int __flags);
+
+	t_config* metadata = config_create(path_copia);
+	char* first_block;
+	sprintf(first_block,"%d",i);
+	config_set_value(metadata,"BLOQUE_INICIAL",first_block);
+	config_set_value(metadata,"TAMANIO_ARCHIVO","0");
+
+	config_destroy(metadata);
+	munmap(mapeo,strlen(to_write)+1);
+}
 
 void avisar_despertar_kernel()
 {
@@ -57,7 +187,6 @@ void avisar_despertar_kernel()
     free(paquete->buffer);
     free(paquete);
 }
-
 
 void entradasalida_escuchar_memoria (){
 	bool control_key = 1;
@@ -313,22 +442,26 @@ void entradasalida_escuchar_kernel (){
 				for (int i = 0; i < tamanio_in; i++) 
 				{
 					printf("ESTOY ITERANDO\n");
-					int* df_to_send_in = malloc(sizeof(int));
+					int* df_to_send_in = malloc(sizeof(int)); //liberar
 					*df_to_send_in = atoi(instruccion_partida_in[5 + i]);
-					char* c_in = malloc(sizeof(char));
+					char* c_in = malloc(sizeof(char)); //liberar
 					*c_in = leido_in[i];
 					new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
 					free(c_in);
+					//free(df_to_send_in);
 				}
 
 				printf("ESTOY ITERANDO\n");
-				int* df_to_send_in = malloc(sizeof(int));
+				int* df_to_send_in = malloc(sizeof(int)); //liberar
 				*df_to_send_in = -1;
-				char* c_in = malloc(sizeof(char));
+				char* c_in = malloc(sizeof(char)); //liberar
 				*c_in = 'L';
 				new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
 				free(c_in);
-
+				//free(df_to_send_in);
+				free(tamanio_instruccion_in);
+				free(instruccion_in);
+				string_array_destroy(instruccion_partida_in);
 				// new_enviar_stdin_to_write_memoria(direccionFisica, caracter);
 				//despertamos
 				//enviarEntero(pid_actual,fd_kernel,DESPERTAR);
@@ -361,7 +494,8 @@ void entradasalida_escuchar_kernel (){
 				new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_out);
 
 				printf("CHECKPOINT DEL OUT 3\n");
-
+				//free(tamanio_instruccion_out);
+				//free(instruccion_out);
 				/*
 				//DESEMPAQUETAMOS
 				int* direccionFisicaOUT = malloc(sizeof(int));
@@ -378,6 +512,19 @@ void entradasalida_escuchar_kernel (){
 				int* new_pid = paquete->buffer->stream;
 				*pid_actual = *new_pid;
 				printf("Esta interfaz está siendo usada actualmente por el proceso cuyo PID es %d\n",*pid_actual);
+				break;
+			case IO_FS_CREATE:
+				// DESEMPAQUETAMOS
+				int* tamanio_instruccion_fs = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs = malloc(*tamanio_instruccion_fs);
+				memcpy(instruccion_fs, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs);
+				char** instruccion_fs_partida = string_split(instruccion_fs," "); 
+
+				// Mostremos por pantalla
+				printf("La instruccion que ha llegado es: %s\n", instruccion_fs);
+				crear_archivo(instruccion_fs_partida[2]);
+
 				break;
 			case MENSAJE:
 				//
@@ -478,7 +625,8 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
     send(fd_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
+    //free(to_send);
+	free(a_enviar);
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);	

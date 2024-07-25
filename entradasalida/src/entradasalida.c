@@ -27,6 +27,8 @@ if (entradasalida_config == NULL)
 	exit(EXIT_FAILURE);
 }
 
+sem_init(&sem_activacion,0,1);
+
 TIPO_INTERFAZ = config_get_string_value (entradasalida_config , "TIPO_INTERFAZ" );
 TIEMPO_UNIDAD_TRABAJO = config_get_int_value (entradasalida_config , "TIEMPO_UNIDAD_TRABAJO" );;
 IP_KERNEL = config_get_string_value (entradasalida_config , "IP_KERNEL" );
@@ -80,6 +82,19 @@ if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
 	//de no ser generica, debemos enviarle los datos a memoria
 	printf("Enviaremos datos a la MEMORIA\n");
 	enviarDatos(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
+}
+
+
+
+//void *mmap(void addr[.length], size_t length, int prot, int flags, int fd, off_t offset);;
+
+
+//si la interfaz es un dialFS, debemos crearle un archivo de bloques, bitmap y metadata, a medida que se vayan creando archivos
+if( strcmp(TIPO_INTERFAZ, "DIALFS") == 0 )
+{
+	t_list* lista_archivos = list_create();
+	levantarArchivoDeBloques();
+	levantarArchivoBitMap();
 }
 
 

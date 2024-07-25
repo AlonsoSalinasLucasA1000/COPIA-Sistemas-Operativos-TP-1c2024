@@ -18,6 +18,9 @@
 #include<commons/collections/list.h>
 #include<commons/temporal.h>
 #include <math.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <commons/bitarray.h>
 
 
 typedef enum
@@ -57,7 +60,14 @@ typedef enum
 	FINALIZAR_PROCESO,
 
 	TAMPAGINA, //tamaño de pagina
-	COPY_STRING
+	COPY_STRING,
+
+	IO_FS_CREATE,
+	IO_FS_DELETE,
+	IO_FS_TRUNCATE,
+	IO_FS_WRITE,
+	IO_FS_READ
+	
 }op_code;
 
 
@@ -157,6 +167,13 @@ typedef struct
 	char* instruccion;
 	PCB proceso;
 } Instruccion_io;
+
+typedef struct
+{
+	uint32_t path_length;
+	char* path;
+	int fd_archivo; //fd de la metadata abierto
+} Archivo;
 
 
 //funciones crear conexion
