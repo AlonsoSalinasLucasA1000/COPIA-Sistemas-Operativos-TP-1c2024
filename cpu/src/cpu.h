@@ -205,34 +205,39 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 		}
 			
 	}*/ 
-	/* ver2
+	//ver2
 		if(strcmp(ALGORITMO_TLB, "LRU")==0)
 	{
-		TLB* entradaLRU = busca_en_TLB(numero_Pagina, pid);
-		int LRU_counter = 0;
+		TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid);
+		int LRU_counter = 0; //
 
 		if(entradaLRU != NULL)
 		{
-			entradaLRU->pid = pid;
+			entradaLRU->PID = pid;
 			entradaLRU->pagina = numero_Pagina;
 			entradaLRU->marco = marco;
 			entradaLRU->contadorLRU = LRU_counter++;
 		} else{
 			TLB* entrada_menos_usada = NULL;
-			for(int i = ; i < list_size(listaTLB); i++){
+			for(int i = 0 ; i < list_size(listaTLB); i++){
 				TLB* entrada_act = list_get(listaTLB, i);
-				if(entrada_menos_usada == NULL || entrada_act-> contadorLRU < entrada_menos_usada->contadorLRU){
-					
-				}
+				if(entrada_menos_usada == NULL || entrada_act->contadorLRU < entrada_menos_usada->contadorLRU){
+					entrada_menos_usada = entrada_act;
+				}				
+			}
 
-				
+			if(entrada_menos_usada != NULL){ //reemplazo
+				entrada_menos_usada->PID = pid;
+				entrada_menos_usada->pagina = numero_Pagina;
+				entrada_menos_usada->marco = marco;
+				entrada_menos_usada->contadorLRU = LRU_counter++;
 			}
 		}
 	}
-	else   
-	{
-      	printf("Algoritmo de TLB no reconocido\n");
-    }*/
+	//else   
+	//{
+    //  	printf("Algoritmo de TLB no reconocido\n");
+    //}
 } 
 	
 // Función para enviar solicitud a la memoria para recibir el marco correspondiente al proceso

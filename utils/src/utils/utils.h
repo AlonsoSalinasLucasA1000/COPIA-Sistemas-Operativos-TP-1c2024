@@ -136,7 +136,7 @@ typedef struct
 	int pagina;
 	int marco; //
 	//si se necesita se puede agrgar campos extras
-	//int contadorLRU;  //agregado reciente para LRU
+	int contadorLRU;  //agregado reciente para LRU
 } TLB;
 
 typedef struct 
