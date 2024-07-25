@@ -77,7 +77,7 @@ void entradasalida_escuchar_memoria (){
 			recv(fd_memoria,paquete->buffer->stream, paquete->buffer->size,0);
 			switch (cod_op) {
 			case STDOUT_TOPRINT:
-				//
+				printf("Entramos acá adentro reyes\n");
 				char* text_to_print = malloc(paquete->buffer->size);
 				text_to_print = paquete->buffer->stream;
 				printf("%s\n",text_to_print);

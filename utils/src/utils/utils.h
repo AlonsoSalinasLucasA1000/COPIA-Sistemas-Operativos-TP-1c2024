@@ -56,7 +56,8 @@ typedef enum
 	NUEVOPID,
 	FINALIZAR_PROCESO,
 
-	TAMPAGINA //tamaño de pagina
+	TAMPAGINA, //tamaño de pagina
+	COPY_STRING
 }op_code;
 
 

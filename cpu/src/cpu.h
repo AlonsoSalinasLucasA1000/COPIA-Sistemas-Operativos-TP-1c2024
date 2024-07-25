@@ -307,7 +307,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 			dir_fisica = retorno_TLB->marco * *TAM_PAGINA + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
-			log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
+			//log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina );
 			enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
 
 			//printf("Llegué hasta antes del semaforo\n");
@@ -648,6 +648,52 @@ bool esRegistroUint32(char* registro)
 		}
 	}
 	return to_ret;
+}
+
+void enviarDirecciones(int direccion_origen, int direccion_destino)
+{
+	//preparamos la primera direccion
+	int* d1_to_send = malloc(sizeof(int));
+	*d1_to_send = direccion_origen;
+
+	//preparamos la segunda direccion
+	int* d2_to_send = malloc(sizeof(int));
+	*d2_to_send = direccion_destino;
+
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(int)*2;
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, d1_to_send, sizeof(int));
+	buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset, d2_to_send, sizeof(int));
+
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = COPY_STRING;
+    paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
 }
 
 void ejecutar_proceso(PCB* proceso)
@@ -1424,6 +1470,34 @@ void ejecutar_proceso(PCB* proceso)
 				
 		 	}
 		 }
+
+
+		//rehacemos en esta parte copy string
+		 if ( strcmp(instruccion_split[0], "COPY_STRING") == 0)
+		{
+			//debemos obtener la cantidad de bytes
+			int bytes_a_copiar = atoi(instruccion_split[1]);
+			direcciones_fisicas = mmu(proceso->registro.SI, proceso, bytes_a_copiar);
+			t_list* direcciones_fisicas_destino = mmu(proceso->registro.DI, proceso, bytes_a_copiar);
+			
+			//vamos enviando ambas direcciones y memoria las irá copiando
+			for(int i = 0; i < bytes_a_copiar; i++)
+			{
+				//enviamos a memoria dos enteros
+				int d1 = list_get(direcciones_fisicas,i);
+				printf("El destino a enviar es: %d\n",d1);
+				int d2 = list_get(direcciones_fisicas_destino,i);
+				printf("El destino a enviar es: %d\n",d2);
+				enviarDirecciones(d1, d2);
+				//esperamos a recibir la señal para continuar
+				sem_wait(&sem_escritura);
+			}
+			
+			printf("Copia finalizada\n");
+		} 
+
+
+
 /*
 		//CASO DE TENER UNA INSTRUCCION COPY_STRING (Tamaño) tamaño = cantidad de bytes a copiar
 		//Toma del string apuntado por el registro SI y copia la cantidad de bytes indicadas en el 
@@ -1645,7 +1719,7 @@ void cpu_escuchar_memoria (){
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
 			paquete->buffer->stream = malloc(paquete->buffer->size);
 			
-			if( cod_op != 8 && cod_op != 20 && cod_op != 21 && cod_op != 28) 		//los cod_op reciben datos de tipo ENTERO
+			if( cod_op != 8 && cod_op != 20 && cod_op != 21 && cod_op != 28 && cod_op != 29) 		//los cod_op reciben datos de tipo ENTERO
 			{
 				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			}
@@ -1682,6 +1756,11 @@ void cpu_escuchar_memoria (){
 				break;
 			case ESCRITO:
 				printf("Teoricamente se ha escrito el valor en la direccion fisica\n");
+				sem_post(&sem_escritura);
+				//
+				break;
+			case COPY_STRING:
+				printf("Teoricamente el valor se ha copiado correctamente\n");
 				sem_post(&sem_escritura);
 				//
 				break;

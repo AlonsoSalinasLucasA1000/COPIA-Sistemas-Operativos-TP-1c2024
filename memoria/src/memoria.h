@@ -111,20 +111,20 @@ void memoria_escuchar_cpu (){
 				//desearializamos lo recibido
 				
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
-				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
-				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
+				//printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
+				//printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				
 				sem_wait(&protect_list_procesos);
 				ProcesoMemoria* datos = encontrarProceso(listProcesos,proceso->PID);
 				sem_post(&protect_list_procesos);
-				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
-				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
+				//printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
+				//printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
 
 				//leemos la linea indicada por el PC
 			    char* instruccion = abrir_archivo(datos->path, proceso->PC); 
-				printf("Enviaremos a la cpu: %s\n",instruccion); 
+				//printf("Enviaremos a la cpu: %s\n",instruccion); 
 				//enviamos, sin antes dormir el tiempo esperado
-				printf("Me voy a mimir, buenas noches\n");
+				//printf("Me voy a mimir, buenas noches\n");
 				sleep(RETARDO_RESPUESTA/1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
 				break;
@@ -415,6 +415,19 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				enviar_mensaje_cpu_memoria(to_send,fd_cpu,ESCRITO);
 				free(to_send);
 				
+				break;
+			case COPY_STRING:
+				//
+				int* df_origen = paquete->buffer->stream;
+				int* df_destino = paquete->buffer->stream + sizeof(int);
+
+				printf("Ha llegado la siguiente dirección origen: %d\n",*df_origen);
+				printf("Ha llegado la siguiente dirección destino: %d\n", *df_destino);	
+
+				memmove(espacio_usuario + *df_destino, espacio_usuario + *df_origen,1);
+				int* random = malloc(sizeof(int));
+				enviarEntero(random,fd_cpu,COPY_STRING);
+				free(random);
 				break;
 			case PAQUETE:
 				//
