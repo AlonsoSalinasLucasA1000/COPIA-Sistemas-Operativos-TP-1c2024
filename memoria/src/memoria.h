@@ -488,7 +488,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 		}
 }
 
-void enviar_texto_io(char* text, int fd_io)
+void enviar_texto_io(char* text, int fd_io, op_code codigo_operacion)
 {
 	int* tamanio = malloc(sizeof(int));
 	*tamanio = strlen(text)+1;
@@ -506,7 +506,7 @@ void enviar_texto_io(char* text, int fd_io)
 
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
     //Podemos usar una constante por operación
-    paquete->codigo_operacion = STDOUT_TOPRINT;
+    paquete->codigo_operacion = codigo_operacion;
 	paquete->buffer = buffer;
 
 	//Empaquetamos el Buffer
@@ -608,7 +608,7 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 
 				printf("El texto quedó de la siguiente forma: %s\n", text);
 				
-				enviar_texto_io(text,*fd_io);
+				enviar_texto_io(text,*fd_io,STDOUT_TOPRINT);
 
 				// liberar memoria
 				free(text);
@@ -623,6 +623,39 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				
 				list_add(listStdin,new_io_dialfs);
 				//
+				break;
+			case IO_FS_WRITE:
+				//
+				int* tamanio_out_FS = (int*)paquete->buffer->stream;
+				printf("El tamanio es el siguiente %d\n", *tamanio_out_FS);
+
+				t_list* direcciones_fisicas_FS = list_create();
+				for (int i = 1; i < *(tamanio_out_FS) + 1; i++) {
+					list_add(direcciones_fisicas_FS, paquete->buffer->stream + sizeof(int) * i);
+				}
+
+				for (int i = 0; i < list_size(direcciones_fisicas_FS); i++) {
+					int* df_FS = list_get(direcciones_fisicas_FS, i);
+					printf("Las direcciones fisicas que he obtenido es: %d\n", *df_FS);
+				}
+
+				char* text_FS = (char*)malloc(*tamanio_out_FS + 1); // +1 para el carácter nulo
+				text_FS[0] = '\0'; // inicializar la cadena
+
+				for (int i = 0; i < *tamanio_out_FS; i++) {
+					int* df_FS = list_get(direcciones_fisicas_FS, i);
+					char caracter = *(char*)(espacio_usuario + *df_FS);
+					text_FS[i] = caracter; // asignar directamente el carácter
+				}
+				text_FS[*tamanio_out_FS] = '\0'; // añadir el carácter nulo al final
+
+				printf("El texto quedó de la siguiente forma: %s\n", text_FS);
+
+				enviar_texto_io(text_FS, *fd_io,IO_FS_WRITE);
+
+				// liberar memoria
+				free(text_FS);
+				list_destroy(direcciones_fisicas_FS);
 				break;
 			case MENSAJE:
 				//

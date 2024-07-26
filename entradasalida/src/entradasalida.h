@@ -42,6 +42,8 @@ void* espacio_bit_map;
 
 t_bitarray* bit_map;
 
+char* dialfs_to_write;
+
 void levantarArchivoDeBloques() {
 
 	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
@@ -306,7 +308,7 @@ void entradasalida_escuchar_memoria (){
 			
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);	
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			if( cod_op == 14 ) //ojo con este hardcodeo, de añadir mas codigos de operacion pueden modificarse
+			if( cod_op == 14 || cod_op == 33) //ojo con este hardcodeo, de añadir mas codigos de operacion pueden modificarse
 			{
 				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			}
@@ -324,6 +326,15 @@ void entradasalida_escuchar_memoria (){
 				printf("Hola, entré a despertar\n");
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 			break;
+			case IO_FS_WRITE:
+				//
+				printf("Entramos acá adentro reyes\n");
+				dialfs_to_write = malloc(paquete->buffer->size);
+				dialfs_to_write = paquete->buffer->stream;
+				printf("%s\n",dialfs_to_write);
+				sem_post(&sem_activacion);
+				sem_wait(&sem_activacion);
+				break;
 			case MENSAJE:
 				//
 				break;
@@ -343,10 +354,100 @@ void entradasalida_escuchar_memoria (){
 		}	
 }
 
+void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamanio, op_code codigo_operacion)
+{
+
+	//Preparamos el buffer
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	buffer->offset = 0;
+	buffer->size = sizeof(int)*(list_size(direcciones_fisicas)+1);
+	buffer->stream = malloc(buffer->size);
+
+	//vamos reservando la memoria
+	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
+    buffer->offset += sizeof(int);
+
+	for(int i = 0; i < list_size(direcciones_fisicas); i++)
+	{
+		memcpy(buffer->stream + buffer->offset,list_get(direcciones_fisicas,i), sizeof(int));
+    	buffer->offset += sizeof(int);
+		int* df = list_get(direcciones_fisicas,i);
+		printf("Mandaremos la siguiente direccion física: %d\n",*df);
+	}
+
+	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigo_operacion;
+	paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
 void escribirArchivo(char** instruccion)
 {
+	//interpretamos lo datos
+	//IO_FS_WRITE FS Goku.config AX ECX EDX 0 14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+
+//puntero del archivo
+	int pointer = atoi(instruccion[6]);
+//cantidad de direcciones físicas
+	int cant_df = atoi(instruccion[7]);
+	
 	//pasamos la instruccion completa y la interpretamos por este medio
+	/*
 	printf("Todavia no hago nada CRACK\n");
+	for (int i = 0; i < cant_df; i++) 
+	{
+		printf("ESTOY ITERANDO\n");
+		int* df_to_send_in = malloc(sizeof(int)); //liberar
+		*df_to_send_in = atoi(instruccion_partida_in[5 + i]);
+		char* c_in = malloc(sizeof(char)); //liberar
+		*c_in = leido_in[i];
+		new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
+		free(c_in);
+		//free(df_to_send_in);
+	}
+	*/
+	t_list* lista_direcciones = list_create();
+	for(int i = 0; i < cant_df; i++)
+	{
+		int* df_out = malloc(sizeof(int));
+		*df_out = atoi(instruccion[8+i]);
+		list_add(lista_direcciones,df_out);
+	}
+
+	int* tamanio_fs = malloc(sizeof(int));
+	*tamanio_fs = cant_df;
+	new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_fs,IO_FS_WRITE);
+	free(tamanio_fs);
+	list_clean_and_destroy_elements(lista_direcciones,free);
+	printf("ESTOY ITERANDO\n");
+
+	sem_wait(&sem_activacion);
+	char* a_escribir_en_archivo = malloc(strlen(dialfs_to_write)+1);
+	strcpy(a_escribir_en_archivo,dialfs_to_write);
+	free(dialfs_to_write);
+
+	sem_post(&sem_activacion);
+	//llegamos acá y tenemos
+	printf("%s\n",a_escribir_en_archivo);
+	printf("No se qué más hacer jajajaj\n");
+
 }
 
 void enviar_stdin_to_write_memoria(int* direccionFisica, int* tamanio,char* text)
@@ -458,49 +559,6 @@ void enviar_stdout_to_print_memoria(int* direccionFisica, int* tamanio)
     free(paquete);
 }
 
-void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamanio)
-{
-
-	//Preparamos el buffer
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-	buffer->offset = 0;
-	buffer->size = sizeof(int)*(list_size(direcciones_fisicas)+1);
-	buffer->stream = malloc(buffer->size);
-
-	//vamos reservando la memoria
-	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
-    buffer->offset += sizeof(int);
-
-	for(int i = 0; i < list_size(direcciones_fisicas); i++)
-	{
-		memcpy(buffer->stream + buffer->offset,list_get(direcciones_fisicas,i), sizeof(int));
-    	buffer->offset += sizeof(int);
-		int* df = list_get(direcciones_fisicas,i);
-		printf("Mandaremos la siguiente direccion física: %d\n",*df);
-	}
-
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = STDOUT_TOPRINT;
-	paquete->buffer = buffer;
-
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
 
 void entradasalida_escuchar_kernel (){
 	bool control_key = 1;
@@ -604,7 +662,7 @@ void entradasalida_escuchar_kernel (){
 				printf("CHECKPOINT DEL OUT 3\n");
 
 				//una ves tengamos la lista hecha habra que empaquetarlo de alguna forma
-				new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_out);
+				new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_out,STDOUT_TOPRINT);
 
 				printf("CHECKPOINT DEL OUT 3\n");
 				//free(tamanio_instruccion_out);

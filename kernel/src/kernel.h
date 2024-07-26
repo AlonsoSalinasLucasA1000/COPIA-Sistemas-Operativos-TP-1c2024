@@ -992,6 +992,11 @@ void kernel_escuchar_cpu ()
 						{
 							// Si está ocupada, añadimos el proceso a la lista de bloqueados
 							printf("La IO está ocupada, se bloqueará en su lista propia\n");
+							Instruccion_io* to_block = malloc(sizeof(Instruccion_io));
+							to_block->proceso = instruccion_io_fs->proceso;
+							to_block->tam_instruccion = instruccion_io_fs->tam_instruccion;
+							to_block->instruccion = malloc(to_block->tam_instruccion);
+							strcpy(to_block->instruccion,instruccion_io_fs->instruccion);
 							list_add(io_fs->procesos_bloqueados, instruccion_io_fs);
 						}
 						else
@@ -1032,6 +1037,7 @@ void kernel_escuchar_cpu ()
 										}
 									}
 								}
+								string_array_destroy(instruccion_partida_dialfs);
 							}
 						}
 					}
@@ -1137,6 +1143,7 @@ void modificar_io_en_listas(int fd_io)
 				if( list_size(to_ret->procesos_bloqueados) > 0 )
 				{
 					Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
+					new_ejecutar_interfaz_stdin_stdout(proceso_bloqueado_io->instruccion,DIALFS,fd_io,proceso_bloqueado_io->proceso.PID);
 				}
 			}
 		}
