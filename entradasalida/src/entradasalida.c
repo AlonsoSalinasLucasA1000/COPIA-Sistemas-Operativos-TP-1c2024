@@ -4,6 +4,15 @@
 
 int main(int argc, char* argv[]) {
 
+/*
+//prueba
+t_config* a = config_create("/home/utnso/dialfs/Goku.config");
+char cantidad_string[32];
+sprintf(cantidad_string,"%d",cantidad);
+config_set_value(metadata_archivo,"TAMANIO_ARCHIVO",cantidad_string)
+config
+*/
+
 //Ingresamos por consola los parametros iniciales NOMBRE y path del config
 char* datosIniciales;
 datosIniciales = readline("> "); //
@@ -28,6 +37,7 @@ if (entradasalida_config == NULL)
 }
 
 sem_init(&sem_activacion,0,1);
+lista_archivos = list_create();
 
 TIPO_INTERFAZ = config_get_string_value (entradasalida_config , "TIPO_INTERFAZ" );
 TIEMPO_UNIDAD_TRABAJO = config_get_int_value (entradasalida_config , "TIEMPO_UNIDAD_TRABAJO" );;
@@ -92,9 +102,13 @@ if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
 //si la interfaz es un dialFS, debemos crearle un archivo de bloques, bitmap y metadata, a medida que se vayan creando archivos
 if( strcmp(TIPO_INTERFAZ, "DIALFS") == 0 )
 {
-	t_list* lista_archivos = list_create();
 	levantarArchivoDeBloques();
 	levantarArchivoBitMap();
+
+	//espacio_bit_map = malloc(BLOCK_COUNT/8);
+	//bit_map = bitarray_create_with_mode(espacio_bit_map, BLOCK_COUNT/8, LSB_FIRST);
+
+
 }
 
 

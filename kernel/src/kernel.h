@@ -155,8 +155,8 @@ t_list* generarRecursos(char* recursos, char* instancias_recursos)
 	removerCorchetes(recursos);
 	removerCorchetes(instancias_recursos);
 	//los separamos por las comas
-	char** recursos_separados = string_split(recursos,",");
-	char** instancias_recursos_separados = string_split(instancias_recursos,",");
+	char** recursos_separados = string_split(recursos,",");   //
+	char** instancias_recursos_separados = string_split(instancias_recursos,","); //
 	//vamos creando los Recurso y añadimos a la lista
 	int i = 0;
 	while( recursos_separados[i] != NULL )
@@ -1033,7 +1033,7 @@ void kernel_escuchar_cpu ()
 						sem_post(&sem_blocked);
 
 						sem_wait(&sem_procesos);
-						PCB* actualizado_fs = encontrarProceso(lista_procesos, instruccion_io_fs->proceso.PC);
+						PCB* actualizado_fs = encontrarProceso(lista_procesos, instruccion_io_fs->proceso.PID);
 						actualizado_fs->estado = EXIT;
 						sem_post(&sem_procesos);
 

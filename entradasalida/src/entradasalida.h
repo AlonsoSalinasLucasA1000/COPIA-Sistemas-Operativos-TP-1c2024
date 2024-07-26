@@ -71,91 +71,198 @@ void levantarArchivoDeBloques() {
         exit(EXIT_FAILURE);
     }
 	
+	close(fd_bloque);
+	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
     printf("Archivo mapeado correctamente\n");
 }
 
-void levantarArchivoBitMap()
-{
-	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
-	strcpy(path_copia,PATH_BASE_DIALFS);
+void levantarArchivoBitMap() {
+    // Asignamos memoria suficiente para path_copia
+    char* path_copia = malloc(strlen(PATH_BASE_DIALFS) + strlen("/bitmap.dat") + 1);
+    if (path_copia == NULL) {
+        perror("Error al asignar memoria");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(path_copia, PATH_BASE_DIALFS);
     strcat(path_copia, "/bitmap.dat");
 
     printf("%s\n", path_copia);
     printf("Hola, entré acá\n");
 
     // Abre el archivo en modo lectura/escritura
-	fd_bitmap = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    fd_bitmap = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd_bitmap == -1) {
         perror("Error al abrir el archivo");
+        free(path_copia);
         exit(EXIT_FAILURE);
     }
-	// Aseguramos que el archivo tenga el tamaño adecuado
-    if (ftruncate(fd_bitmap, BLOCK_COUNT/8) != 0) {
+
+    // Aseguramos que el archivo tenga el tamaño adecuado
+    int tamanio_bit_map = BLOCK_COUNT / 8;
+    if (ftruncate(fd_bitmap, tamanio_bit_map) != 0) {
         perror("Error ajustando el tamaño del archivo");
+        close(fd_bitmap);
+        free(path_copia);
         exit(EXIT_FAILURE);
     }
 
-	int tamanio_bit_map = BLOCK_COUNT/8;
-	int* random = malloc(sizeof(int));
-
-	// Mapeamos el archivo en memoria
+    // Mapeamos el archivo en memoria
     espacio_bit_map = mmap(NULL, tamanio_bit_map, PROT_WRITE, MAP_SHARED, fd_bitmap, 0);
     if (espacio_bit_map == MAP_FAILED) {
         perror("Error en mmap");
+        close(fd_bitmap);
+        free(path_copia);
         exit(EXIT_FAILURE);
     }
 
+    // Creamos el bitarray
+    bit_map = bitarray_create_with_mode(espacio_bit_map, tamanio_bit_map, LSB_FIRST);
+	for(int i = 0; i < tamanio_bit_map; i++)
+	{
+		bitarray_clean_bit(bit_map,i);
+	}
+    if (bit_map == NULL) {
+        perror("Error creando el bitarray");
+        munmap(espacio_bit_map, tamanio_bit_map);
+        close(fd_bitmap);
+        free(path_copia);
+        exit(EXIT_FAILURE);
+    }
 
-	bit_map = bitarray_create_with_mode(random,tamanio_bit_map,LSB_FIRST);
-    // Liberamos el mapeo y cerramos el archivo
     printf("Archivo mapeado correctamente\n");
+
+    // Liberamos la memoria asignada para path_copia
+    free(path_copia);
 }
+
+
 
 void crear_archivo(char* nombre)
 {
-	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
-	strcpy(path_copia,PATH_BASE_DIALFS);
+	char* path_copia = malloc(strlen(PATH_BASE_DIALFS) + 1 + strlen(nombre) + 1);
+	strcpy(path_copia, PATH_BASE_DIALFS);
 	strcat(path_copia, "/");
-    strcat(path_copia, nombre);
+	strcat(path_copia, nombre);
 
 	int fd_random = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	
 	//Creamos el archivo y lo añadimos a la lista
 	Archivo* archivo = malloc(sizeof(Archivo));
-	archivo->path_length = strlen(path_copia)+1;
-	archivo->path = path_copia;
+	archivo->path_length = strlen(path_copia) + 1;
+	archivo->path = malloc(archivo->path_length);
+	strcpy(archivo->path, path_copia);
 	archivo->fd_archivo = fd_random;
-	list_add(lista_archivos,archivo);
+	list_add(lista_archivos, archivo);
 
 	//le asignamos un bloque:
 	int i = 0;
-	while( i < BLOCK_COUNT)
+	bool finished = false;
+	while( i < BLOCK_COUNT && finished != true)
 	{
 		int value = bitarray_test_bit(bit_map,i); //obtenemos el valor actual de dicho bit array en la posición i
+		printf("El valor actual es: %d\n",value);
 		if( value == 0 )
 		{
-			//si es cero, está libre, así que lo ocupamos
+			//si es cero, está libre, así que lo ocupamos y actualizamos el archivo de bitmap
 			bitarray_set_bit(bit_map, i);
+			memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+			msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+			finished = true;
+			i--;
 		}
+		printf("valor de i es: %d\n",i);
 		i++;
 	}
 
 	//escribimos en el archivo los datos obtenidos
-	char* to_write = "BLOQUE_INICIAL=\nTAMANIO_ARCHIVO=";
-	void* mapeo = mmap(NULL,strlen(to_write)+1, PROT_WRITE, MAP_SHARED, fd_random, 0);
+	char first_block[12]; // 12 es suficiente para almacenar cualquier entero de 32 bits
+    sprintf(first_block, "%d", i);
+	char to_write[256]; // Ajusta el tamaño según sea necesario
+    snprintf(to_write, sizeof(to_write), "BLOQUE_INICIAL=%s\nTAMANIO_ARCHIVO=0\n", first_block);
 	ftruncate(fd_random, strlen(to_write)+1);
-	memcpy(mapeo,to_write,strlen(mapeo)+1);
+	void* mapeo = mmap(NULL,strlen(to_write)+1, PROT_WRITE, MAP_SHARED, fd_random, 0);
+	memcpy(mapeo,to_write,strlen(to_write)+1);
 	msync(mapeo,strlen(mapeo)+1,MS_SYNC);
-	//msync (void *__addr, size_t __len, int __flags);
 
-	t_config* metadata = config_create(path_copia);
-	char* first_block;
-	sprintf(first_block,"%d",i);
-	config_set_value(metadata,"BLOQUE_INICIAL",first_block);
-	config_set_value(metadata,"TAMANIO_ARCHIVO","0");
-
-	config_destroy(metadata);
 	munmap(mapeo,strlen(to_write)+1);
+	free(path_copia);
+}
+
+Archivo* encontrar_archivo(t_list* lista_archivos, char* nombre)
+{
+	Archivo* to_ret;
+	for(int i = 0; i < list_size(lista_archivos); i++)
+	{
+		Archivo* a = list_get(lista_archivos,i);
+		char** path_partido = string_split(a->path,"/");
+		if( strcmp(path_partido[4], nombre) == 0 )
+		{
+			to_ret = a;
+			return to_ret;
+		}
+		string_array_destroy(path_partido);
+	}
+	to_ret = NULL;
+	return to_ret;
+}
+
+bool esPosibleTruncar(int base, int cantidad)
+{
+	printf("La base encontrada es: %d\n",base);
+	printf("La cantidad a aumentar es: %d\n",cantidad);
+	bool to_Ret = true;
+	for(int i = base+1; i < cantidad+base; i++)
+	{
+		int value = bitarray_test_bit(bit_map,i);
+		printf("El valor del bit es %d\n",value);
+		if( value == 0 )
+		{
+			to_Ret = true;
+		}
+		else
+		{
+			to_Ret = false;
+			return to_Ret;
+		}
+	}
+	return to_Ret;
+}
+
+void truncarArchivo(char* nombre, int cantidad)
+{
+	//debemos obtener el archivo y su bloque base
+	Archivo* archivo = encontrar_archivo(lista_archivos, nombre);
+	t_config* metadata_archivo = config_create(archivo->path);
+	int base = config_get_int_value(metadata_archivo,"BLOQUE_INICIAL");
+	if( esPosibleTruncar(base,cantidad) )
+	{
+		//realizamos la asignación
+		printf("Hay espacio suficiente, PODEMOS TRUNCAR\n");
+		//se lleva a cabo la asignación
+		for(int i = base+1; i < cantidad+base; i++)
+		{
+			int value = bitarray_test_bit(bit_map,i);
+			printf("El valor del bit es %d\n",value);
+			if( value == 0 )
+			{
+				bitarray_set_bit(bit_map,i);
+			}
+			//guardamos
+			memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+			msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+			
+			//escribimos en el config el nuevo valor
+		}
+		char cantidad_string[32];
+		sprintf(cantidad_string,"%d",cantidad+base);
+		config_set_value(metadata_archivo,"TAMANIO_ARCHIVO",cantidad_string);
+		config_save_in_file(metadata_archivo,archivo->path);
+	}
+	else
+	{
+		//introducir lógica de compactación
+		printf("Desafortunadamente no hay espacio suficiente, NO PODEMOS TRUNCAR\n");
+	}
 }
 
 void avisar_despertar_kernel()
@@ -234,6 +341,12 @@ void entradasalida_escuchar_memoria (){
 			free(paquete->buffer);
 			free(paquete);
 		}	
+}
+
+void escribirArchivo(char** instruccion)
+{
+	//pasamos la instruccion completa y la interpretamos por este medio
+	printf("Todavia no hago nada CRACK\n");
 }
 
 void enviar_stdin_to_write_memoria(int* direccionFisica, int* tamanio,char* text)
@@ -515,19 +628,44 @@ void entradasalida_escuchar_kernel (){
 				break;
 			case IO_FS_CREATE:
 				// DESEMPAQUETAMOS
-				int* tamanio_instruccion_fs = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_fs, paquete->buffer->stream, sizeof(int));
-				char* instruccion_fs = malloc(*tamanio_instruccion_fs);
-				memcpy(instruccion_fs, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs);
-				char** instruccion_fs_partida = string_split(instruccion_fs," "); 
+				int* tamanio_instruccion_fs_create = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs_create, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs_create = malloc(*tamanio_instruccion_fs_create);
+				memcpy(instruccion_fs_create, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_create);
+				char** instruccion_fs_partida_create = string_split(instruccion_fs_create, " ");
 
 				// Mostremos por pantalla
-				printf("La instruccion que ha llegado es: %s\n", instruccion_fs);
-				crear_archivo(instruccion_fs_partida[2]);
-
+				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_create);
+				crear_archivo(instruccion_fs_partida_create[2]);
+				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
-			case MENSAJE:
-				//
+			case IO_FS_TRUNCATE:
+				int* tamanio_instruccion_fs_truncate = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs_truncate, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs_truncate = malloc(*tamanio_instruccion_fs_truncate);
+				memcpy(instruccion_fs_truncate, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_truncate);
+				char** instruccion_fs_partida_truncate = string_split(instruccion_fs_truncate, " ");
+
+				// Mostremos por pantalla
+				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_truncate);
+				// Realiza la operación de truncamiento aquí (por ejemplo, llamando a una función)
+				truncarArchivo(instruccion_fs_partida_truncate[2], atoi(instruccion_fs_partida_truncate[3]));
+				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
+				break;
+			break;
+			case IO_FS_WRITE:
+
+				int* tamanio_instruccion_fs_write = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs_write, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs_write = malloc(*tamanio_instruccion_fs_write);
+				memcpy(instruccion_fs_write, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_write);
+				char** instruccion_fs_partida_write = string_split(instruccion_fs_write, " ");
+
+				// Mostremos por pantalla
+				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_write);
+				// Realiza la operación de escritura aquí (por ejemplo, llamando a una función)
+				escribirArchivo(instruccion_fs_partida_write);
+				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			case PAQUETE:
 				//
