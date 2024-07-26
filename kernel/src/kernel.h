@@ -1211,7 +1211,7 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 				proceso_awaken->estado = READY;
 
 				sem_wait(&sem_procesos);
-				PCB* actualizado = encontrarProceso(lista_procesos,proceso_awaken->PID);
+				PCB* actualizado = encontrarProceso(lista_procesos,(uint32_t)*pid_io);
 				actualizado->estado = READY;
 				sem_post(&sem_procesos);
 
