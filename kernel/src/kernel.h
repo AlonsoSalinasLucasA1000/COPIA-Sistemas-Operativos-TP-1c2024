@@ -625,14 +625,18 @@ void kernel_escuchar_cpu ()
 					{
 						//de estar ocupado añado el proceso a la lista de este
 						printf("La IO está ocupada, se bloqueará en su lista propia\n");
-						list_add(io_stdin->procesos_bloqueados,instruccion_io_stdin);
+						Instruccion_io* to_block = malloc(sizeof(Instruccion_io));
+						to_block->proceso = instruccion_io_stdin->proceso;
+						to_block->tam_instruccion = instruccion_io_stdin->tam_instruccion;
+						to_block->instruccion = malloc(to_block->tam_instruccion);
+						strcpy(to_block->instruccion,instruccion_io_stdin->instruccion);
+						list_add(io_stdin->procesos_bloqueados,to_block);
 					}
 					else
 					{
 						io_stdin->ocupado = true;
 						printf("El fd de este IO es %d\n",io_stdin->fd_cliente);
 						new_ejecutar_interfaz_stdin_stdout(instruccion_io_stdin->instruccion,STDIN,io_stdin->fd_cliente,instruccion_io_stdin->proceso.PID);
-						free(instruccion_io_stdin);
 					}
 				}
 				else
@@ -656,13 +660,12 @@ void kernel_escuchar_cpu ()
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
-					free(instruccion_io_stdin);
 				}
 
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
-				//free(instruccion_io_stdin); //ESTE FREE ES PELIGROSÍSIMO, ESTAMOS BORRANDO UN DATO DE LA LISTA DE BLOQUEADOS DEL PROCESO
+				free(instruccion_io_stdin); //ESTE FREE ES PELIGROSÍSIMO, ESTAMOS BORRANDO UN DATO DE LA LISTA DE BLOQUEADOS DEL PROCESO
 				break;
 			//case FS_CREATE:
 				//
