@@ -1110,7 +1110,7 @@ void modificar_io_en_listas(int fd_io)
 			if( list_size(to_ret->procesos_bloqueados) > 0 )
 			{
 				Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
-				ejecutar_interfaz_stdinstdout(proceso_bloqueado_io->instruccion,STDIN,fd_io,proceso_bloqueado_io->proceso.PID);
+				new_ejecutar_interfaz_stdin_stdout(proceso_bloqueado_io->instruccion,STDIN,fd_io,proceso_bloqueado_io->proceso.PID);
 			}
 		}
 		else
@@ -1122,7 +1122,7 @@ void modificar_io_en_listas(int fd_io)
 				if( list_size(to_ret->procesos_bloqueados) > 0 )
 				{
 					Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
-					ejecutar_interfaz_stdinstdout(proceso_bloqueado_io->instruccion,STDOUT,fd_io,proceso_bloqueado_io->proceso.PID);
+					new_ejecutar_interfaz_stdin_stdout(proceso_bloqueado_io->instruccion,STDOUT,fd_io,proceso_bloqueado_io->proceso.PID);
 				}
 			}
 			else
