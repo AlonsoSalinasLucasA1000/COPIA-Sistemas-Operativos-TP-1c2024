@@ -127,6 +127,8 @@ void memoria_escuchar_cpu (){
 				//printf("Me voy a mimir, buenas noches\n");
 				sleep(RETARDO_RESPUESTA/1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
+				free(instruccion);
+				free(proceso);
 				break;
 
 			case RESIZE:
@@ -637,6 +639,9 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
+		free(paquete->buffer->stream);
+		free(paquete->buffer);
+		free(paquete);
 		}
 }
 
@@ -740,6 +745,7 @@ char* abrir_archivo(char* path, int PC)
 	}
 
     free(content);
+	free(newContent);
 	fclose(file);
 	return to_ret;
 }
@@ -808,6 +814,8 @@ void memoria_escuchar_kernel (){
 					list_destroy(dato->TablaDePaginas);
 					free(dato->path);
 					free(dato);
+					free(proceso);
+
 					printf("Proceso borrado con exito\n");
 					break;
 			case PAQUETE:

@@ -124,6 +124,7 @@ void enviar_pcb_memoria(int PID, int PC)
 	to_send->path_length = 1;
 	to_send->path = "";
 	enviarPCB (to_send, fd_memoria,PROCESO);
+	free(to_send);
 
 }
 
@@ -821,10 +822,10 @@ void ejecutar_proceso(PCB* proceso)
 			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,GENERICA);
 			
 			//se bloquea el proceso, devolvemos al kernel
-			free(instruccionActual);
+			
 			instruccionActual = malloc(1);
 			instruccionActual = "";
-
+			free(instruccionActual);
 			/*
 			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
 			//usleep(1000);
@@ -1573,6 +1574,8 @@ void ejecutar_proceso(PCB* proceso)
 		printf("------------------------------\n");
 		sem_post(&sem_exe_a);
 		sem_wait(&sem_exe_b);
+		free(instruccion);
+		free(instruccion_split);
 	}
 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
 }
@@ -1714,6 +1717,7 @@ void cpu_escuchar_memoria (){
 				//printf("La instruccion que llego fue: %s\n",instruccionActual);
 				//instruccionActual = paquete->buffer->stream;
 				sem_post(&sem_exe_b);
+				free(instruccionActual);//nuevo
 				break;
 			case ASIGNACION_CORRECTA:
 				printf("Voy a avisarle a ejecutar proceso que puede seguir\n");

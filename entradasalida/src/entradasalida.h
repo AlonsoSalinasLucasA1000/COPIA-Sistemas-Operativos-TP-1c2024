@@ -416,6 +416,7 @@ void entradasalida_escuchar_kernel (){
 				//DEVOLVER AL KERNEL PARA DESPERTAR
 				//avisar_despertar_kernel();
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
+				free(unidadesDeTrabajo);
 				break;
 			case STDIN:
 				// DESEMPAQUETAMOS
@@ -625,7 +626,11 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
     send(fd_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
-    //free(to_send);
+    free(to_send->path);
+	free(to_send->path_length);
+    free(to_send->nombre);
+    free(to_send->nombre_length);
+    free(to_send);
 	free(a_enviar);
     free(paquete->buffer->stream);
     free(paquete->buffer);

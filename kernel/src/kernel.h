@@ -167,8 +167,22 @@ t_list* generarRecursos(char* recursos, char* instancias_recursos)
 		to_add->listBloqueados = list_create();
 		to_add->pid_procesos = list_create();
 		list_add(ret,to_add);
-		i++;
+		i++;	
+		free(to_add->pid_procesos);
+		free(to_add->listBloqueados);
+		free(to_add->instancias);
+		free(to_add);
 	}
+	for (int s = 0; recursos_separados[s] != NULL; ++s) {
+    	free(recursos_separados[s]);
+	}
+	free(recursos_separados);
+
+	for (int s = 0; instancias_recursos_separados[s] != NULL; ++s) {
+		free(instancias_recursos_separados[s]);
+	}
+	free(instancias_recursos_separados);
+	
 	return ret;
 }
 
@@ -184,6 +198,8 @@ void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz, int f
 
 	enviarEntero(pid_io,fd_io,NUEVOPID);
 	enviarEntero(unidadesDeTrabajo,fd_io,GENERICA);
+	free(unidadesDeTrabajo);
+	free(pid_io);
 }
 
 //Ejecuta tanto stdin como stdout
@@ -503,7 +519,7 @@ void kernel_escuchar_cpu ()
 				queue_push(cola_blocked, proceso_io);
 				sem_post(&sem_blocked);
 
-
+				free(proceso_io);
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);		
@@ -548,6 +564,8 @@ void kernel_escuchar_cpu ()
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);	
+
+				free(proceso_fin_de_quantum);
 				break;
 			case GENERICA:
 				
@@ -604,6 +622,8 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
+					free(instruccion_io_gen);
+					
 				break;
 			case STDIN:
 				//Deserializamos
@@ -660,7 +680,7 @@ void kernel_escuchar_cpu ()
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
-				free(instruccion_io_stdin);
+				string_array_destroy(instruccion_io_stdin);
 				break;
 			//case FS_CREATE:
 				//
@@ -813,6 +833,8 @@ void kernel_escuchar_cpu ()
 							Recurso* got = list_get(listRecursos,i);
 							printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
 						}
+						free(proceso_recurso);
+						free(pid);
 					}
 				}
 				else
@@ -838,6 +860,8 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
+					free(instruccion_recurso_wait);
+
 				}
 				
 				break;
@@ -913,6 +937,8 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = true;
 					sem_post(&sem_mutex_cpu_ocupada);
+					free(proceso_recurso);
+					free(instruccion_recurso_signal);
 					/*
 					if( strcmp(ALGORITMO_PLANIFICACION, "VRR") == 0 )
 					{
@@ -957,6 +983,7 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
+
 				}
 
 				break;
@@ -1387,6 +1414,7 @@ void iniciar_proceso(char* path)
 	//procesos_en_new++;
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);
+	free(pcb);
 }
 
 void finalizar_proceso (char* pid) {
@@ -1426,6 +1454,7 @@ void finalizar_proceso (char* pid) {
             int* pid_del_proceso = malloc(sizeof(int));
             *pid_del_proceso = proceso_a_terminar->PID;
             enviarEntero(pid_del_proceso, fd_cpu_interrupt, FINALIZAR_PROCESO);
+			free(pid_del_proceso);
             break;
         case BLOCKED:
             printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
@@ -1500,7 +1529,13 @@ void atender_instruccion (char* leido)
         log_error(kernel_logger, "Comando no reconocido, pero que paso el filtro ???");  
         exit(EXIT_FAILURE);
     }
-    string_array_destroy(comando_consola); 
+	
+	for (int i = 0; comando_consola[i] != NULL; ++i) {
+		free(comando_consola[i]);
+	}
+	free(comando_consola);
+
+    //string_array_destroy(comando_consola); 
 }
 
 void validarFuncionesConsola(char* leido)
@@ -1561,7 +1596,13 @@ void validarFuncionesConsola(char* leido)
 			}
 		}
 	 }
-	 string_array_destroy(valorLeido);
+	
+	for (int i = 0; valorLeido[i] != NULL; ++i) {
+		free(valorLeido[i]);
+	}
+	free(valorLeido);
+	
+	//string_array_destroy(valorLeido);
 }
 
 char* remove_last_two_chars(const char* str) {
@@ -1620,6 +1661,7 @@ void consolaInteractiva()
 		sem_post(&sem_ready);
 		*/
 	}
+	free(leido);
 }
 
 void mover_procesos_a_ready()
