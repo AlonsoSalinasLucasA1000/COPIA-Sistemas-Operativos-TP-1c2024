@@ -43,7 +43,7 @@ t_log* cpu_logger; //LOG ADICIONAL A LOS MINIMOS Y OBLIGATORIOS
 t_log* cpu_logs_obligatorios; //LOG OBLIGATORIO
 
 t_config* cpu_config;
-//t_config* 
+
 //creemos una variable global de instruccion actual
 char* instruccionActual;
 uint8_t* valor_leido;
@@ -822,7 +822,7 @@ void ejecutar_proceso(PCB* proceso)
 			enviar_instruccion_kernel(instruccion, instruccion_length,*proceso,GENERICA);
 			
 			//se bloquea el proceso, devolvemos al kernel
-			
+			free(instruccionActual);
 			instruccionActual = malloc(1);
 			instruccionActual = "";
 			free(instruccionActual);

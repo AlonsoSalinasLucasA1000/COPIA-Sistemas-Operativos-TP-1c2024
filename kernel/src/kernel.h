@@ -622,7 +622,8 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
-					free(instruccion_io_gen);
+					string_array_destroy(instruccion_io_gen);
+					string_array_destroy(io_gen);
 					
 				break;
 			case STDIN:
@@ -1398,7 +1399,6 @@ void iniciar_proceso(char* path)
 	enviarProcesoMemoria(proceso,fd_memoria);
 
 	//agrego el pcb a la cola new
-	
 	sem_wait(&sem_procesos);
 	list_add(lista_procesos,pcb);
 	printf("Agregué el proceso %d a la lista de procesos\n", pcb->PID);
@@ -1414,7 +1414,12 @@ void iniciar_proceso(char* path)
 	//procesos_en_new++;
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);
+	
+	free(pcb->path);
+	string_array_destroy(path);
 	free(pcb);
+	free(proceso->path);
+	free(proceso);
 }
 
 void finalizar_proceso (char* pid) {
@@ -1897,6 +1902,7 @@ void enviar_pcb_a_cpu()
 	{
 		interrumpir_por_quantum();
 	}
+	free(to_send);
 }
 
 void enviar_pcb_a_cpu_vrr()

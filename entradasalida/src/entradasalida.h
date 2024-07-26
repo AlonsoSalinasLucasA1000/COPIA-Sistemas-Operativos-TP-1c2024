@@ -627,9 +627,9 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(to_send->path);
-	free(to_send->path_length);
+	//free(to_send->path_length);
     free(to_send->nombre);
-    free(to_send->nombre_length);
+    //free(to_send->nombre_length);
     free(to_send);
 	free(a_enviar);
     free(paquete->buffer->stream);
