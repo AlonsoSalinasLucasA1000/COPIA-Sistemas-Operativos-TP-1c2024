@@ -44,6 +44,7 @@ void* espacio_bit_map;
 t_bitarray* bit_map;
 
 char* dialfs_to_write;
+char* path_bloques;
 
 void levantarArchivoDeBloques() {
 
@@ -403,27 +404,14 @@ void escribirArchivo(char** instruccion)
 {
 	//interpretamos lo datos
 	//IO_FS_WRITE FS Goku.config AX ECX EDX 0 14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+	Archivo* archivo = encontrar_archivo(lista_archivos,instruccion[2]);
+	t_config* config_archivo = config_create(archivo->path);
 
 //puntero del archivo
 	int pointer = atoi(instruccion[6]);
 //cantidad de direcciones físicas
 	int cant_df = atoi(instruccion[7]);
 	
-	//pasamos la instruccion completa y la interpretamos por este medio
-	/*
-	printf("Todavia no hago nada CRACK\n");
-	for (int i = 0; i < cant_df; i++) 
-	{
-		printf("ESTOY ITERANDO\n");
-		int* df_to_send_in = malloc(sizeof(int)); //liberar
-		*df_to_send_in = atoi(instruccion_partida_in[5 + i]);
-		char* c_in = malloc(sizeof(char)); //liberar
-		*c_in = leido_in[i];
-		new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
-		free(c_in);
-		//free(df_to_send_in);
-	}
-	*/
 	t_list* lista_direcciones = list_create();
 	for(int i = 0; i < cant_df; i++)
 	{
@@ -444,11 +432,39 @@ void escribirArchivo(char** instruccion)
 	strcpy(a_escribir_en_archivo,dialfs_to_write);
 	free(dialfs_to_write);
 
-	sem_wait(&sem_activacion2);
+	sem_post(&sem_activacion2);
 	//llegamos acá y tenemos
 	printf("%s\n",a_escribir_en_archivo);
 	printf("No se qué más hacer jajajaj\n");
 
+
+	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+	
+	int bloque_base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
+	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
+	// Aseguramos que el archivo tenga el tamaño adecuado
+    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+	// Mapeamos el archivo en memoria
+    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+	memmove(bloques + bloque_base*BLOCK_SIZE + pointer, a_escribir_en_archivo, cant_df);	
+	msync(bloques,BLOCK_COUNT * BLOCK_SIZE,MS_SYNC);
+	close(fd_bloque);
+	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
+	
 }
 
 void enviar_stdin_to_write_memoria(int* direccionFisica, int* tamanio,char* text)

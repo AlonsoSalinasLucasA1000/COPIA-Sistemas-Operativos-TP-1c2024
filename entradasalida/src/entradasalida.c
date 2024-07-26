@@ -95,7 +95,9 @@ if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
 	enviarDatos(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
 }
 
-
+path_bloques = malloc(strlen(PATH_BASE_DIALFS));
+strcpy(path_bloques,PATH_BASE_DIALFS);
+strcat(path_bloques, "/bloques.dat");
 
 //void *mmap(void addr[.length], size_t length, int prot, int flags, int fd, off_t offset);;
 
@@ -109,7 +111,8 @@ if( strcmp(TIPO_INTERFAZ, "DIALFS") == 0 )
 	//espacio_bit_map = malloc(BLOCK_COUNT/8);
 	//bit_map = bitarray_create_with_mode(espacio_bit_map, BLOCK_COUNT/8, LSB_FIRST);
 
-
+	
+	
 }
 
 
@@ -126,6 +129,7 @@ pthread_create (&hilo_kernel, NULL, (void*)entradasalida_escuchar_kernel, NULL);
 pthread_detach (hilo_kernel);
 //si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
 
+string_array_destroy(datosInicialesPartidos);
 
 while(1)
 {
