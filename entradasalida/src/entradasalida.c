@@ -36,7 +36,8 @@ if (entradasalida_config == NULL)
 	exit(EXIT_FAILURE);
 }
 
-sem_init(&sem_activacion,0,1);
+sem_init(&sem_activacion1,0,0);
+sem_init(&sem_activacion2,0,0);
 lista_archivos = list_create();
 
 TIPO_INTERFAZ = config_get_string_value (entradasalida_config , "TIPO_INTERFAZ" );

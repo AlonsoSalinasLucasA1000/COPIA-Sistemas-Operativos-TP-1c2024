@@ -7,7 +7,8 @@
 #include <utils/utils.c>
 
 //semaforo de activacion
-sem_t sem_activacion;
+sem_t sem_activacion1;
+sem_t sem_activacion2;
 
 //lista de archivos
 t_list* lista_archivos;
@@ -332,8 +333,8 @@ void entradasalida_escuchar_memoria (){
 				dialfs_to_write = malloc(paquete->buffer->size);
 				dialfs_to_write = paquete->buffer->stream;
 				printf("%s\n",dialfs_to_write);
-				sem_post(&sem_activacion);
-				sem_wait(&sem_activacion);
+				sem_post(&sem_activacion1);
+				sem_wait(&sem_activacion2);
 				break;
 			case MENSAJE:
 				//
@@ -438,12 +439,12 @@ void escribirArchivo(char** instruccion)
 	list_clean_and_destroy_elements(lista_direcciones,free);
 	printf("ESTOY ITERANDO\n");
 
-	sem_wait(&sem_activacion);
+	sem_wait(&sem_activacion1);
 	char* a_escribir_en_archivo = malloc(strlen(dialfs_to_write)+1);
 	strcpy(a_escribir_en_archivo,dialfs_to_write);
 	free(dialfs_to_write);
 
-	sem_post(&sem_activacion);
+	sem_wait(&sem_activacion2);
 	//llegamos acá y tenemos
 	printf("%s\n",a_escribir_en_archivo);
 	printf("No se qué más hacer jajajaj\n");
