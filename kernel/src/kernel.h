@@ -632,6 +632,7 @@ void kernel_escuchar_cpu ()
 						io_stdin->ocupado = true;
 						printf("El fd de este IO es %d\n",io_stdin->fd_cliente);
 						new_ejecutar_interfaz_stdin_stdout(instruccion_io_stdin->instruccion,STDIN,io_stdin->fd_cliente,instruccion_io_stdin->proceso.PID);
+						free(instruccion_io_stdin);
 					}
 				}
 				else
@@ -655,12 +656,13 @@ void kernel_escuchar_cpu ()
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
+					free(instruccion_io_stdin);
 				}
 
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
-				free(instruccion_io_stdin);
+				//free(instruccion_io_stdin); //ESTE FREE ES PELIGROSÍSIMO, ESTAMOS BORRANDO UN DATO DE LA LISTA DE BLOQUEADOS DEL PROCESO
 				break;
 			//case FS_CREATE:
 				//
