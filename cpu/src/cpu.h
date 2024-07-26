@@ -299,12 +299,13 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 		TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
 			
 		if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
-			log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
+			log_info(cpu_logger, "PID: <%d> - TLB HIT - Pagina: <%d>", proceso->PID, numero_Pagina);  //-------TLB Hit
 			
 			dir_fisica = retorno_TLB->marco * *TAM_PAGINA + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
 			//log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina ); ---------------------------------------> chequear
+			
 			enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
 
 			//printf("Llegué hasta antes del semaforo\n");
@@ -312,6 +313,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 			sem_wait(&sem_mmu);
 			
 			printf("Obtuve el marco de proceso %d\n",proceso->PID);
+			
 			//num_marco es global
 			if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
 				

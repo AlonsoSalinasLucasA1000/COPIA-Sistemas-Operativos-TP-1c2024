@@ -623,7 +623,7 @@ void kernel_escuchar_cpu ()
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
 					string_array_destroy(instruccion_io_gen);
-					string_array_destroy(io_gen);
+					free(io_gen)
 					
 				break;
 			case STDIN:
@@ -1420,6 +1420,7 @@ void iniciar_proceso(char* path)
 	free(pcb);
 	free(proceso->path);
 	free(proceso);
+	list_destroy(proceso->TablaDePaginas);
 }
 
 void finalizar_proceso (char* pid) {
@@ -1529,7 +1530,9 @@ void atender_instruccion (char* leido)
 		proceso_estado();
 		
     }else if(strcmp(comando_consola [0], "HELP") == 0){
+
     }else if(strcmp(comando_consola [0], "PRINT") == 0){
+		
     }else{   
         log_error(kernel_logger, "Comando no reconocido, pero que paso el filtro ???");  
         exit(EXIT_FAILURE);
@@ -1902,6 +1905,7 @@ void enviar_pcb_a_cpu()
 	{
 		interrumpir_por_quantum();
 	}
+	string_array_destroy(to_send->path);
 	free(to_send);
 }
 
