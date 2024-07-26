@@ -690,6 +690,11 @@ void kernel_escuchar_cpu ()
 					{
 						//de estar ocupado añado el proceso a la lista de este
 						printf("La IO está ocupada, se bloqueará en su lista propia\n");
+						Instruccion_io* to_block = malloc(sizeof(Instruccion_io));
+						to_block->proceso = instruccion_io_stdout->proceso;
+						to_block->tam_instruccion = instruccion_io_stdout->tam_instruccion;
+						to_block->instruccion = malloc(to_block->tam_instruccion);
+						strcpy(to_block->instruccion,instruccion_io_stdout->instruccion);
 						list_add(io_stdout->procesos_bloqueados,instruccion_io_stdout);
 					}
 					else
