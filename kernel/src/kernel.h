@@ -368,7 +368,7 @@ void liberar_recursos(int pid)
 					printf("El proceso desbloqueado es el siguiente: \n");
 					printf("PID: %d\n", proceso_desbloqueado->PID);
 					printf("QUANTUM: %d\n",proceso_desbloqueado->quantum);
-					printf("PATH: %s\n",proceso_desbloqueado->path);
+					//printf("PATH: %s\n",proceso_desbloqueado->path);
 					//el proceso ya no queda bloquedo, lo sacamos de la cola general de bloqueados
 					sem_wait(&sem_blocked);
 					eliminar_elemento(cola_blocked->elements,proceso_desbloqueado->PID);
@@ -1213,7 +1213,7 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 				proceso_awaken->estado = READY;
 
 				sem_wait(&sem_procesos);
-				PCB* actualizado = encontrarProceso(lista_procesos,proceso_awaken->PID);
+				PCB* actualizado = encontrarProceso(lista_procesos,(uint32_t)*pid_io);
 				actualizado->estado = READY;
 				sem_post(&sem_procesos);
 
