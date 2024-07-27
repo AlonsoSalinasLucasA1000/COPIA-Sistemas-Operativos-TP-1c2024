@@ -10,8 +10,8 @@ datosIniciales = readline("> "); //
 printf("%s\n",datosIniciales);
 
 char** datosInicialesPartidos = string_split(datosIniciales," ");
+free(datosIniciales);  // Liberar memoria de datosIniciales
 
-free(datosIniciales);
 entradasalida_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 if (entradasalida_logger == NULL)
 {
@@ -107,6 +107,14 @@ liberar_config(entradasalida_config);
 liberar_logger(entradasalida_logger);
 liberar_conexion(fd_memoria);
 liberar_conexion(fd_kernel);
+
+// Liberar memoria de datosInicialesPartidos
+for (int i = 0; datosInicialesPartidos[i] != NULL; i++) {
+    free(datosInicialesPartidos[i]);
+}
+free(datosInicialesPartidos);
+
+free(pid_actual);
 
 return (EXIT_SUCCESS);
 }

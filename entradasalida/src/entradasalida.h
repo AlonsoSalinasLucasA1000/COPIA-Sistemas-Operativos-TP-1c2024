@@ -262,7 +262,7 @@ void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamani
 
 void entradasalida_escuchar_kernel (){
 	bool control_key = 1;
-	while (control_key) {
+		while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 
 			printf("Checkpoin1 \n");
@@ -278,7 +278,8 @@ void entradasalida_escuchar_kernel (){
 				printf("Checkpoin2 \n");
 				//hay que deserializar, dado que es solo un int
 				int* unidadesDeTrabajo = malloc(sizeof(int));
-				unidadesDeTrabajo = paquete->buffer->stream;
+				//unidadesDeTrabajo = paquete->buffer->stream;
+				memcpy(unidadesDeTrabajo, paquete->buffer->stream, sizeof(int)); // Corrección: Usa el puntero ya asignado, no sobrescribas
 
 				printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n",*unidadesDeTrabajo);
 				printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO ));
@@ -319,6 +320,10 @@ void entradasalida_escuchar_kernel (){
 					*c_in = leido_in[i];
 					new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
 					free(c_in);
+<<<<<<< Updated upstream
+=======
+					free(df_to_send_in);
+>>>>>>> Stashed changes
 				}
 
 				printf("ESTOY ITERANDO\n");
@@ -328,7 +333,15 @@ void entradasalida_escuchar_kernel (){
 				*c_in = 'L';
 				new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
 				free(c_in);
+<<<<<<< Updated upstream
 
+=======
+				free(df_to_send_in);
+				free(tamanio_instruccion_in);
+				free(instruccion_in);
+				string_array_destroy(instruccion_partida_in);
+				free(leido_in);
+>>>>>>> Stashed changes
 				// new_enviar_stdin_to_write_memoria(direccionFisica, caracter);
 				//despertamos
 				//enviarEntero(pid_actual,fd_kernel,DESPERTAR);
@@ -373,12 +386,39 @@ void entradasalida_escuchar_kernel (){
 
 				enviar_stdout_to_print_memoria(direccionFisicaOUT, tamanioOUT);
 				*/
+				free(tamanio_instruccion_out);
+            	free(instruccion_out);
+            	string_array_destroy(instrucciones_partidas_out);
+            	list_destroy(lista_direcciones);
+            	free(tamanio_out);
 				break;
 			case NUEVOPID:
-				int* new_pid = paquete->buffer->stream;
+				//int* new_pid = paquete->buffer->stream;
+				int* new_pid = malloc(sizeof(int));
+            	memcpy(new_pid, paquete->buffer->stream, sizeof(int));
 				*pid_actual = *new_pid;
+				free(new_pid);
 				printf("Esta interfaz está siendo usada actualmente por el proceso cuyo PID es %d\n",*pid_actual);
 				break;
+<<<<<<< Updated upstream
+=======
+			case IO_FS_CREATE:
+				// DESEMPAQUETAMOS
+				int* tamanio_instruccion_fs = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs = malloc(*tamanio_instruccion_fs);
+				memcpy(instruccion_fs, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs);
+				char** instruccion_fs_partida = string_split(instruccion_fs," "); 
+
+				// Mostremos por pantalla
+				printf("La instruccion que ha llegado es: %s\n", instruccion_fs);
+				crear_archivo(instruccion_fs_partida[2]);
+
+				free(tamanio_instruccion_fs);
+            	free(instruccion_fs);
+           		string_array_destroy(instruccion_fs_partida);
+				break;
+>>>>>>> Stashed changes
 			case MENSAJE:
 				//
 				break;
@@ -403,12 +443,15 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
 	//creamos el struct a enviar
 	EntradaSalida* to_send = malloc(sizeof(EntradaSalida));
 	to_send->fd_cliente = 0;
+	
 	to_send->nombre_length = strlen(datos[0])+1;
 	to_send->nombre = malloc(to_send->nombre_length);
-	to_send->nombre = datos[0];
+	//to_send->nombre = datos[0];
+	strcpy(to_send->nombre, datos[0]);  // Copiar el contenido del string
 	to_send->path_length = strlen(datos[1])+1;
 	to_send->path = malloc(to_send->path_length);
-	to_send->path = datos[1];
+	//to_send->path = datos[1];
+	strcpy(to_send->path, datos[1]);  // Copiar el contenido del string
 
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 	//calculamos su tamaño
@@ -478,9 +521,21 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
     send(fd_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
+<<<<<<< Updated upstream
     free(a_enviar);
     free(paquete->buffer->stream);
     free(paquete->buffer);
+=======
+    free(to_send->nombre);
+	free(to_send->path);
+	//free(to_send->path_length);
+    
+    //free(to_send->nombre_length);
+    free(to_send); // Liberamos la estructura
+	free(a_enviar); // Liberamos el buffer de envío
+    free(paquete->buffer->stream); // Liberamos el buffer de datos
+    free(paquete->buffer);  // Liberamos el contenedor del buffer
+>>>>>>> Stashed changes
     free(paquete);	
 }
 

@@ -32,6 +32,7 @@ int RETARDO_RESPUESTA;
 void* espacio_usuario;
 void* espacio_pagina;
 
+char* abrir_archivo(char* path, int PC);
 
 t_list* generarListaDeMarcos(t_list* listMarcos)
 {
@@ -48,7 +49,7 @@ t_list* generarListaDeMarcos(t_list* listMarcos)
 	return to_return;
 }
 
-char* abrir_archivo(char* path, int PC);
+//char* abrir_archivo(char* path, int PC);
 
 ProcesoMemoria* encontrarProceso(t_list* lista, uint32_t pid)
 {
@@ -739,7 +740,12 @@ char* abrir_archivo(char* path, int PC)
 		to_ret = "";
 	}
 
+<<<<<<< Updated upstream
     free(content);
+=======
+    //free(content);
+	//free(newContent);
+>>>>>>> Stashed changes
 	fclose(file);
 	return to_ret;
 }

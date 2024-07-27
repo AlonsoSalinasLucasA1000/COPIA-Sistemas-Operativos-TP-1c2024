@@ -1622,7 +1622,7 @@ void cpu_escuchar_kernel_dispatch (){
 			case PROCESO:
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
 				printf("/////////////\n");
-				printf("Recibi el siguiente proceso:\n");
+				printf("Recibi el siguiente proceso\n");
 				printf("Su PID es: %d\n",proceso->PID);
 				printf("El quamtum actual es de: %d\n",proceso->quantum);
 				printf("Su AX es: %d\n",proceso->registro.AX);//cambios

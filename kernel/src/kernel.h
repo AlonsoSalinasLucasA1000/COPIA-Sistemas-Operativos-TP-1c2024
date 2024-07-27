@@ -167,7 +167,15 @@ t_list* generarRecursos(char* recursos, char* instancias_recursos)
 		to_add->listBloqueados = list_create();
 		to_add->pid_procesos = list_create();
 		list_add(ret,to_add);
+<<<<<<< Updated upstream
 		i++;
+=======
+		i++;	
+		free(to_add->pid_procesos);
+		free(to_add->listBloqueados);
+		//free(to_add->instancias);
+		free(to_add);
+>>>>>>> Stashed changes
 	}
 	return ret;
 }
@@ -1295,6 +1303,15 @@ void iniciar_proceso(char* path)
 	//procesos_en_new++;
 	
 	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);
+<<<<<<< Updated upstream
+=======
+	
+	free(pcb->path);
+	//string_array_destroy(path);
+	free(pcb);
+	free(proceso->path);
+	free(proceso);
+>>>>>>> Stashed changes
 }
 
 void finalizar_proceso (char* pid) {
@@ -1469,7 +1486,17 @@ void validarFuncionesConsola(char* leido)
 			}
 		}
 	 }
+<<<<<<< Updated upstream
 	 string_array_destroy(valorLeido);
+=======
+	/*
+	for (int i = 0; valorLeido[i] != NULL; ++i) {
+		free(valorLeido[i]);
+	}
+	free(valorLeido);*/
+	
+	string_array_destroy(valorLeido);
+>>>>>>> Stashed changes
 }
 
 char* remove_last_two_chars(const char* str) {
