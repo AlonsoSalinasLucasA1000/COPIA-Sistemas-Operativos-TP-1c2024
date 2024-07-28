@@ -823,9 +823,9 @@ void ejecutar_proceso(PCB* proceso)
 			
 			//se bloquea el proceso, devolvemos al kernel
 			free(instruccionActual);
+			free(instruccion);
 			instruccionActual = malloc(1);
 			instruccionActual = "";
-
 			/*
 			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
 			//usleep(1000);
@@ -860,6 +860,7 @@ void ejecutar_proceso(PCB* proceso)
 		{
 		 	//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
 		 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			char* instruccion_to_send;
 
 		 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 		 	{
@@ -905,13 +906,16 @@ void ejecutar_proceso(PCB* proceso)
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 
+				instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+				strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
+
 				if(list_size(direcciones_fisicas) > 0)
 				{
 					char tamanioToSend[20];
 					sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
 						
-					strcat(instruccion," ");//CONCATENAR
-					strcat(instruccion, tamanioToSend);
+					strcat(instruccion_to_send," ");//CONCATENAR
+					strcat(instruccion_to_send, tamanioToSend);
 					
 					for(int i=0; i < list_size(direcciones_fisicas);i++)
 					{
@@ -921,8 +925,8 @@ void ejecutar_proceso(PCB* proceso)
 						char direccionFisica[20];
 						sprintf(direccionFisica, "%d", direc_fisica);
 							
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccionFisica);//CONCATENAR
+						strcat(instruccion_to_send," ");//CONCATENAR
+						strcat(instruccion_to_send, direccionFisica);//CONCATENAR
 					}
 				}else{
 					printf("NO HAY ELEMENTOS EN LA LISTA\n");
@@ -980,24 +984,31 @@ void ejecutar_proceso(PCB* proceso)
 					
 		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 					
-		 			char tamanioToSend[20];
-		 			sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
-					
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, tamanioToSend);
+		 			instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+					strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
 
-		 			for(int i=0; i < list_size(direcciones_fisicas);i++)
-		 			{
-		 				int direc_fisica = list_get(direcciones_fisicas,i);
-		 				//contenamos la direccion fisica
-		 				char direccionFisica[20];
-		 				sprintf(direccionFisica, "%d", direc_fisica);
+					if(list_size(direcciones_fisicas) > 0)
+					{
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
+							
+						strcat(instruccion_to_send," ");//CONCATENAR
+						strcat(instruccion_to_send, tamanioToSend);
 						
-		 				strcat(instruccion," ");//CONCATENAR
-		 				strcat(instruccion, direccionFisica);//CONCATENAR
-		 			}
-					
-					
+						for(int i=0; i < list_size(direcciones_fisicas);i++)
+						{
+							int direc_fisica = list_get(direcciones_fisicas,i);
+							printf("La direccion fisica %d es: %d\n",i, direc_fisica);
+							//contenamos la direccion fisica
+							char direccionFisica[20];
+							sprintf(direccionFisica, "%d", direc_fisica);
+								
+							strcat(instruccion_to_send," ");//CONCATENAR
+							strcat(instruccion_to_send, direccionFisica);//CONCATENAR
+						}
+					}else{
+						printf("NO HAY ELEMENTOS EN LA LISTA\n");
+					}							
 		 		}
 		 		else
 		 		{
@@ -1008,14 +1019,15 @@ void ejecutar_proceso(PCB* proceso)
 		 	printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
 
 		 	//debemos devolver instruccion + pcb parando el proceso actual
-		 	uint32_t instruccion_length = strlen(instruccion)+1;
-		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, STDIN);
+		 	uint32_t instruccion_length = strlen(instruccion_to_send)+1;
+		 	enviar_instruccion_kernel(instruccion_to_send, instruccion_length, *proceso, STDIN);
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
-
+			free(instruccion);
+			free(instruccion_to_send);
 		 	return;
 		}
 
@@ -1024,6 +1036,7 @@ void ejecutar_proceso(PCB* proceso)
 		{
 		 	//Primero bloqueamos al proceso para que llegue a la cola de bloqueados antes que nada y luego ejecutamos la rutina relacionada con la IO
 		 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+			char* instruccion_to_send;
 
 		 	if( esRegistroUint8(instruccion_split[2])) //REGISTRO DIRECCION UNIT8
 		 	{
@@ -1069,13 +1082,16 @@ void ejecutar_proceso(PCB* proceso)
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 
+				instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+				strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
+
 				if(list_size(direcciones_fisicas) > 0)
 				{
 					char tamanioToSend[20];
 					sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
 						
-					strcat(instruccion," ");//CONCATENAR
-					strcat(instruccion, tamanioToSend);
+					strcat(instruccion_to_send," ");//CONCATENAR
+					strcat(instruccion_to_send, tamanioToSend);
 					
 					for(int i=0; i < list_size(direcciones_fisicas);i++)
 					{
@@ -1085,8 +1101,8 @@ void ejecutar_proceso(PCB* proceso)
 						char direccionFisica[20];
 						sprintf(direccionFisica, "%d", direc_fisica);
 							
-						strcat(instruccion," ");//CONCATENAR
-						strcat(instruccion, direccionFisica);//CONCATENAR
+						strcat(instruccion_to_send," ");//CONCATENAR
+						strcat(instruccion_to_send, direccionFisica);//CONCATENAR
 					}
 				}else{
 					printf("NO HAY ELEMENTOS EN LA LISTA\n");
@@ -1144,23 +1160,31 @@ void ejecutar_proceso(PCB* proceso)
 					
 		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 					
-		 			char tamanioToSend[20];
-		 			sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
-					
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, tamanioToSend);
+		 			instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+					strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
 
-		 			for(int i=0; i < list_size(direcciones_fisicas);i++)
-		 			{
-		 				int direc_fisica = list_get(direcciones_fisicas,i);
-		 				//contenamos la direccion fisica
-		 				char direccionFisica[20];
-		 				sprintf(direccionFisica, "%d", direc_fisica);
+					if(list_size(direcciones_fisicas) > 0)
+					{
+						char tamanioToSend[20];
+						sprintf(tamanioToSend, "%d", tamanio);//copia en valor del tercer parametro en el primero
+							
+						strcat(instruccion_to_send," ");//CONCATENAR
+						strcat(instruccion_to_send, tamanioToSend);
 						
-		 				strcat(instruccion," ");//CONCATENAR
-		 				strcat(instruccion, direccionFisica);//CONCATENAR
-		 			}
-					
+						for(int i=0; i < list_size(direcciones_fisicas);i++)
+						{
+							int direc_fisica = list_get(direcciones_fisicas,i);
+							printf("La direccion fisica %d es: %d\n",i, direc_fisica);
+							//contenamos la direccion fisica
+							char direccionFisica[20];
+							sprintf(direccionFisica, "%d", direc_fisica);
+								
+							strcat(instruccion_to_send," ");//CONCATENAR
+							strcat(instruccion_to_send, direccionFisica);//CONCATENAR
+						}
+					}else{
+						printf("NO HAY ELEMENTOS EN LA LISTA\n");
+					}
 					
 		 		}
 		 		else
@@ -1172,14 +1196,15 @@ void ejecutar_proceso(PCB* proceso)
 		 	printf("La instruccion que se envia a KERNEL es: %s\n", instruccion);
 
 		 	//debemos devolver instruccion + pcb parando el proceso actual
-		 	uint32_t instruccion_length = strlen(instruccion)+1;
-		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, STDOUT);
+		 	uint32_t instruccion_length = strlen(instruccion_to_send)+1;
+		 	enviar_instruccion_kernel(instruccion_to_send, instruccion_length, *proceso, STDOUT);
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
-
+			free(instruccion);
+			free(instruccion_to_send);
 		 	return;
 		}
 
@@ -1453,6 +1478,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
+			free(instruccion);
 
 		 	return;
 		 }
@@ -1468,10 +1494,12 @@ void ejecutar_proceso(PCB* proceso)
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
+			free(instruccion);
 
 		 	return;
 		}
 
+		//Tendremos que obtener el registro
 		//CASO DE TENER UNA INSTRUCCION IO_FS_TRUNCATE(Interfaz, Nombre Archivo, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_FS_TRUNCATE") == 0){
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
@@ -1483,7 +1511,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
-
+			free(instruccion);
 		 	return;
 		}	
 
@@ -1532,18 +1560,20 @@ void ejecutar_proceso(PCB* proceso)
 			printf("El valor que nos ha quedado es: %d\n",*pointer_archivo);
 
 			direcciones_fisicas = mmu(*d_logica, proceso, *tamanio);
+			char* instruccion_to_send = malloc( strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+			strncpy(instruccion_to_send,instruccion, strlen(instruccion)+1);
 			if(list_size(direcciones_fisicas) > 0)
 			{
 				char pointer_to_send[20];
 				sprintf(pointer_to_send, "%u", *pointer_archivo);//copia en valor del tercer parametro en el primero
-				strcat(instruccion," ");//CONCATENAR
-				strcat(instruccion, pointer_to_send);
+				strcat(instruccion_to_send," ");//CONCATENAR
+				strcat(instruccion_to_send, pointer_to_send);
 
 				char tamanioToSend[20];
 				sprintf(tamanioToSend, "%u", *tamanio);//copia en valor del tercer parametro en el primero
 					
-				strcat(instruccion," ");//CONCATENAR
-				strcat(instruccion, tamanioToSend);
+				strcat(instruccion_to_send," ");//CONCATENAR
+				strcat(instruccion_to_send, tamanioToSend);
 				
 				for(int i=0; i < list_size(direcciones_fisicas);i++)
 				{
@@ -1553,8 +1583,8 @@ void ejecutar_proceso(PCB* proceso)
 					char direccionFisica[20];
 					sprintf(direccionFisica, "%d", direc_fisica);
 						
-					strcat(instruccion," ");//CONCATENAR
-					strcat(instruccion, direccionFisica);//CONCATENAR
+					strcat(instruccion_to_send," ");//CONCATENAR
+					strcat(instruccion_to_send, direccionFisica);//CONCATENAR
 				}
 			}
 			else
@@ -1565,8 +1595,8 @@ void ejecutar_proceso(PCB* proceso)
 
 
 			//debemos devolver instruccion + pcb parando el proceso actual
-		 	uint32_t instruccion_length = strlen(instruccion)+1;
-		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
+		 	uint32_t instruccion_length = strlen(instruccion_to_send)+1;
+		 	enviar_instruccion_kernel(instruccion_to_send, instruccion_length, *proceso, DIALFS);
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 			free(d_logica);
@@ -1576,7 +1606,8 @@ void ejecutar_proceso(PCB* proceso)
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
-
+			free(instruccion);
+			free(instruccion_to_send);
 		 	return;
 		}
 
@@ -1608,6 +1639,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
+			free(instruccion);
 		 	return;
 		 }
 		//CASO DE TENER UNA INSTRUCCION SIGNAL (Recurso): 
@@ -1621,6 +1653,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
+			free(instruccion);
 		 	return;
 		 }
 		

@@ -712,7 +712,7 @@ void kernel_escuchar_cpu ()
 					sem_post(&sem_blocked);
 
 					sem_wait(&sem_procesos);
-					PCB* actualizado_out = encontrarProceso(lista_procesos,instruccion_io_stdout->proceso.PC);
+					PCB* actualizado_out = encontrarProceso(lista_procesos,instruccion_io_stdout->proceso.PID);
 					actualizado_out->estado = EXIT;
 					sem_post(&sem_procesos);
 
