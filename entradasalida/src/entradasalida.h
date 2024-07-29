@@ -46,9 +46,108 @@ t_bitarray* bit_map;
 char* dialfs_to_write;
 char* path_bloques;
 
+void inicializar_path_bloques(const char* PATH_BASE_DIALFS)
+{
+	path_bloques = malloc(strlen(PATH_BASE_DIALFS) + strlen("/bloques.dat") + 1);
+    if (path_bloques == NULL) {
+        perror("Error al asignar memoria para path_bloques");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(path_bloques, PATH_BASE_DIALFS);
+    strcat(path_bloques, "/bloques.dat");
+}
+
+void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
+{
+	printf("ONE\n");
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	buffer->offset = 0;
+	buffer->size = sizeof(int) + sizeof(char) + 1;
+	buffer->stream = malloc(buffer->size);
+
+	memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
+    buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset,caracter, sizeof(char));
+
+	printf("TWO\n");
+	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = STDIN_TOWRITE;
+	paquete->buffer = buffer;
+
+	printf("THREE\n");
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+	printf("FOUR\n");
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
+void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamanio, op_code codigo_operacion)
+{
+
+	//Preparamos el buffer
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	buffer->offset = 0;
+	buffer->size = sizeof(int)*(list_size(direcciones_fisicas)+1);
+	buffer->stream = malloc(buffer->size);
+
+	//vamos reservando la memoria
+	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
+    buffer->offset += sizeof(int);
+
+	for(int i = 0; i < list_size(direcciones_fisicas); i++)
+	{
+		memcpy(buffer->stream + buffer->offset,list_get(direcciones_fisicas,i), sizeof(int));
+    	buffer->offset += sizeof(int);
+		int* df = list_get(direcciones_fisicas,i);
+		printf("Mandaremos la siguiente direccion física: %d\n",*df);
+	}
+
+	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigo_operacion;
+	paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
+void recuperarArchivos(t_list* lista_archivos)
+{
+	//nos falta terminar esto
+	sleep(1);
+}
+
 void levantarArchivoDeBloques() {
 
-	char* path_copia = malloc(strlen(PATH_BASE_DIALFS));
+	char* path_copia = malloc(strlen(PATH_BASE_DIALFS) + strlen("/bloques.dat") + 1);
 	strcpy(path_copia,PATH_BASE_DIALFS);
     strcat(path_copia, "/bloques.dat");
 
@@ -77,6 +176,7 @@ void levantarArchivoDeBloques() {
 	
 	close(fd_bloque);
 	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
+	free(path_copia);
     printf("Archivo mapeado correctamente\n");
 }
 
@@ -269,34 +369,146 @@ void truncarArchivo(char* nombre, int cantidad)
 	}
 }
 
-void avisar_despertar_kernel()
+void escribirArchivo(char** instruccion)
 {
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-	buffer->offset = 0;
-	buffer->size = 1;
-	buffer->stream = malloc(buffer->size);
+	//interpretamos lo datos
+	//IO_FS_WRITE FS Goku.config AX ECX EDX 0 14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+	Archivo* archivo = encontrar_archivo(lista_archivos,instruccion[2]);
+	t_config* config_archivo = config_create(archivo->path);
 
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = DESPERTAR;
-	paquete->buffer = buffer;
+//puntero del archivo
+	int pointer = atoi(instruccion[6]);
+//cantidad de direcciones físicas
+	int cant_df = atoi(instruccion[7]);
+	
+	t_list* lista_direcciones = list_create();
+	for(int i = 0; i < cant_df; i++)
+	{
+		int* df_out = malloc(sizeof(int));
+		*df_out = atoi(instruccion[8+i]);
+		list_add(lista_direcciones,df_out);
+	}
 
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_kernel, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+	int* tamanio_fs = malloc(sizeof(int));
+	*tamanio_fs = cant_df;
+	new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_fs,IO_FS_WRITE);
+	free(tamanio_fs);
+	list_clean_and_destroy_elements(lista_direcciones,free);
+	printf("ESTOY ITERANDO\n");
 
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
+	sem_wait(&sem_activacion1);
+	char* a_escribir_en_archivo = malloc(strlen(dialfs_to_write)+1);
+	strcpy(a_escribir_en_archivo,dialfs_to_write);
+
+	sem_post(&sem_activacion2);
+	//llegamos acá y tenemos
+	printf("%s\n",a_escribir_en_archivo);
+	printf("No se qué más hacer jajajaj\n");
+
+
+	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+	
+	int bloque_base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
+	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
+	// Aseguramos que el archivo tenga el tamaño adecuado
+    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+	// Mapeamos el archivo en memoria
+    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+	memmove(bloques + bloque_base*BLOCK_SIZE + pointer, a_escribir_en_archivo, cant_df);	
+	msync(bloques,BLOCK_COUNT * BLOCK_SIZE,MS_SYNC);
+	close(fd_bloque);
+	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
+}
+
+void leerArchivo(char** instruccion_fs_partida_read)
+{
+	//interpretamos lo datos
+	//IO_FS_READ FS Goku.config AX ECX EDX //base//0 //tamanio//14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+	Archivo* archivo = encontrar_archivo(lista_archivos,instruccion_fs_partida_read[2]);
+	t_config* config_archivo = config_create(archivo->path);
+
+//puntero del archivo
+	int pointer = atoi(instruccion_fs_partida_read[6]);
+//cantidad de direcciones físicas
+	int cant_df = atoi(instruccion_fs_partida_read[7]);
+	
+//generamos las direcciones físicas
+/*
+	t_list* lista_direcciones = list_create();
+	for(int i = 0; i < cant_df; i++)
+	{
+		int* df_out = malloc(sizeof(int));
+		*df_out = atoi(instruccion_fs_partida_read[8+i]);
+		list_add(lista_direcciones,df_out);
+	}
+*/
+
+	char* to_read = malloc(cant_df+1);
+	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+	
+	int bloque_base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
+	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
+	// Aseguramos que el archivo tenga el tamaño adecuado
+    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+	// Mapeamos el archivo en memoria
+    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+//copiamos lo leido
+	strncpy(to_read,bloques + BLOCK_SIZE*bloque_base + pointer,cant_df);
+	printf("Lo que hemos leido fue: %s\n",to_read);
+
+//cerramos todo
+	close(fd_bloque);
+	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
+
+//escribimos todo en memoria
+	for (int i = 0; i < cant_df; i++) 
+	{
+		printf("ESTOY ITERANDO\n");
+		int* df_to_send_in = malloc(sizeof(int)); //liberar
+		*df_to_send_in = atoi(instruccion_fs_partida_read[8 + i]);
+		char* c_in = malloc(sizeof(char)); //liberar
+		*c_in = to_read[i];
+		new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
+		free(c_in);
+		free(df_to_send_in);
+	}
+
+	printf("ESTOY ITERANDO\n");
+	int* df_to_send_in = malloc(sizeof(int)); //liberar
+	*df_to_send_in = -1;
+	char* c_in = malloc(sizeof(char)); //liberar
+	*c_in = 'L';
+	new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
+	free(c_in);
+	free(df_to_send_in);
 }
 
 void entradasalida_escuchar_memoria (){
@@ -355,227 +567,6 @@ void entradasalida_escuchar_memoria (){
 			free(paquete);
 		}	
 }
-
-void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamanio, op_code codigo_operacion)
-{
-
-	//Preparamos el buffer
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-	buffer->offset = 0;
-	buffer->size = sizeof(int)*(list_size(direcciones_fisicas)+1);
-	buffer->stream = malloc(buffer->size);
-
-	//vamos reservando la memoria
-	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
-    buffer->offset += sizeof(int);
-
-	for(int i = 0; i < list_size(direcciones_fisicas); i++)
-	{
-		memcpy(buffer->stream + buffer->offset,list_get(direcciones_fisicas,i), sizeof(int));
-    	buffer->offset += sizeof(int);
-		int* df = list_get(direcciones_fisicas,i);
-		printf("Mandaremos la siguiente direccion física: %d\n",*df);
-	}
-
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = codigo_operacion;
-	paquete->buffer = buffer;
-
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
-
-void escribirArchivo(char** instruccion)
-{
-	//interpretamos lo datos
-	//IO_FS_WRITE FS Goku.config AX ECX EDX 0 14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
-	Archivo* archivo = encontrar_archivo(lista_archivos,instruccion[2]);
-	t_config* config_archivo = config_create(archivo->path);
-
-//puntero del archivo
-	int pointer = atoi(instruccion[6]);
-//cantidad de direcciones físicas
-	int cant_df = atoi(instruccion[7]);
-	
-	t_list* lista_direcciones = list_create();
-	for(int i = 0; i < cant_df; i++)
-	{
-		int* df_out = malloc(sizeof(int));
-		*df_out = atoi(instruccion[8+i]);
-		list_add(lista_direcciones,df_out);
-	}
-
-	int* tamanio_fs = malloc(sizeof(int));
-	*tamanio_fs = cant_df;
-	new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_fs,IO_FS_WRITE);
-	free(tamanio_fs);
-	list_clean_and_destroy_elements(lista_direcciones,free);
-	printf("ESTOY ITERANDO\n");
-
-	sem_wait(&sem_activacion1);
-	char* a_escribir_en_archivo = malloc(strlen(dialfs_to_write)+1);
-	strcpy(a_escribir_en_archivo,dialfs_to_write);
-	free(dialfs_to_write);
-
-	sem_post(&sem_activacion2);
-	//llegamos acá y tenemos
-	printf("%s\n",a_escribir_en_archivo);
-	printf("No se qué más hacer jajajaj\n");
-
-
-	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (fd_bloque == -1) {
-        perror("Error al abrir el archivo");
-        exit(EXIT_FAILURE);
-    }
-	
-	int bloque_base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
-	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
-	// Aseguramos que el archivo tenga el tamaño adecuado
-    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
-        perror("Error ajustando el tamaño del archivo");
-        close(fd_bloque);
-        exit(EXIT_FAILURE);
-    }
-	// Mapeamos el archivo en memoria
-    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
-    if (bloques == MAP_FAILED) {
-        perror("Error en mmap");
-        close(fd_bloque);
-        exit(EXIT_FAILURE);
-    }
-
-	memmove(bloques + bloque_base*BLOCK_SIZE + pointer, a_escribir_en_archivo, cant_df);	
-	msync(bloques,BLOCK_COUNT * BLOCK_SIZE,MS_SYNC);
-	close(fd_bloque);
-	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
-	
-}
-
-void enviar_stdin_to_write_memoria(int* direccionFisica, int* tamanio,char* text)
-{
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-	buffer->offset = 0;
-	buffer->size = sizeof(int)*2 + *tamanio + 1;
-	buffer->stream = malloc(buffer->size);
-
-	memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
-    buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
-    buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset,text,*tamanio+1);
-
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = STDIN_TOWRITE;
-	paquete->buffer = buffer;
-
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
-
-void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
-{
-	printf("ONE\n");
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-	buffer->offset = 0;
-	buffer->size = sizeof(int) + sizeof(char) + 1;
-	buffer->stream = malloc(buffer->size);
-
-	memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
-    buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset,caracter, sizeof(char));
-
-	printf("TWO\n");
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = STDIN_TOWRITE;
-	paquete->buffer = buffer;
-
-	printf("THREE\n");
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-	printf("FOUR\n");
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
-
-void enviar_stdout_to_print_memoria(int* direccionFisica, int* tamanio)
-{
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-	buffer->offset = 0;
-	buffer->size = sizeof(int)*2;
-	buffer->stream = malloc(buffer->size);
-
-	memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
-    buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
-    buffer->offset += sizeof(int);
-
-	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = STDOUT_TOPRINT;
-	paquete->buffer = buffer;
-
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-}
-
 
 void entradasalida_escuchar_kernel (){
 	bool control_key = 1;
@@ -741,6 +732,19 @@ void entradasalida_escuchar_kernel (){
 				// Realiza la operación de escritura aquí (por ejemplo, llamando a una función)
 				escribirArchivo(instruccion_fs_partida_write);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
+				break;
+			case IO_FS_READ:
+				//
+				int* tamanio_instruccion_fs_read = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs_read, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs_read = malloc(*tamanio_instruccion_fs_read);
+				memcpy(instruccion_fs_read, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_read);
+				char** instruccion_fs_partida_read = string_split(instruccion_fs_read, " ");
+
+				// Mostramos por pantalla
+				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_read);
+				// Realiza la operación de lectura aquí (por ejemplo, llamando a una función)
+				leerArchivo(instruccion_fs_partida_read);
 				break;
 			case PAQUETE:
 				//

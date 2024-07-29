@@ -312,6 +312,8 @@ PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
     for (int i = 0; i < list_size(lista); i++) 
 	{
         PCB* pcb = list_get(lista, i);
+		printf("El PCB obtenido fue: %d\n",pcb->PID);
+		printf("Su estado actual es %d\n",pcb->estado);
         if (pcb->PID == pid_buscado) 
 		{
 			pcb = list_remove(lista, i);

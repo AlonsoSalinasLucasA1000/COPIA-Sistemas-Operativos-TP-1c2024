@@ -95,24 +95,21 @@ if( strcmp(TIPO_INTERFAZ,"GENERICA") != 0)
 	enviarDatos(fd_memoria,datosInicialesPartidos,TIPO_INTERFAZ);
 }
 
-path_bloques = malloc(strlen(PATH_BASE_DIALFS));
-strcpy(path_bloques,PATH_BASE_DIALFS);
-strcat(path_bloques, "/bloques.dat");
-
 //void *mmap(void addr[.length], size_t length, int prot, int flags, int fd, off_t offset);;
 
 
 //si la interfaz es un dialFS, debemos crearle un archivo de bloques, bitmap y metadata, a medida que se vayan creando archivos
 if( strcmp(TIPO_INTERFAZ, "DIALFS") == 0 )
 {
+	//TENDREMOS QUE HACER UNA FUNCIÓN PARA RECUPERAR LOS ARCHIVOS BASE
+	inicializar_path_bloques(PATH_BASE_DIALFS);
+	//Recuperar lista de archivos
+	recuperarArchivos(lista_archivos);
 	levantarArchivoDeBloques();
 	levantarArchivoBitMap();
 
 	//espacio_bit_map = malloc(BLOCK_COUNT/8);
-	//bit_map = bitarray_create_with_mode(espacio_bit_map, BLOCK_COUNT/8, LSB_FIRST);
-
-	
-	
+	//bit_map = bitarray_create_with_mode(espacio_bit_map, BLOCK_COUNT/8, LSB_FIRST);	
 }
 
 
