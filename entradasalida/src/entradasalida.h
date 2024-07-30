@@ -139,11 +139,63 @@ void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamani
     free(paquete);
 }
 
-void recuperarArchivos(t_list* lista_archivos)
-{
-	//nos falta terminar esto
-	sleep(1);
+void recuperarArchivos(const char* path, t_list* lista_archivos) {
+    DIR *dir;
+    struct dirent *ent;
+
+    // Verifica si la lista es nula
+    if (lista_archivos == NULL) {
+        fprintf(stderr, "La lista proporcionada es nula.\n");
+        return;
+    }
+
+    // Abre el directorio
+    if ((dir = opendir(path)) != NULL) {
+        // Lee cada entrada en el directorio
+        while ((ent = readdir(dir)) != NULL) {
+            // Omite "." y ".."
+            if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+                // Omite "bloques.dat" y "bitmap.dat"
+                if (strcmp(ent->d_name, "bloques.dat") != 0 && strcmp(ent->d_name, "bitmap.dat") != 0) {
+                    // Construye el path completo
+                    size_t path_len = strlen(path);
+                    size_t name_len = strlen(ent->d_name);
+                    char *path_completo = malloc(path_len + name_len + 2); // +2 para '/' y '\0'
+                    
+                    if (path_completo == NULL) {
+                        perror("Error al asignar memoria");
+                        closedir(dir);
+                        return; // Salir sin liberar la lista ya que puede que haya elementos válidos
+                    }
+
+                    // Construye el path completo
+                    snprintf(path_completo, path_len + name_len + 2, "%s/%s", path, ent->d_name);
+
+                    // Crea una nueva estructura Archivo
+                    Archivo *archivo = malloc(sizeof(Archivo));
+                    if (archivo == NULL) {
+                        perror("Error al asignar memoria para Archivo");
+                        free(path_completo); // Libera el path si ocurre un error
+                        closedir(dir);
+                        return; // Salir sin liberar la lista ya que puede que haya elementos válidos
+                    }
+
+                    archivo->path_length = name_len;
+                    archivo->path = path_completo;
+                    archivo->fd_archivo = -1; // No se abre el descriptor de archivo aquí
+
+                    // Añade la estructura Archivo a la lista
+                    list_add(lista_archivos, archivo);
+                }
+            }
+        }
+        closedir(dir);
+    } else {
+        // No se pudo abrir el directorio
+        perror("Error al abrir el directorio");
+    }
 }
+
 
 void levantarArchivoDeBloques() {
 
@@ -221,75 +273,27 @@ void levantarArchivoBitMap() {
 
     // Creamos el bitarray
     bit_map = bitarray_create_with_mode(espacio_bit_map, tamanio_bit_map, LSB_FIRST);
-	for(int i = 0; i < tamanio_bit_map; i++)
+
+	//de cumplirse esta condición, significa que el FS es nuevo
+	if( list_size(lista_archivos) == 0 )
 	{
-		bitarray_clean_bit(bit_map,i);
+		for(int i = 0; i < tamanio_bit_map*8; i++)
+		{
+			bitarray_clean_bit(bit_map,i);
+		}
+		if (bit_map == NULL) {
+			perror("Error creando el bitarray");
+			munmap(espacio_bit_map, tamanio_bit_map);
+			close(fd_bitmap);
+			free(path_copia);
+			exit(EXIT_FAILURE);
+		}
 	}
-    if (bit_map == NULL) {
-        perror("Error creando el bitarray");
-        munmap(espacio_bit_map, tamanio_bit_map);
-        close(fd_bitmap);
-        free(path_copia);
-        exit(EXIT_FAILURE);
-    }
 
     printf("Archivo mapeado correctamente\n");
 
     // Liberamos la memoria asignada para path_copia
     free(path_copia);
-}
-
-
-
-void crear_archivo(char* nombre)
-{
-	char* path_copia = malloc(strlen(PATH_BASE_DIALFS) + 1 + strlen(nombre) + 1);
-	strcpy(path_copia, PATH_BASE_DIALFS);
-	strcat(path_copia, "/");
-	strcat(path_copia, nombre);
-
-	int fd_random = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	
-	//Creamos el archivo y lo añadimos a la lista
-	Archivo* archivo = malloc(sizeof(Archivo));
-	archivo->path_length = strlen(path_copia) + 1;
-	archivo->path = malloc(archivo->path_length);
-	strcpy(archivo->path, path_copia);
-	archivo->fd_archivo = fd_random;
-	list_add(lista_archivos, archivo);
-
-	//le asignamos un bloque:
-	int i = 0;
-	bool finished = false;
-	while( i < BLOCK_COUNT && finished != true)
-	{
-		int value = bitarray_test_bit(bit_map,i); //obtenemos el valor actual de dicho bit array en la posición i
-		printf("El valor actual es: %d\n",value);
-		if( value == 0 )
-		{
-			//si es cero, está libre, así que lo ocupamos y actualizamos el archivo de bitmap
-			bitarray_set_bit(bit_map, i);
-			memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
-			msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
-			finished = true;
-			i--;
-		}
-		printf("valor de i es: %d\n",i);
-		i++;
-	}
-
-	//escribimos en el archivo los datos obtenidos
-	char first_block[12]; // 12 es suficiente para almacenar cualquier entero de 32 bits
-    sprintf(first_block, "%d", i);
-	char to_write[256]; // Ajusta el tamaño según sea necesario
-    snprintf(to_write, sizeof(to_write), "BLOQUE_INICIAL=%s\nTAMANIO_ARCHIVO=0\n", first_block);
-	ftruncate(fd_random, strlen(to_write)+1);
-	void* mapeo = mmap(NULL,strlen(to_write)+1, PROT_WRITE, MAP_SHARED, fd_random, 0);
-	memcpy(mapeo,to_write,strlen(to_write)+1);
-	msync(mapeo,strlen(mapeo)+1,MS_SYNC);
-
-	munmap(mapeo,strlen(to_write)+1);
-	free(path_copia);
 }
 
 Archivo* encontrar_archivo(t_list* lista_archivos, char* nombre)
@@ -310,14 +314,76 @@ Archivo* encontrar_archivo(t_list* lista_archivos, char* nombre)
 	return to_ret;
 }
 
+void crear_archivo(char* nombre)
+{
+	Archivo* a = encontrar_archivo(lista_archivos, nombre);
+	//De no existir el archivo, lo creamos, de lo contrario no hacemos nada
+	if( a == NULL)
+	{
+		char* path_copia = malloc(strlen(PATH_BASE_DIALFS) + 1 + strlen(nombre) + 1);
+		strcpy(path_copia, PATH_BASE_DIALFS);
+		strcat(path_copia, "/");
+		strcat(path_copia, nombre);
+
+		int fd_random = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		
+		//Creamos el archivo y lo añadimos a la lista
+		Archivo* archivo = malloc(sizeof(Archivo));
+		archivo->path_length = strlen(path_copia) + 1;
+		archivo->path = malloc(archivo->path_length);
+		strcpy(archivo->path, path_copia);
+		archivo->fd_archivo = fd_random;
+		list_add(lista_archivos, archivo);
+
+		//le asignamos un bloque:
+		int i = 0;
+		bool finished = false;
+		while( i < BLOCK_COUNT && finished != true)
+		{
+			int value = bitarray_test_bit(bit_map,i); //obtenemos el valor actual de dicho bit array en la posición i
+			printf("El valor actual es: %d\n",value);
+			if( value == 0 )
+			{
+				//si es cero, está libre, así que lo ocupamos y actualizamos el archivo de bitmap
+				bitarray_set_bit(bit_map, i);
+				/*
+				memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+				*/
+				msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+				finished = true;
+				i--;
+			}
+			printf("valor de i es: %d\n",i);
+			i++;
+		}
+
+		//escribimos en el archivo los datos obtenidos
+		char first_block[12]; // 12 es suficiente para almacenar cualquier entero de 32 bits
+		sprintf(first_block, "%d", i);
+		char to_write[256]; // Ajusta el tamaño según sea necesario
+		snprintf(to_write, sizeof(to_write), "BLOQUE_INICIAL=%s\nTAMANIO_ARCHIVO=0\n", first_block);
+		ftruncate(fd_random, strlen(to_write)+1);
+		void* mapeo = mmap(NULL,strlen(to_write)+1, PROT_WRITE, MAP_SHARED, fd_random, 0);
+		memcpy(mapeo,to_write,strlen(to_write)+1);
+		msync(mapeo,strlen(mapeo)+1,MS_SYNC);
+
+		munmap(mapeo,strlen(to_write)+1);
+		free(path_copia);
+	}
+}
+
+/*
 bool esPosibleTruncar(int base, int cantidad)
 {
 	printf("La base encontrada es: %d\n",base);
 	printf("La cantidad a aumentar es: %d\n",cantidad);
+	printf("Mostremos los valores que tenemos en el bitmap\n");
+	printf("El tamanio que posee es: %d\n",bit_map->size);
 	bool to_Ret = true;
-	for(int i = base+1; i < cantidad+base; i++)
+	for(int i = base+1; i < cantidad+base && i < bit_map->size*8; i++)
 	{
 		int value = bitarray_test_bit(bit_map,i);
+		printf("El valor de i es: %d\n",i);
 		printf("El valor del bit es %d\n",value);
 		if( value == 0 )
 		{
@@ -331,28 +397,103 @@ bool esPosibleTruncar(int base, int cantidad)
 	}
 	return to_Ret;
 }
+*/
+
+bool esPosibleTruncar(int base, int cantidad)
+{
+    printf("La base encontrada es: %d\n", base);
+    printf("La cantidad a aumentar es: %d\n", cantidad);
+    printf("Mostremos los valores que tenemos en el bitmap\n");
+    printf("El tamanio que posee es: %d\n", bit_map->size);
+	int cant_bloques = floor(cantidad/BLOCK_SIZE);
+
+    for (int i = base + 1; i < cant_bloques + base; i++)
+    {
+        // Verificar si 'i' excede el tamaño del bitmap
+        if (i >= bit_map->size * 8)
+        {
+            printf("El valor de i es: %d\n", i);
+            printf("i ha excedido el tamaño del bitmap\n");
+            return false;
+        }
+
+        int value = bitarray_test_bit(bit_map, i);
+        printf("El valor de i es: %d\n", i);
+        printf("El valor del bit es %d\n", value);
+
+        if (value != 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 void truncarArchivo(char* nombre, int cantidad)
 {
+	//Primero consideremos un "truncado" que aumente el tamanio del archivo
 	//debemos obtener el archivo y su bloque base
 	Archivo* archivo = encontrar_archivo(lista_archivos, nombre);
 	t_config* metadata_archivo = config_create(archivo->path);
 	int base = config_get_int_value(metadata_archivo,"BLOQUE_INICIAL");
-	if( esPosibleTruncar(base,cantidad) )
+	int tamanio = config_get_int_value(metadata_archivo,"TAMANIO_ARCHIVO");
+	int cant_bloques = floor(cantidad/BLOCK_SIZE);
+
+	if( cantidad > tamanio )
 	{
-		//realizamos la asignación
-		printf("Hay espacio suficiente, PODEMOS TRUNCAR\n");
-		//se lleva a cabo la asignación
-		for(int i = base+1; i < cantidad+base; i++)
+		//se busca aumentar
+		if( esPosibleTruncar(base,cantidad) )
+		{
+			//realizamos la asignación
+			printf("Hay espacio suficiente, PODEMOS TRUNCAR\n");
+			printf("La base es la siguiente: %d\n",base);
+			printf("La cantidad de bloque es %d\n",cant_bloques);
+			//se lleva a cabo la asignación
+			for(int i = base+1; i < cant_bloques+base; i++)
+			{
+				int value = bitarray_test_bit(bit_map,i);
+				printf("El valor del bit es %d\n",value);
+				if( value == 0 )
+				{
+					bitarray_set_bit(bit_map,i);
+				}
+				//guardamos
+				/*
+				memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+				*/
+				msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+				
+				//escribimos en el config el nuevo valor
+			}
+			char cantidad_string[32];
+			sprintf(cantidad_string,"%d",cantidad);
+			config_set_value(metadata_archivo,"TAMANIO_ARCHIVO",cantidad_string);
+			config_save_in_file(metadata_archivo,archivo->path);
+		}
+		else
+		{
+			//introducir lógica de compactación
+			printf("Desafortunadamente no hay espacio suficiente, NO PODEMOS TRUNCAR\n");
+			//Debemos introducir otro if para determinar si hay espacio suficiente
+		}
+	}
+	else
+	{
+		//se busca reducir el tamanio
+		printf("Se busca reducir el archivo %s\n", nombre);
+		for(int i = base+1; i < cant_bloques+base; i++)
 		{
 			int value = bitarray_test_bit(bit_map,i);
 			printf("El valor del bit es %d\n",value);
-			if( value == 0 )
+			if( value == 1 )
 			{
-				bitarray_set_bit(bit_map,i);
+				bitarray_clean_bit(bit_map,i);
 			}
 			//guardamos
+			/*
 			memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+			*/
 			msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
 			
 			//escribimos en el config el nuevo valor
@@ -361,11 +502,6 @@ void truncarArchivo(char* nombre, int cantidad)
 		sprintf(cantidad_string,"%d",cantidad+base);
 		config_set_value(metadata_archivo,"TAMANIO_ARCHIVO",cantidad_string);
 		config_save_in_file(metadata_archivo,archivo->path);
-	}
-	else
-	{
-		//introducir lógica de compactación
-		printf("Desafortunadamente no hay espacio suficiente, NO PODEMOS TRUNCAR\n");
 	}
 }
 
@@ -434,6 +570,59 @@ void escribirArchivo(char** instruccion)
 	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
 }
 
+void liberarElementoLista(t_list* lista_archivos, char* name)
+{
+	for(int i = 0; i < list_size(lista_archivos); i++)
+	{
+		Archivo* a = list_get(lista_archivos,i);
+		char** path_partido = string_split(a->path,"/");
+		if( strcmp(path_partido[4], name) == 0 )
+		{
+			list_remove_and_destroy_element(lista_archivos,i,free);
+		}
+		string_array_destroy(path_partido);
+	}
+}
+
+void eliminarArchivo(char** instruccion_fs_partida_delete)
+{
+	//Ejemplo de cómo luce
+	//IO_FS_DELETE Int4 notas.txt
+	Archivo* archivo = encontrar_archivo(lista_archivos,instruccion_fs_partida_delete[2]);
+	t_config* config_archivo = config_create(archivo->path);
+
+	int base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
+	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
+
+	//liberamos aquellos bits que utilizaba
+	for(int i = base; i < tamanio; i++)
+	{
+		int value = bitarray_test_bit(bit_map,i);
+		printf("El valor del bit es %d\n",value);
+		if( value == 1 )
+		{
+			bitarray_clean_bit(bit_map,i);
+		}
+		//guardamos
+		/*
+		memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+		*/
+		msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+		
+		//escribimos en el config el nuevo valor
+	}
+
+	//finalmente borramos el archivo del directorio
+	if (unlink(archivo->path) == 0) {
+        printf("El archivo %s fue eliminado exitosamente.\n", archivo->path);
+    } else {
+        perror("Error al eliminar el archivo");
+    }
+
+	liberarElementoLista(lista_archivos,instruccion_fs_partida_delete[2]);
+}
+
+/*
 void leerArchivo(char** instruccion_fs_partida_read)
 {
 	//interpretamos lo datos
@@ -445,17 +634,6 @@ void leerArchivo(char** instruccion_fs_partida_read)
 	int pointer = atoi(instruccion_fs_partida_read[6]);
 //cantidad de direcciones físicas
 	int cant_df = atoi(instruccion_fs_partida_read[7]);
-	
-//generamos las direcciones físicas
-/*
-	t_list* lista_direcciones = list_create();
-	for(int i = 0; i < cant_df; i++)
-	{
-		int* df_out = malloc(sizeof(int));
-		*df_out = atoi(instruccion_fs_partida_read[8+i]);
-		list_add(lista_direcciones,df_out);
-	}
-*/
 
 	char* to_read = malloc(cant_df+1);
 	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -510,6 +688,7 @@ void leerArchivo(char** instruccion_fs_partida_read)
 	free(c_in);
 	free(df_to_send_in);
 }
+*/
 
 void entradasalida_escuchar_memoria (){
 	bool control_key = 1;
@@ -567,6 +746,110 @@ void entradasalida_escuchar_memoria (){
 			free(paquete);
 		}	
 }
+
+
+void leerArchivo(char** instruccion_fs_partida_read)
+{
+    // Interpretamos los datos
+    // IO_FS_READ FS Goku.config AX ECX EDX //base//0 //tamanio//14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+    Archivo* archivo = encontrar_archivo(lista_archivos, instruccion_fs_partida_read[2]);
+    t_config* config_archivo = config_create(archivo->path);
+
+    // Puntero del archivo
+    int pointer = atoi(instruccion_fs_partida_read[6]);
+    // Cantidad de direcciones físicas
+    int cant_df = atoi(instruccion_fs_partida_read[7]);
+
+    // Asignamos memoria y la inicializamos
+    char* to_read = malloc(cant_df + 1);
+    if (to_read == NULL) {
+        perror("Error al asignar memoria para to_read");
+        exit(EXIT_FAILURE);
+    }
+    memset(to_read, 0, cant_df + 1); // Inicializamos la memoria a 0
+
+    fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        free(to_read);
+        exit(EXIT_FAILURE);
+    }
+
+    int bloque_base = config_get_int_value(config_archivo, "BLOQUE_INICIAL");
+    int tamanio = config_get_int_value(config_archivo, "TAMANIO_ARCHIVO");
+    // Aseguramos que el archivo tenga el tamaño adecuado
+    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        free(to_read);
+        exit(EXIT_FAILURE);
+    }
+
+    // Mapeamos el archivo en memoria
+    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        free(to_read);
+        exit(EXIT_FAILURE);
+    }
+
+    // Copiamos lo leído
+    strncpy(to_read, bloques + BLOCK_SIZE * bloque_base + pointer, cant_df);
+    to_read[cant_df] = '\0'; // Aseguramos que la cadena esté terminada en nulo
+    printf("Lo que hemos leído fue: %s\n", to_read);
+
+    // Cerramos todo
+    close(fd_bloque);
+    munmap(bloques, BLOCK_COUNT * BLOCK_SIZE);
+
+    // Escribimos todo en memoria
+    for (int i = 0; i < cant_df; i++) {
+        printf("ESTOY ITERANDO\n");
+        int* df_to_send_in = malloc(sizeof(int));
+        if (df_to_send_in == NULL) {
+            perror("Error al asignar memoria para df_to_send_in");
+            free(to_read);
+            exit(EXIT_FAILURE);
+        }
+        *df_to_send_in = atoi(instruccion_fs_partida_read[8 + i]);
+        char* c_in = malloc(sizeof(char));
+        if (c_in == NULL) {
+            perror("Error al asignar memoria para c_in");
+            free(df_to_send_in);
+            free(to_read);
+            exit(EXIT_FAILURE);
+        }
+        *c_in = to_read[i];
+        new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
+        free(c_in);
+        free(df_to_send_in);
+    }
+
+    printf("ESTOY ITERANDO\n");
+    int* df_to_send_in = malloc(sizeof(int));
+    if (df_to_send_in == NULL) {
+        perror("Error al asignar memoria para df_to_send_in");
+        free(to_read);
+        exit(EXIT_FAILURE);
+    }
+    *df_to_send_in = -1;
+    char* c_in = malloc(sizeof(char));
+    if (c_in == NULL) {
+        perror("Error al asignar memoria para c_in");
+        free(df_to_send_in);
+        free(to_read);
+        exit(EXIT_FAILURE);
+    }
+    *c_in = 'L';
+    new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
+    free(c_in);
+    free(df_to_send_in);
+
+    // Liberamos la memoria asignada para to_read
+    free(to_read);
+}
+
 
 void entradasalida_escuchar_kernel (){
 	bool control_key = 1;
@@ -715,7 +998,7 @@ void entradasalida_escuchar_kernel (){
 				// Mostremos por pantalla
 				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_truncate);
 				// Realiza la operación de truncamiento aquí (por ejemplo, llamando a una función)
-				truncarArchivo(instruccion_fs_partida_truncate[2], atoi(instruccion_fs_partida_truncate[3]));
+				truncarArchivo(instruccion_fs_partida_truncate[2], atoi(instruccion_fs_partida_truncate[4]));
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			break;
@@ -746,6 +1029,20 @@ void entradasalida_escuchar_kernel (){
 				// Realiza la operación de lectura aquí (por ejemplo, llamando a una función)
 				leerArchivo(instruccion_fs_partida_read);
 				break;
+			case IO_FS_DELETE:
+			//
+				int* tamanio_instruccion_fs_delete = malloc(sizeof(int));
+				memcpy(tamanio_instruccion_fs_delete, paquete->buffer->stream, sizeof(int));
+				char* instruccion_fs_delete = malloc(*tamanio_instruccion_fs_delete);
+				memcpy(instruccion_fs_delete, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_delete);
+				char** instruccion_fs_partida_delete = string_split(instruccion_fs_delete, " ");
+
+				// Mostramos por pantalla
+				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_delete);
+				// Realiza la operación de eliminación aquí (por ejemplo, llamando a una función)
+				eliminarArchivo(instruccion_fs_partida_delete);
+				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
+			break;
 			case PAQUETE:
 				//
 				break;

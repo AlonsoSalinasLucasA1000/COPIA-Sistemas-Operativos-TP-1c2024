@@ -104,7 +104,15 @@ if( strcmp(TIPO_INTERFAZ, "DIALFS") == 0 )
 	//TENDREMOS QUE HACER UNA FUNCIÓN PARA RECUPERAR LOS ARCHIVOS BASE
 	inicializar_path_bloques(PATH_BASE_DIALFS);
 	//Recuperar lista de archivos
-	recuperarArchivos(lista_archivos);
+	recuperarArchivos(PATH_BASE_DIALFS,lista_archivos);
+	if( list_size(lista_archivos) != 0 )
+	{
+		for(int i = 0; i < list_size(lista_archivos); i++)
+		{
+			Archivo* a = list_get(lista_archivos,i);
+			printf("El archivo que se ha encontrado es: %s\n", a->path);
+		}
+	}
 	levantarArchivoDeBloques();
 	levantarArchivoBitMap();
 

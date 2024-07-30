@@ -21,6 +21,8 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <commons/bitarray.h>
+#include <unistd.h>
+#include <dirent.h>
 
 
 typedef enum

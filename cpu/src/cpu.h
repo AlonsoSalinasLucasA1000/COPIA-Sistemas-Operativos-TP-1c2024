@@ -1503,15 +1503,43 @@ void ejecutar_proceso(PCB* proceso)
 		//CASO DE TENER UNA INSTRUCCION IO_FS_TRUNCATE(Interfaz, Nombre Archivo, Registro Tamaño)
 		if (strcmp(instruccion_split[0], "IO_FS_TRUNCATE") == 0){
 			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
+
 			//debemos devolver instruccion + pcb parando el proceso actual
-		 	uint32_t instruccion_length = strlen(instruccion)+1;
-		 	enviar_instruccion_kernel(instruccion, instruccion_length, *proceso, DIALFS);
+			//Debemos obtener el valor del registro, lo concatenamos a la instrucción y lo enviamos nuevamente.
+			//DEBEMOS OBTENER EL VALOR DEL REGISTRO
+			uint32_t* cant_bloques = malloc(sizeof(uint32_t));
+			if( esRegistroUint32(instruccion_split[3]) )
+			{
+				*cant_bloques = *(uint32_t*) obtener_registro(instruccion_split[3],proceso);
+			}
+			else
+			{
+				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[3],proceso);
+				printf("el valor de %d\n",*dt);
+				*cant_bloques = *dt;
+			}
+			printf("El valor que nos ha quedado es: %d\n",*cant_bloques);
+
+			char* instruccion_to_send = malloc(strlen(instruccion) + 5);
+			strncpy(instruccion_to_send, instruccion, strlen(instruccion)+1);
+			
+			strcat(instruccion_to_send," ");
+
+			char cant_bloquesToSend[20];
+			sprintf(cant_bloquesToSend, "%u", *cant_bloques);//copia en valor del tercer parametro en el primero
+			
+			strcat(instruccion_to_send,cant_bloquesToSend);
+
+		 	uint32_t instruccion_length = strlen(instruccion_to_send)+1;
+		 	enviar_instruccion_kernel(instruccion_to_send, instruccion_length, *proceso, DIALFS);
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
 		 	instruccionActual = malloc(1);
 		 	instruccionActual = "";
+			free(instruccion_to_send);
 			free(instruccion);
+			free(cant_bloques);
 		 	return;
 		}	
 
