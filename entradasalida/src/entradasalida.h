@@ -430,6 +430,28 @@ bool esPosibleTruncar(int base, int cantidad)
     return true;
 }
 
+int encontrar_bloques_continuos(t_bitarray* bit_array, size_t desired_length) {
+    size_t max_bit = bitarray_get_max_bit(bit_array);
+    size_t consecutive_free_blocks = 0;
+
+    for (size_t i = 0; i < max_bit; ++i) {
+        if (!bitarray_test_bit(bit_array, i)) {
+            // El bit actual es 0 (bloque libre)
+            ++consecutive_free_blocks;
+            if (consecutive_free_blocks == desired_length) {
+                // Encontramos una secuencia de bloques libres
+                return i - desired_length + 1;
+            }
+        } else {
+            // Reiniciamos la cuenta si encontramos un bloque ocupado
+            consecutive_free_blocks = 0;
+        }
+    }
+
+    // No se encontró ninguna secuencia adecuada
+    return -1;
+}
+
 void truncarArchivo(char* nombre, int cantidad)
 {
 	//Primero consideremos un "truncado" que aumente el tamanio del archivo
@@ -474,8 +496,53 @@ void truncarArchivo(char* nombre, int cantidad)
 		else
 		{
 			//introducir lógica de compactación
-			printf("Desafortunadamente no hay espacio suficiente, NO PODEMOS TRUNCAR\n");
+			printf("Desafortunadamente no podemos truncar de forma continua\n");
 			//Debemos introducir otro if para determinar si hay espacio suficiente
+			printf("Verificaremos si hay, en alguna parte del espacio de memoria, alguna secuencia de bloques libres de forma continua");
+			int new_base = encontrar_bloques_continuos(bit_map,cant_bloques);
+			if( new_base != (-1))
+			{
+				//encontramos una nueva secuencia de bloques libres, actualizamos bloque base y asignamos tamaño
+				printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
+
+				//antes liberamos el bloque que poseía anteriormente
+				bitarray_clean_bit(bit_map,base);
+
+				//llevamos a cabo la asignación
+				for(int i = new_base+1; i < cant_bloques+new_base; i++)
+				{
+					int value = bitarray_test_bit(bit_map,i);
+					printf("El valor del bit es %d\n",value);
+					if( value == 0 )
+					{
+						bitarray_set_bit(bit_map,i);
+					}
+					//guardamos
+					/*
+					memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+					*/
+					msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+					
+					//escribimos en el config el nuevo valor
+				}
+
+				//actualizamos la base
+				char base_string[32];
+				sprintf(base_string,"%d",new_base);
+				config_set_value(metadata_archivo,"BLOQUE_INICIAL",base_string);
+				config_save_in_file(metadata_archivo,archivo->path);
+
+				//actualizamos el tamanio
+				char cantidad_string[32];
+				sprintf(cantidad_string,"%d",cantidad);
+				config_set_value(metadata_archivo,"TAMANIO_ARCHIVO",cantidad_string);
+				config_save_in_file(metadata_archivo,archivo->path);
+			}
+			else
+			{
+				//llevar a cabo compactación
+				printf("Debemos llevar a cabo el proceso de compactación\n");
+			}
 		}
 	}
 	else
@@ -621,74 +688,6 @@ void eliminarArchivo(char** instruccion_fs_partida_delete)
 
 	liberarElementoLista(lista_archivos,instruccion_fs_partida_delete[2]);
 }
-
-/*
-void leerArchivo(char** instruccion_fs_partida_read)
-{
-	//interpretamos lo datos
-	//IO_FS_READ FS Goku.config AX ECX EDX //base//0 //tamanio//14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
-	Archivo* archivo = encontrar_archivo(lista_archivos,instruccion_fs_partida_read[2]);
-	t_config* config_archivo = config_create(archivo->path);
-
-//puntero del archivo
-	int pointer = atoi(instruccion_fs_partida_read[6]);
-//cantidad de direcciones físicas
-	int cant_df = atoi(instruccion_fs_partida_read[7]);
-
-	char* to_read = malloc(cant_df+1);
-	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (fd_bloque == -1) {
-        perror("Error al abrir el archivo");
-        exit(EXIT_FAILURE);
-    }
-	
-	int bloque_base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
-	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
-	// Aseguramos que el archivo tenga el tamaño adecuado
-    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
-        perror("Error ajustando el tamaño del archivo");
-        close(fd_bloque);
-        exit(EXIT_FAILURE);
-    }
-	// Mapeamos el archivo en memoria
-    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
-    if (bloques == MAP_FAILED) {
-        perror("Error en mmap");
-        close(fd_bloque);
-        exit(EXIT_FAILURE);
-    }
-
-//copiamos lo leido
-	strncpy(to_read,bloques + BLOCK_SIZE*bloque_base + pointer,cant_df);
-	printf("Lo que hemos leido fue: %s\n",to_read);
-
-//cerramos todo
-	close(fd_bloque);
-	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
-
-//escribimos todo en memoria
-	for (int i = 0; i < cant_df; i++) 
-	{
-		printf("ESTOY ITERANDO\n");
-		int* df_to_send_in = malloc(sizeof(int)); //liberar
-		*df_to_send_in = atoi(instruccion_fs_partida_read[8 + i]);
-		char* c_in = malloc(sizeof(char)); //liberar
-		*c_in = to_read[i];
-		new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
-		free(c_in);
-		free(df_to_send_in);
-	}
-
-	printf("ESTOY ITERANDO\n");
-	int* df_to_send_in = malloc(sizeof(int)); //liberar
-	*df_to_send_in = -1;
-	char* c_in = malloc(sizeof(char)); //liberar
-	*c_in = 'L';
-	new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
-	free(c_in);
-	free(df_to_send_in);
-}
-*/
 
 void entradasalida_escuchar_memoria (){
 	bool control_key = 1;
