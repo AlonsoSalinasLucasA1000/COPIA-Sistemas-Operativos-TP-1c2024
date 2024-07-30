@@ -1,7 +1,1 @@
 IO_FS_CREATE FS Goku.config
-IO_FS_CREATE FS Vegeta.config
-IO_FS_CREATE FS Gohan.config
-IO_FS_CREATE FS Goten.config
-IO_FS_CREATE FS Trunks.config
-IO_FS_CREATE FS Pan.config
-IO_FS_CREATE FS Bra.config

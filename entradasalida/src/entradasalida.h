@@ -357,6 +357,7 @@ void crear_archivo(char* nombre)
 			i++;
 		}
 
+		msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
 		//escribimos en el archivo los datos obtenidos
 		char first_block[12]; // 12 es suficiente para almacenar cualquier entero de 32 bits
 		sprintf(first_block, "%d", i);
@@ -372,40 +373,13 @@ void crear_archivo(char* nombre)
 	}
 }
 
-/*
-bool esPosibleTruncar(int base, int cantidad)
-{
-	printf("La base encontrada es: %d\n",base);
-	printf("La cantidad a aumentar es: %d\n",cantidad);
-	printf("Mostremos los valores que tenemos en el bitmap\n");
-	printf("El tamanio que posee es: %d\n",bit_map->size);
-	bool to_Ret = true;
-	for(int i = base+1; i < cantidad+base && i < bit_map->size*8; i++)
-	{
-		int value = bitarray_test_bit(bit_map,i);
-		printf("El valor de i es: %d\n",i);
-		printf("El valor del bit es %d\n",value);
-		if( value == 0 )
-		{
-			to_Ret = true;
-		}
-		else
-		{
-			to_Ret = false;
-			return to_Ret;
-		}
-	}
-	return to_Ret;
-}
-*/
-
 bool esPosibleTruncar(int base, int cantidad)
 {
     printf("La base encontrada es: %d\n", base);
     printf("La cantidad a aumentar es: %d\n", cantidad);
     printf("Mostremos los valores que tenemos en el bitmap\n");
     printf("El tamanio que posee es: %d\n", bit_map->size);
-	int cant_bloques = floor(cantidad/BLOCK_SIZE);
+	int cant_bloques = (int)ceil((double)cantidad / BLOCK_SIZE);
 
     for (int i = base + 1; i < cant_bloques + base; i++)
     {
@@ -452,6 +426,21 @@ int encontrar_bloques_continuos(t_bitarray* bit_array, size_t desired_length) {
     return -1;
 }
 
+bool hay_bloques_libres(t_bitarray* bitarray, int cantidad_bloques) {
+    int contador_libres = 0;
+    int tamanio = bitarray_get_max_bit(bitarray);
+
+    for (int i = 0; i < tamanio; i++) {
+        if (!bitarray_test_bit(bitarray, i)) {
+            contador_libres++;
+        }
+        if (contador_libres >= cantidad_bloques) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void truncarArchivo(char* nombre, int cantidad)
 {
 	//Primero consideremos un "truncado" que aumente el tamanio del archivo
@@ -460,7 +449,8 @@ void truncarArchivo(char* nombre, int cantidad)
 	t_config* metadata_archivo = config_create(archivo->path);
 	int base = config_get_int_value(metadata_archivo,"BLOQUE_INICIAL");
 	int tamanio = config_get_int_value(metadata_archivo,"TAMANIO_ARCHIVO");
-	int cant_bloques = floor(cantidad/BLOCK_SIZE);
+	int cant_bloques = (int)ceil((double)cantidad / BLOCK_SIZE);
+	printf("Para el archivo: %s, necesitamos la cantidad de bloques de %d\n",nombre,cant_bloques);
 
 	if( cantidad > tamanio )
 	{
@@ -498,7 +488,7 @@ void truncarArchivo(char* nombre, int cantidad)
 			//introducir lógica de compactación
 			printf("Desafortunadamente no podemos truncar de forma continua\n");
 			//Debemos introducir otro if para determinar si hay espacio suficiente
-			printf("Verificaremos si hay, en alguna parte del espacio de memoria, alguna secuencia de bloques libres de forma continua");
+			printf("Verificaremos si hay, en alguna parte del espacio de memoria, alguna secuencia de bloques libres de forma continua\n");
 			int new_base = encontrar_bloques_continuos(bit_map,cant_bloques);
 			if( new_base != (-1))
 			{
@@ -509,7 +499,7 @@ void truncarArchivo(char* nombre, int cantidad)
 				bitarray_clean_bit(bit_map,base);
 
 				//llevamos a cabo la asignación
-				for(int i = new_base+1; i < cant_bloques+new_base; i++)
+				for(int i = new_base; i < cant_bloques+new_base; i++)
 				{
 					int value = bitarray_test_bit(bit_map,i);
 					printf("El valor del bit es %d\n",value);
@@ -541,7 +531,16 @@ void truncarArchivo(char* nombre, int cantidad)
 			else
 			{
 				//llevar a cabo compactación
-				printf("Debemos llevar a cabo el proceso de compactación\n");
+				//antes de llevar a cabo la compactación debemos ver si siquiera existe la cantidad de bloques libres 
+				if( hay_bloques_libres(bit_map,cant_bloques) )
+				{
+					printf("Existe la cantidad de bloques libres, pero no se encuentran de forma continua. Debemos llevar a cabo la compactación\n");
+				}
+				else
+				{
+					printf("No hay espacio suficiente, lo siento\n");
+				}
+				
 			}
 		}
 	}
@@ -660,9 +659,10 @@ void eliminarArchivo(char** instruccion_fs_partida_delete)
 
 	int base = config_get_int_value(config_archivo,"BLOQUE_INICIAL");
 	int tamanio = config_get_int_value(config_archivo,"TAMANIO_ARCHIVO");
+	int cant_bloques = (int)ceil((double)tamanio / BLOCK_SIZE);
 
 	//liberamos aquellos bits que utilizaba
-	for(int i = base; i < tamanio; i++)
+	for(int i = base; i < cant_bloques; i++)
 	{
 		int value = bitarray_test_bit(bit_map,i);
 		printf("El valor del bit es %d\n",value);
