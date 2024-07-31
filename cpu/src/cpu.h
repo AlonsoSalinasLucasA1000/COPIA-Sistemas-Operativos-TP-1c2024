@@ -651,7 +651,9 @@ void ejecutar_proceso(PCB* proceso)
 	instruccionActual = "Goku";
 	enviar_pcb_memoria(proceso->PID,proceso->PC);
 
+	sem_wait(&interrupt_mutex);
 	*any_interrupcion = 0;	
+	sem_post(&interrupt_mutex);
 	sem_wait(&sem_exe_b);
 	while( strcmp(instruccionActual,"") != 0 )
 	{

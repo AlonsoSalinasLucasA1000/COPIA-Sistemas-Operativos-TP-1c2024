@@ -743,6 +743,7 @@ void kernel_escuchar_cpu ()
 				while( i_wait < list_size(listRecursos) && existe_wait != true )
 				{
 					recurso_wait = list_get(listRecursos,i_wait);
+					printf("El recurso obtenido es: %s",recurso_wait->name);
 					if( strcmp(recurso_wait->name,instruccion_partida_wait[1]) == 0 )
 					{
 						existe_wait = true;
