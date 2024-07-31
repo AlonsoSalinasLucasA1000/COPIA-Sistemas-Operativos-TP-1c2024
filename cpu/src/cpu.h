@@ -106,6 +106,10 @@ void enviar_pcb_memoria(int PID, int PC)
 { 
 	//enviar pcb
 	PCB* to_send = malloc(sizeof(PCB));
+	if (to_send == NULL) {
+        fprintf(stderr, "Error al asignar memoria para el PCB\n");
+        return;
+    }
 	to_send->PC = PC;
 	to_send->PID = PID;
 	to_send->quantum = 0;
@@ -124,6 +128,7 @@ void enviar_pcb_memoria(int PID, int PC)
 	to_send->path_length = 1;
 	to_send->path = "";
 	enviarPCB (to_send, fd_memoria,PROCESO);
+	free(to_send);
 
 }
 
@@ -159,6 +164,10 @@ TLB* buscar_en_TLB_PID(int numero_Pagina, int pid)
 void agregar_a_TLB(int pid, int numero_Pagina, int marco) 
 {
 	TLB* nueva_entrada = malloc(sizeof(TLB));
+	if (nueva_entrada == NULL) {
+        fprintf(stderr, "Error al asignar memoria para la nueva entrada TLB\n");
+        return;
+    }
 	nueva_entrada->PID = pid;
 	nueva_entrada->pagina = numero_Pagina;
 	nueva_entrada->marco = marco;
@@ -169,7 +178,7 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 	//
 	for(int i=0; i < list_size(listaTLB); i++){
 		
-		TLB* entrada_tlb = list_get(listaTLB, i);
+		TLB* entrada_tlb = (TLB*)list_get(listaTLB, i);
 
 		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
 
@@ -334,7 +343,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
 			//log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina ); ---------------------------------------> chequear
-			//log_info(cpu_logs_obligatorios, "PID: <%d> - TLB MISS - Pagina: <%d>", proceso->PID, numero_Pagina);
+			log_info(cpu_logs_obligatorios, "PID: <%d> - TLB MISS - Pagina: <%d>", proceso->PID, numero_Pagina);
 			enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
 
 			//printf("Llegué hasta antes del semaforo\n");
@@ -692,7 +701,7 @@ void ejecutar_proceso(PCB* proceso)
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 	instruccionActual = "Goku";
 	enviar_pcb_memoria(proceso->PID,proceso->PC);
-	//
+	//log_info(cpu_logs_obligatorios, "PID: <%d> - FETCH - Program Counter: <%d>", proceso->PID, proceso->PC);
 	sem_wait(&interrupt_mutex);
 	*any_interrupcion = 0;	
 	sem_post(&interrupt_mutex);
@@ -869,6 +878,9 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccionActual);
 			free(instruccion);
 			instruccionActual = malloc(1);
+			/*if(instruccionActual != NULL){
+				intruccionActual[0] = '\0';
+			}*/
 			instruccionActual = "";
 			/*
 			//dormir un poco antes de enviar, para no solaparse a la hora de mandar

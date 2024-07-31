@@ -80,7 +80,6 @@ char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 
 PCB* encontrarProceso(t_list* lista, uint32_t pid)
 {
-	printf("Holisasdjadsj\n");
 	PCB* ret;
 	int i = 0;
 	while( i < list_size(lista) )
@@ -238,10 +237,10 @@ void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, in
 	enviarEntero(pid,fd_io,NUEVOPID);
 
 	//mandaremos
-	printf("mandaremos la siguiente direccion fisica: %d\n",*direccionFisica);
-	printf("mandaremos el siguiente tamanio: %d\n",*tamanio);
+	//printf("mandaremos la siguiente direccion fisica: %d\n",*direccionFisica);
+	//printf("mandaremos el siguiente tamanio: %d\n",*tamanio);
 
-	printf("Voy a mandar algo para el stdin\n");
+	//printf("Voy a mandar algo para el stdin\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
@@ -271,7 +270,7 @@ void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, in
     memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
     //Por último enviamos
     send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-	printf("Lo mande\n");
+	//printf("Lo mande\n");
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
     free(paquete->buffer->stream);
@@ -320,7 +319,7 @@ void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfa
     memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
     //Por último enviamos
     send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-	printf("Lo mande\n");
+	//printf("Lo mande\n");
 	
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
@@ -343,12 +342,11 @@ EntradaSalida* encontrar_io(t_list* lista, const char* nombre_buscado) {
 
 //Busca una PCB en base a su pid en una lista. La usamos para eliminar procesos de la cola de bloqueados.
 PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
-	printf("kakaroto\n");
     for (int i = 0; i < list_size(lista); i++) 
 	{
         PCB* pcb = list_get(lista, i);
-		printf("El PCB obtenido fue: %d\n",pcb->PID);
-		printf("Su estado actual es %d\n",pcb->estado);
+		//printf("El PCB obtenido fue: %d\n",pcb->PID);
+		//printf("Su estado actual es %d\n",pcb->estado);
         if (pcb->PID == pid_buscado) 
 		{
 			pcb = list_remove(lista, i);
@@ -360,12 +358,21 @@ PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
 
 void encolar_procesos_vrr(PCB* proceso)
 {
-	printf("[CHECKPOINT VRR] En este instante el quantum es %d\n",proceso->quantum);
+	//printf("[CHECKPOINT VRR] En este instante el quantum es %d\n",proceso->quantum);
 	if( proceso->quantum > 0 )
 	{
-		printf("A la cola de máxima prioridad llegó el proceso de PID %d\n",proceso->PID);
+		//printf("A la cola de máxima prioridad llegó el proceso de PID %d\n",proceso->PID);
 		sem_wait(&sem_ready_prio);
 		queue_push(cola_ready_prioridad,proceso);
+
+
+		char* cadena_pids_prioridad = obtener_cadena_pids(cola_ready_prioridad->elements);
+		log_info (kernel_logs_obligatorios, "Ready Prioridad: %s\n", cadena_pids_prioridad);
+		free(cadena_pids_prioridad);
+		char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+		log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+		free(cadena_pids);
+
 		sem_post(&sem_ready_prio);
 	}
 	else
@@ -374,6 +381,11 @@ void encolar_procesos_vrr(PCB* proceso)
 		proceso->quantum = atoi(QUANTUM);
 		sem_wait(&sem_ready);   // mutex hace wait
 		queue_push(cola_ready, proceso); // agrega el proceso a la cola de ready
+
+		char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+		log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+		free(cadena_pids);
+
 		sem_post(&sem_ready);
 		sem_post(&sem_cant_ready);  // mutex hace wait
 	}
@@ -402,9 +414,9 @@ void liberar_recursos(int pid)
 					PCB* proceso_desbloqueado = list_remove(r->listBloqueados, 0);
 					//*to_ready = *proceso_desbloqueado;
 
-					printf("El proceso desbloqueado es el siguiente: \n");
-					printf("PID: %d\n", proceso_desbloqueado->PID);
-					printf("QUANTUM: %d\n",proceso_desbloqueado->quantum);
+					//printf("El proceso desbloqueado es el siguiente: \n");
+					//printf("PID: %d\n", proceso_desbloqueado->PID);
+					//printf("QUANTUM: %d\n",proceso_desbloqueado->quantum);
 					//printf("PATH: %s\n",proceso_desbloqueado->path);
 					//el proceso ya no queda bloquedo, lo sacamos de la cola general de bloqueados
 					sem_wait(&sem_blocked);
@@ -420,15 +432,32 @@ void liberar_recursos(int pid)
 						//añadimos a una cola dependiendo si le queda quantum o no
 						// Enviamos el proceso a la cola de ready
 
+						char* estado_anterior_proceso_desbloqueado = estado_proceso_to_string(proceso_desbloqueado->estado);
+						sem_wait(&sem_procesos);
+						PCB* actualizado_fin = encontrarProceso(lista_procesos,proceso_desbloqueado->PID);
+						actualizado_fin->estado = READY;
+						char* estado_actual_proceso_desbloqueado = estado_proceso_to_string(actualizado_fin->estado);
+						sem_post(&sem_procesos);
+
+						log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso_desbloqueado->PID, estado_anterior_proceso_desbloqueado, estado_actual_proceso_desbloqueado);
+
+
 						if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 						{
 							encolar_procesos_vrr(proceso_desbloqueado);
 						}
 						else
 						{
+
 							sem_wait(&sem_ready);   // mutex hace wait
-							printf("En este momento en la cola de ready se ha pusheado al pid: %d\n", proceso_desbloqueado->PID);
+							//printf("En este momento en la cola de ready se ha pusheado al pid: %d\n", proceso_desbloqueado->PID);
 							queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
+
+
+							char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+							log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+							free(cadena_pids);
+
 							sem_post(&sem_ready);
 							sem_post(&sem_cant_ready);  // mutex hace wait
 						}
@@ -459,6 +488,7 @@ void kernel_escuchar_cpu ()
 				char* estado_anterior = estado_proceso_to_string(proceso->estado);
 				proceso->estado = EXIT;
 				char* estado_actual = estado_proceso_to_string(proceso->estado);
+				/*
 				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
 				printf("Recibimos el proceso con el quantum en: %d\n",proceso->quantum);
 				printf("Recibimos el proceso con el AX: %d\n",proceso->registro.AX);//cambios
@@ -471,6 +501,7 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el EDX: %d\n",proceso->registro.EDX);//cambios
 				printf("Recibimos el proceso con el SI: %d\n",proceso->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
+				*/
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n",proceso->PID);
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso->PID, estado_anterior, estado_actual);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <SUCCESS>\n",proceso->PID);
@@ -491,12 +522,14 @@ void kernel_escuchar_cpu ()
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
 
+				/*
 				printf("Los recursos han quedado de la siguiente forma:\n");
 				for(int i = 0; i < list_size(listRecursos); i++)
 				{
 					Recurso* got = list_get(listRecursos,i);
 					printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
-				}				
+				}
+				*/				
 			//	
                 break;
 			case OUT_OF_MEMORY:
@@ -504,6 +537,7 @@ void kernel_escuchar_cpu ()
 				char* estado_anterior_out_of_memory = estado_proceso_to_string(proceso_out_of_memory->estado);
 				proceso_out_of_memory->estado = EXIT;
 				char* estado_actual_out_of_memory = estado_proceso_to_string(proceso_out_of_memory->estado);
+				/*
 				printf("Recibimos el proceso con el pid: %d\n", proceso_out_of_memory->PID);
 				printf("Recibimos el proceso con el quantum en: %d\n", proceso_out_of_memory->quantum);
 				printf("Recibimos el proceso con el AX: %d\n", proceso_out_of_memory->registro.AX);
@@ -516,6 +550,7 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el EDX: %d\n", proceso_out_of_memory->registro.EDX);
 				printf("Recibimos el proceso con el SI: %d\n", proceso_out_of_memory->registro.SI);
 				printf("Recibimos el proceso con el DI: %d\n", proceso_out_of_memory->registro.DI);
+				*/
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_out_of_memory->PID);
 				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_out_of_memory->PID, estado_anterior_out_of_memory, estado_actual_out_of_memory);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <OUT_OF_MEMORT>\n",proceso_out_of_memory->PID);
@@ -536,18 +571,21 @@ void kernel_escuchar_cpu ()
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
 
+				/*
 				printf("Los recursos han quedado de la siguiente forma:\n");
 				for (int i = 0; i < list_size(listRecursos); i++)
 				{
 					Recurso* got_out_of_memory = list_get(listRecursos, i);
 					printf("El nombre del recurso es %s y tiene %d instancias\n", got_out_of_memory->name, got_out_of_memory->instancias);
 				}
+				*/
 			break;
 			case INTERRUPTED_BY_USER:
 				PCB* proceso_interrupted_by_user = deserializar_proceso_cpu(paquete->buffer);
 				char* estado_anterior_interrupted_by_user = estado_proceso_to_string(proceso_interrupted_by_user->estado);
 				proceso_interrupted_by_user->estado = EXIT;
 				char* estado_actual_interrupted_by_user = estado_proceso_to_string(proceso_interrupted_by_user->estado);
+				/*
 				printf("Recibimos el proceso con el pid: %d\n", proceso_interrupted_by_user->PID);
 				printf("Recibimos el proceso con el quantum en: %d\n", proceso_interrupted_by_user->quantum);
 				printf("Recibimos el proceso con el AX: %d\n", proceso_interrupted_by_user->registro.AX);
@@ -560,7 +598,9 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el EDX: %d\n", proceso_interrupted_by_user->registro.EDX);
 				printf("Recibimos el proceso con el SI: %d\n", proceso_interrupted_by_user->registro.SI);
 				printf("Recibimos el proceso con el DI: %d\n", proceso_interrupted_by_user->registro.DI);
+				*/
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_interrupted_by_user->PID);
+				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_interrupted_by_user->PID, estado_anterior_interrupted_by_user, estado_actual_interrupted_by_user);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INTERRUPTED_BY_USER>\n", proceso_interrupted_by_user->PID);
 				// ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
@@ -578,18 +618,23 @@ void kernel_escuchar_cpu ()
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
 
+				/*
 				printf("Los recursos han quedado de la siguiente forma:\n");
 				for (int i = 0; i < list_size(listRecursos); i++)
 				{
 					Recurso* got_interrupted_by_user = list_get(listRecursos, i);
 					printf("El nombre del recurso es %s y tiene %d instancias\n", got_interrupted_by_user->name, got_interrupted_by_user->instancias);
 				}
+				*/
 			break;
 			case PROCESOIO:
 
 				PCB* proceso_io = deserializar_proceso_cpu(paquete->buffer);
-				//char* estado_anterior_1 = estado_proceso_to_string(proceso->estado);
+				char* estado_anterior_io = estado_proceso_to_string(proceso_io->estado);
 				proceso_io->estado = BLOCKED;
+				char* estado_actual_io = estado_proceso_to_string(proceso_io->estado);
+
+				/*
 				printf("Recibimos el proceso con el pid: %d\n",proceso_io->PID);
 				printf("Recibimos el proceso con el siguiente quantum: %d\n",proceso_io->quantum);
 				printf("Recibimos el proceso con el AX: %d\n",proceso_io->registro.AX);//cambios
@@ -603,6 +648,8 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso_io->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso_io->registro.DI);//cambios
 				printf("Este SE HA BLOQUEADO\n");
+				*/
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_io->PID,estado_anterior_io,estado_actual_io);
 
 				//ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
@@ -616,10 +663,10 @@ void kernel_escuchar_cpu ()
 				{
 					sem_wait(&sem_mutex_cronometro);
 					int64_t quantum_transcurrido= temporal_gettime(cronometro);
-					printf("La cantidad de tiempo que ha transcurrido: %d\n",quantum_transcurrido);
+					//printf("La cantidad de tiempo que ha transcurrido: %d\n",quantum_transcurrido);
 					sem_post(&sem_mutex_cronometro);
 					proceso_io->quantum -= quantum_transcurrido;
-					printf("[ACTUALIZACIÓN] Hemos actualizado el quantum y ha quedado de la siguiente forma: %d\n",proceso_io->quantum);
+					//printf("[ACTUALIZACIÓN] Hemos actualizado el quantum y ha quedado de la siguiente forma: %d\n",proceso_io->quantum);
 				}
 
 				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
@@ -636,7 +683,10 @@ void kernel_escuchar_cpu ()
 			case FIN_DE_QUANTUM:
 
 				PCB* proceso_fin_de_quantum = deserializar_proceso_cpu(paquete->buffer);
+				char* estado_anterior_fin_de_quantum = estado_proceso_to_string(proceso_fin_de_quantum->estado);
 				proceso_fin_de_quantum->estado = READY;
+				char* estado_actual_fin_de_quantum = estado_proceso_to_string(proceso_fin_de_quantum->estado);
+				/*
 				printf("Recibimos el proceso con el pid: %d\n",proceso_fin_de_quantum->PID);
 				printf("Recibimos el proceso con el siguiente quantum: %d\n",proceso_fin_de_quantum->quantum);
 				printf("Recibimos el proceso con el AX: %d\n",proceso_fin_de_quantum->registro.AX);//cambios
@@ -650,7 +700,8 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el SI: %d\n",proceso_fin_de_quantum->registro.SI);//cambios
 				printf("Recibimos el proceso con el DI: %d\n",proceso_fin_de_quantum->registro.DI);//cambios
 				printf("SE HA ACABADO EL QUANTUM DE ESTE PROCESO\n");
-
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_fin_de_quantum->PID,estado_anterior_fin_de_quantum,estado_actual_fin_de_quantum);
+				*/
 				sem_wait(&sem_procesos);
 				PCB* actualizado_quantum = encontrarProceso(lista_procesos,proceso_fin_de_quantum->PID);
 				actualizado_quantum->estado = READY;
@@ -661,11 +712,16 @@ void kernel_escuchar_cpu ()
 
 				//el quantum vuelve al valor original
 				proceso_fin_de_quantum->quantum = atoi(QUANTUM);
-				printf("Hemos reiniciado el quantum: %d\n",proceso_fin_de_quantum->quantum);
+				//printf("Hemos reiniciado el quantum: %d\n",proceso_fin_de_quantum->quantum);
 
 				//lo ideal seria tambien agregarlo a una cola de la interfaz de cada proceso
 				sem_wait(&sem_ready);   // mutex hace wait
 				queue_push(cola_ready,proceso_fin_de_quantum);	//agrega el proceso a la cola de ready
+
+				char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+				log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+				free(cadena_pids);
+
   				sem_post(&sem_ready); 
 				sem_post(&sem_cant_ready);  // mutex hace wait
 				
@@ -677,25 +733,30 @@ void kernel_escuchar_cpu ()
 				
 				//Deserializamos
 				Instruccion_io* instruccion_io_gen = deserializar_instruccion_io(paquete->buffer);
-				printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
-				printf("El PID del proceso es: %d\n",instruccion_io_gen->proceso.PID);
+				//printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
+				//printf("El PID del proceso es: %d\n",instruccion_io_gen->proceso.PID);
 
 				//Debemos obtener el IO específico de la lista
 				sem_wait(&sem_mutex_lists_io);
 				EntradaSalida* io_gen = encontrar_io(listGenericas,string_split(instruccion_io_gen->instruccion," ")[1]);
 				sem_post(&sem_mutex_lists_io);
 
+                char** instruccion_partida_gen = string_split(instruccion_io_gen->instruccion," ");
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_io_gen->proceso.PID,instruccion_partida_gen[1]);
+				string_array_destroy(instruccion_partida_gen);
+
+
 				//verificamos que exista
 				if( io_gen != NULL )
 				{
 					//una vez encontrada la io, veo si está ocupado
-					printf("El io encontrado tiene como nombre %s\n",io_gen->nombre);
+					//printf("El io encontrado tiene como nombre %s\n",io_gen->nombre);
 					if( io_gen->ocupado )
 					{
 						//de estar ocupado, añado el proceso a la lista de este (al proceso con la instruccion y todo)
-						printf("La IO está ocupada, se bloqueará en su lista propia\n");
-						printf("En la lista se guarda la instruccion %s\n",instruccion_io_gen->instruccion);
-						printf("En la lista se guarda el PID %d\n",instruccion_io_gen->proceso.PID);
+						//printf("La IO está ocupada, se bloqueará en su lista propia\n");
+						//printf("En la lista se guarda la instruccion %s\n",instruccion_io_gen->instruccion);
+						//printf("En la lista se guarda el PID %d\n",instruccion_io_gen->proceso.PID);
 						list_add(io_gen->procesos_bloqueados, instruccion_io_gen);
 					}
 					else
@@ -724,7 +785,7 @@ void kernel_escuchar_cpu ()
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 					
-					printf("Este proceso ha terminado\n");
+					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
@@ -738,23 +799,27 @@ void kernel_escuchar_cpu ()
 			case STDIN:
 				//Deserializamos
 				Instruccion_io* instruccion_io_stdin = deserializar_instruccion_io(paquete->buffer);
-				printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
-				printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
+				//printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
+				//printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
 
 				//debemos obtener el io específico de la lista
 				sem_wait(&sem_mutex_lists_io);
 				EntradaSalida* io_stdin = encontrar_io(listStdin,string_split(instruccion_io_stdin->instruccion," ")[1]);
 				sem_post(&sem_mutex_lists_io);
 
+				char** instruccion_partida_stdin = string_split(instruccion_io_stdin->instruccion," ");
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_io_stdin->proceso.PID,instruccion_partida_stdin[1]);
+				string_array_destroy(instruccion_partida_stdin);
+
 				//verificamos que exista
 				if( io_stdin != NULL)
 				{
-					printf("Entré acá first\n");
+					//printf("Entré acá first\n");
 					//Una vez encontrada la io, vemos si está ocupado
 					if( io_stdin->ocupado )
 					{
 						//de estar ocupado añado el proceso a la lista de este
-						printf("La IO está ocupada, se bloqueará en su lista propia\n");
+						//printf("La IO está ocupada, se bloqueará en su lista propia\n");
 						Instruccion_io* to_block = malloc(sizeof(Instruccion_io));
 						to_block->proceso = instruccion_io_stdin->proceso;
 						to_block->tam_instruccion = instruccion_io_stdin->tam_instruccion;
@@ -765,7 +830,7 @@ void kernel_escuchar_cpu ()
 					else
 					{
 						io_stdin->ocupado = true;
-						printf("El fd de este IO es %d\n",io_stdin->fd_cliente);
+						//printf("El fd de este IO es %d\n",io_stdin->fd_cliente);
 						new_ejecutar_interfaz_stdin_stdout(instruccion_io_stdin->instruccion,STDIN,io_stdin->fd_cliente,instruccion_io_stdin->proceso.PID);
 					}
 				}
@@ -778,18 +843,18 @@ void kernel_escuchar_cpu ()
 
 					char* estado_anterior_proceso_to_end = estado_proceso_to_string(proceso_to_end->estado);
 
-					printf("1Another checkpoint\n");
+					//printf("1Another checkpoint\n");
 					sem_wait(&sem_procesos);
 					PCB* actualizado_in = encontrarProceso(lista_procesos,instruccion_io_stdin->proceso.PID);
 					actualizado_in->estado = EXIT;
 					char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_in->estado);
 					sem_post(&sem_procesos);
-					printf("2Another checkpoint\n");
+					//printf("2Another checkpoint\n");
 
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 					
-					printf("Este proceso ha terminado\n");
+					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
@@ -801,19 +866,20 @@ void kernel_escuchar_cpu ()
 				sem_post(&sem_mutex_cpu_ocupada);
 				free(instruccion_io_stdin); //ESTE FREE ES PELIGROSÍSIMO, ESTAMOS BORRANDO UN DATO DE LA LISTA DE BLOQUEADOS DEL PROCESO
 				break;
-			//case FS_CREATE:
-				//
-			//	break;
 			case STDOUT:
 				//deserializamos
 				Instruccion_io* instruccion_io_stdout = deserializar_instruccion_io(paquete->buffer);
-				printf("La instruccion es: %s\n",instruccion_io_stdout->instruccion);
-				printf("El PID del proceso es: %d\n",instruccion_io_stdout->proceso.PID);
+				//printf("La instruccion es: %s\n",instruccion_io_stdout->instruccion);
+				//printf("El PID del proceso es: %d\n",instruccion_io_stdout->proceso.PID);
 
 				//debemos obtener el io específico de la lista
 				sem_wait(&sem_mutex_lists_io);
 				EntradaSalida* io_stdout = encontrar_io(listStdout,string_split(instruccion_io_stdout->instruccion," ")[1]);
 				sem_post(&sem_mutex_lists_io);
+
+				char** instruccion_partida_stdout = string_split(instruccion_io_stdout->instruccion," ");
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_io_stdout->proceso.PID,instruccion_partida_stdout[1]);
+				string_array_destroy(instruccion_partida_stdout);
 
 				//verificamos que exista
 				if( io_stdout != NULL)
@@ -823,7 +889,7 @@ void kernel_escuchar_cpu ()
 					if( io_stdout->ocupado )
 					{
 						//de estar ocupado añado el proceso a la lista de este
-						printf("La IO está ocupada, se bloqueará en su lista propia\n");
+						//printf("La IO está ocupada, se bloqueará en su lista propia\n");
 						Instruccion_io* to_block = malloc(sizeof(Instruccion_io));
 						to_block->proceso = instruccion_io_stdout->proceso;
 						to_block->tam_instruccion = instruccion_io_stdout->tam_instruccion;
@@ -834,7 +900,7 @@ void kernel_escuchar_cpu ()
 					else
 					{
 						io_stdout->ocupado = true;
-						printf("El fd de este IO es %d\n",io_stdout->fd_cliente);
+						//printf("El fd de este IO es %d\n",io_stdout->fd_cliente);
 						new_ejecutar_interfaz_stdin_stdout(instruccion_io_stdout->instruccion,STDOUT,io_stdout->fd_cliente,instruccion_io_stdout->proceso.PID);
 					}
 				}
@@ -856,7 +922,7 @@ void kernel_escuchar_cpu ()
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 
-					printf("Este proceso ha terminado\n");
+					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PC);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
@@ -870,8 +936,8 @@ void kernel_escuchar_cpu ()
 			case WAIT:
 				//Deserializamos el recurso
 				Instruccion_io* instruccion_recurso_wait = deserializar_instruccion_io(paquete->buffer);
-				printf("La instruccion es: %s\n",instruccion_recurso_wait->instruccion);
-				printf("El PID del proceso es: %d\n",instruccion_recurso_wait->proceso.PID);
+				//printf("La instruccion es: %s\n",instruccion_recurso_wait->instruccion);
+				//printf("El PID del proceso es: %d\n",instruccion_recurso_wait->proceso.PID);
 				char** instruccion_partida_wait = string_split(instruccion_recurso_wait->instruccion," ");
 
 				//verificamos que el recurso exista
@@ -881,13 +947,15 @@ void kernel_escuchar_cpu ()
 				while( i_wait < list_size(listRecursos) && existe_wait != true )
 				{
 					recurso_wait = list_get(listRecursos,i_wait);
-					printf("El recurso obtenido es: %s",recurso_wait->name);
+					//printf("El recurso obtenido es: %s",recurso_wait->name);
 					if( strcmp(recurso_wait->name,instruccion_partida_wait[1]) == 0 )
 					{
 						existe_wait = true;
 					}
 					i_wait++;
 				}
+
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
 
 				//si existe
 				if( existe_wait )
@@ -902,17 +970,25 @@ void kernel_escuchar_cpu ()
 						PCB* proceso_recurso = malloc(sizeof(PCB));
 						*proceso_recurso = instruccion_recurso_wait->proceso;
 						list_add(recurso_wait->listBloqueados,proceso_recurso);
+
+						char* estado_anterior_proceso_wait = estado_proceso_to_string(proceso_recurso->estado);
 						
 						sem_wait(&sem_blocked);
 						queue_push(cola_blocked,proceso_recurso);
 						sem_post(&sem_blocked);
+
+						
+						
 
 						sem_wait(&sem_procesos);
 						PCB* actualizado_wait = encontrarProceso(lista_procesos,instruccion_recurso_wait->proceso.PID);
 						actualizado_wait->estado = BLOCKED;
 						sem_post(&sem_procesos);
 
-						printf("El proceso se ha bloqueado porque no hay instancias disponibles\n");
+						char* estado_actual_proceso_wait = estado_proceso_to_string(actualizado_wait->estado);
+
+						log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_recurso->PID, estado_anterior_proceso_wait, estado_actual_proceso_wait);
+						log_info(kernel_logs_obligatorios, "El proceso de PID: <%d> - Ha sido bloqueado porque no hay instancias disponibles del recurso\n");
 
 						//CPU desocupada
 						sem_wait(&sem_mutex_cpu_ocupada);
@@ -927,7 +1003,7 @@ void kernel_escuchar_cpu ()
 						uint32_t* pid = malloc(sizeof(uint32_t));
 						*pid = instruccion_recurso_wait->proceso.PID;
 						list_add(recurso_wait->pid_procesos, pid);
-						printf("En este momento el tamaño de la lista del recurso es de %d\n",list_size(recurso_wait->pid_procesos));
+						//printf("En este momento el tamaño de la lista del recurso es de %d\n",list_size(recurso_wait->pid_procesos));
 
 						//enviamos el proceso a la cola de ready
 						PCB* proceso_recurso = malloc(sizeof(PCB));
@@ -946,8 +1022,8 @@ void kernel_escuchar_cpu ()
 							sem_post(&sem_cant_ready);  // mutex hace wait
 						}
 						*/
-						printf("Enviaremos un proceso\n");
-						printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
+						//printf("Enviaremos un proceso\n");
+						//printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
 						enviarPCB(proceso_recurso, fd_cpu_dispatch,PROCESO);
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = true;
@@ -958,30 +1034,41 @@ void kernel_escuchar_cpu ()
 						cpu_ocupada = false;
 						sem_post(&sem_mutex_cpu_ocupada);
 						*/
+
+						/*
 						printf("Los recursos han quedado de la siguiente forma:\n");
 						for(int i = 0; i < list_size(listRecursos); i++)
 						{
 							Recurso* got = list_get(listRecursos,i);
 							printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
 						}
+						*/
 					}
 				}
 				else
 				{
 					//el recurso no existe, debemos terminarlo
-					printf("El recurso no existe\n");
-					printf("Este proceso ha terminado\n");
+					//printf("El recurso no existe\n");
+					//printf("Este proceso ha terminado\n");
+
+					char* estado_anterior_proceso_to_end = estado_proceso_to_string(instruccion_recurso_wait->proceso.estado);
 
 					sem_wait(&sem_procesos);
 					PCB* actualizado_wait = encontrarProceso(lista_procesos,instruccion_recurso_wait->proceso.PID);
 					actualizado_wait->estado = EXIT;
+					char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_wait->estado);
 					sem_post(&sem_procesos);
+
+					
 
 					//printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_wait->proceso;
 					liberar_recursos(proceso_recurso->PID);
 					enviarPCB(proceso_recurso,fd_memoria,PROCESOFIN);
+
+					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", actualizado_wait->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
+					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_RESOURCE>\n", actualizado_wait->PID);
 
 					//EN ESTA PARTE, LO IDEAL SERÍA TENER UNA LISTA GLOBAL DE PROCESOS CON LA CUAL PODAMOS TENER SEGUIMIENTO TOTAL DE ELLOS.
 					//De darse este caso, en dicha lista diríamos que el proceso ha finalizado.
@@ -995,8 +1082,8 @@ void kernel_escuchar_cpu ()
 			case SIGNAL:
 				// Deserializamos el recurso
 				Instruccion_io* instruccion_recurso_signal = deserializar_instruccion_io(paquete->buffer);
-				printf("La instruccion es: %s\n", instruccion_recurso_signal->instruccion);
-				printf("El PID del proceso es: %d\n", instruccion_recurso_signal->proceso.PID);
+				//printf("La instruccion es: %s\n", instruccion_recurso_signal->instruccion);
+				//printf("El PID del proceso es: %d\n", instruccion_recurso_signal->proceso.PID);
 				char** instruccion_partida_signal = string_split(instruccion_recurso_signal->instruccion, " ");
 
 				// Verificamos que el recurso exista
@@ -1010,6 +1097,8 @@ void kernel_escuchar_cpu ()
 					}
 					i_signal++;
 				}
+
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
 
 				// Si existe
 				if (existe_signal) 
@@ -1030,10 +1119,15 @@ void kernel_escuchar_cpu ()
 							*pid = proceso_desbloqueado->PID;
 							list_add(recurso_signal->pid_procesos,pid);
 
+							char* estado_anterior_proceso_desbloqueado = estado_proceso_to_string(proceso_desbloqueado->estado);
+
 							sem_wait(&sem_procesos);
 							PCB* actualizado_signal = encontrarProceso(lista_procesos,instruccion_recurso_signal->proceso.PID);
 							actualizado_signal->estado = READY;
+							char* estado_actual_proceso_desbloqueado = estado_proceso_to_string(actualizado_signal->estado);
 							sem_post(&sem_procesos);
+
+							log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", actualizado_signal->PID, estado_anterior_proceso_desbloqueado, estado_actual_proceso_desbloqueado);
 
 							if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 							{
@@ -1043,8 +1137,13 @@ void kernel_escuchar_cpu ()
 							{
 								// Enviamos el proceso a la cola de ready
 								sem_wait(&sem_ready);   // mutex hace wait
-								printf("En este momento en la cola de ready se ha pusheado al pid: %d\n", proceso_desbloqueado->PID);
+								//printf("En este momento en la cola de ready se ha pusheado al pid: %d\n", proceso_desbloqueado->PID);
 								queue_push(cola_ready, proceso_desbloqueado); // agrega el proceso a la cola de ready
+
+								char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+								log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+								free(cadena_pids);
+
 								sem_post(&sem_ready);
 								sem_post(&sem_cant_ready);  // mutex hace wait
 							}
@@ -1058,8 +1157,8 @@ void kernel_escuchar_cpu ()
 					*proceso_recurso = instruccion_recurso_signal->proceso;
 
 					//debe volver a ejecutarse
-					printf("Enviaremos un proceso\n");
-					printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
+					//printf("Enviaremos un proceso\n");
+					//printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
 					enviarPCB(proceso_recurso, fd_cpu_dispatch,PROCESO);
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = true;
@@ -1087,15 +1186,19 @@ void kernel_escuchar_cpu ()
 				else 
 				{
 					// El recurso no existe, debemos terminarlo
-					printf("El recurso no existe\n");
-					printf("Este proceso ha terminado\n");
+					//printf("El recurso no existe\n");
+					//printf("Este proceso ha terminado\n");
+
+					char* estado_anterior_proceso_to_end = estado_proceso_to_string(instruccion_recurso_signal->proceso.estado);
+
 					sem_wait(&sem_procesos);
 					PCB* actualizado_signal = encontrarProceso(lista_procesos,instruccion_recurso_signal->proceso.PID);
-					
 					actualizado_signal->estado = EXIT;
-					
-					
+					char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_signal->estado);
 					sem_post(&sem_procesos);
+
+					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", actualizado_signal->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
+					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_RESOURCE>\n", actualizado_signal->PID);
 
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
@@ -1116,23 +1219,27 @@ void kernel_escuchar_cpu ()
 				
 				// Deserializamos
 					Instruccion_io* instruccion_io_fs = deserializar_instruccion_io(paquete->buffer);
-					printf("La instrucción es: %s\n", instruccion_io_fs->instruccion);
-					printf("El PID del proceso es: %d\n", instruccion_io_fs->proceso.PID);
+					//printf("La instrucción es: %s\n", instruccion_io_fs->instruccion);
+					//printf("El PID del proceso es: %d\n", instruccion_io_fs->proceso.PID);
 
 					// Debemos obtener la IO específica de la lista
 					sem_wait(&sem_mutex_lists_io);
 					EntradaSalida* io_fs = encontrar_io(listDialfs, string_split(instruccion_io_fs->instruccion, " ")[1]);
 					sem_post(&sem_mutex_lists_io);
 
+
 					// Verificamos que exista
 					if (io_fs != NULL)
 					{
 						// Existe
 						// Una vez encontrada la IO, vemos si está ocupada
+						char** instruccion_partida_dialfs = string_split(instruccion_io_fs->instruccion," ");
+						log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_io_fs->proceso.PID,instruccion_partida_dialfs[1]);
+
 						if (io_fs->ocupado)
 						{
 							// Si está ocupada, añadimos el proceso a la lista de bloqueados
-							printf("La IO está ocupada, se bloqueará en su lista propia\n");
+							//printf("La IO está ocupada, se bloqueará en su lista propia\n");
 							Instruccion_io* to_block = malloc(sizeof(Instruccion_io));
 							to_block->proceso = instruccion_io_fs->proceso;
 							to_block->tam_instruccion = instruccion_io_fs->tam_instruccion;
@@ -1143,8 +1250,8 @@ void kernel_escuchar_cpu ()
 						else
 						{
 							io_fs->ocupado = true;
-							printf("El fd de esta IO es %d\n", io_fs->fd_cliente);
-							char** instruccion_partida_dialfs = string_split(instruccion_io_fs->instruccion," ");
+							//printf("El fd de esta IO es %d\n", io_fs->fd_cliente);
+							
 							if( strcmp(instruccion_partida_dialfs[0], "IO_FS_CREATE") == 0 )
 							{
 								//crear archivo 
@@ -1178,8 +1285,9 @@ void kernel_escuchar_cpu ()
 										}
 									}
 								}
-								string_array_destroy(instruccion_partida_dialfs);
+								
 							}
+							string_array_destroy(instruccion_partida_dialfs);
 						}
 					}
 					else
@@ -1200,7 +1308,7 @@ void kernel_escuchar_cpu ()
 						log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 						log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 
-						printf("Este proceso ha terminado\n");
+						//printf("Este proceso ha terminado\n");
 						liberar_recursos(proceso_to_end->PC);
 						enviarPCB(proceso_to_end, fd_memoria, PROCESOFIN);
 						free(proceso_to_end->path);
@@ -1254,8 +1362,8 @@ void modificar_io_en_listas(int fd_io)
 		if( list_size(to_ret->procesos_bloqueados) > 0 )
 		{
 			Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
-			printf("De la lista hemos extraído la instrucción %s\n",proceso_bloqueado_io->instruccion);
-			printf("De la lista hemos extraído el pid %d\n",proceso_bloqueado_io->proceso.PID);
+			//printf("De la lista hemos extraído la instrucción %s\n",proceso_bloqueado_io->instruccion);
+			//printf("De la lista hemos extraído el pid %d\n",proceso_bloqueado_io->proceso.PID);
 			ejecutar_interfaz_generica(proceso_bloqueado_io->instruccion,GENERICA,fd_io,proceso_bloqueado_io->proceso.PID);
 		}
 	}
@@ -1304,7 +1412,7 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 	while (control_key) {
 
 			int cod_op = recibir_operacion(*fd_io);
-			printf("El fd de este IO es %d\n",*fd_io);
+			//printf("El fd de este IO es %d\n",*fd_io);
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 			recv(*fd_io,&(paquete->buffer->size),sizeof(uint32_t),0);	
@@ -1362,14 +1470,16 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 			    break;
 			case DESPERTAR:
 				//sacamos al proceso de la cola de blocked y lo añadimos a IO
-				printf("La IO ha despertado :O\n");
+				//printf("La IO ha despertado :O\n");
 				int* pid_io = paquete->buffer->stream;
-				printf("El pid que ha llegado de la IO es %d\n",*pid_io);
+				//printf("El pid que ha llegado de la IO es %d\n",*pid_io);
 
 				//PCB* proceso_awaken = queue_pop(cola_blocked);
 				sem_wait(&sem_blocked);
 				PCB* proceso_awaken = encontrar_por_pid(cola_blocked->elements,(uint32_t)*pid_io);
 				sem_post(&sem_blocked);
+				
+				char* estado_anterior_awaken = estado_proceso_to_string(proceso_awaken->estado);
 				
 				//ACÁ METERÉ EN READY DEPENDIENDO DEL QUANTUM DEL PROCESO
 				proceso_awaken->estado = READY;
@@ -1377,7 +1487,10 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 				sem_wait(&sem_procesos);
 				PCB* actualizado = encontrarProceso(lista_procesos,(uint32_t)*pid_io);
 				actualizado->estado = READY;
+				char* estado_actual_awaken = estado_proceso_to_string(actualizado->estado);
 				sem_post(&sem_procesos);
+
+				log_info(kernel_logs_obligatorios,"PID: <%u> - Estado Anterior : <%s> - Estado Actual: <%s>\n",proceso_awaken->PID,estado_anterior_awaken,estado_actual_awaken);
 
 				//si el quantum del proceso es mayor a cero, debe ir a la cola de mayor prioridad
 				//meter en ready
@@ -1389,6 +1502,11 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 				{
 					sem_wait(&sem_ready);   // mutex hace wait
 					queue_push(cola_ready,proceso_awaken);	//agrega el proceso a la cola de ready
+
+					char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+					log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+					free(cadena_pids);
+
 					sem_post(&sem_ready); 
 					sem_post(&sem_cant_ready);
 				}
@@ -1538,7 +1656,7 @@ void iniciar_proceso(char* path)
 	
 	sem_wait(&sem_procesos);
 	list_add(lista_procesos,pcb);
-	printf("Agregué el proceso %d a la lista de procesos\n", pcb->PID);
+	//printf("Agregué el proceso %d a la lista de procesos\n", pcb->PID);
 	sem_post(&sem_procesos);
 	
 	
@@ -1555,22 +1673,22 @@ void iniciar_proceso(char* path)
 
 void finalizar_proceso (char* pid) {
     uint32_t pid_to_eliminar = (uint32_t)atoi(pid);
-    printf("El pid solicitado a eliminar es %d\n", pid_to_eliminar);
+   // printf("El pid solicitado a eliminar es %d\n", pid_to_eliminar);
 
     sem_wait(&sem_procesos);
     PCB* proceso_a_terminar = encontrarProceso(lista_procesos, pid_to_eliminar);
     sem_post(&sem_procesos);
 
-    printf("El proceso a terminar luce de la siguiente forma: \n");
-    printf("PID: %d\n", proceso_a_terminar->PID);
-    printf("Length del path: %d\n", proceso_a_terminar->path_length);
-    printf("Path: %s\n", proceso_a_terminar->path);
+    //printf("El proceso a terminar luce de la siguiente forma: \n");
+    //printf("PID: %d\n", proceso_a_terminar->PID);
+   // printf("Length del path: %d\n", proceso_a_terminar->path_length);
+    //printf("Path: %s\n", proceso_a_terminar->path);
 
     char* estado_anterior = estado_proceso_to_string(proceso_a_terminar->estado);
 
     switch (proceso_a_terminar->estado) {
         case NEW:
-            printf("El proceso de pid %d es eliminado estando en NEW\n", proceso_a_terminar->PID);
+            //printf("El proceso de pid %d es eliminado estando en NEW\n", proceso_a_terminar->PID);
             liberar_recursos(pid_to_eliminar);
             enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
             sem_wait(&sem);
@@ -1578,7 +1696,7 @@ void finalizar_proceso (char* pid) {
             sem_post(&sem);
             break;
         case READY:
-            printf("El proceso de pid %d es eliminado estando en READY\n", proceso_a_terminar->PID);
+           // printf("El proceso de pid %d es eliminado estando en READY\n", proceso_a_terminar->PID);
             liberar_recursos(pid_to_eliminar);
             enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
             sem_wait(&sem_ready);
@@ -1586,13 +1704,12 @@ void finalizar_proceso (char* pid) {
             sem_post(&sem_ready);
             break;
         case EXEC:
-            // FALTA VERIFICAR EL CASO DE QUE SE ENCUENTRE EN EJECUCIÓN.
             int* pid_del_proceso = malloc(sizeof(int));
             *pid_del_proceso = proceso_a_terminar->PID;
             enviarEntero(pid_del_proceso, fd_cpu_interrupt, FINALIZAR_PROCESO);
             break;
         case BLOCKED:
-            printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
+           // printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
 			liberar_recursos(pid_to_eliminar);
             enviarPCB(proceso_a_terminar, fd_memoria, PROCESOFIN);
             sem_wait(&sem_blocked);
@@ -1755,9 +1872,9 @@ void ejecutar_script (char* path)
 	
 	char linea[256];
     while (fgets(linea, sizeof(linea), file)) {
-		printf("La linea leida es: %s", linea);
+		//printf("La linea leida es: %s", linea);
 		char* linea_modificada = remove_last_two_chars(linea);
-		printf("La linea modificada leida es: %s\n", linea_modificada);
+		//printf("La linea modificada leida es: %s\n", linea_modificada);
 		validarFuncionesConsola(linea_modificada);
 		free(linea_modificada);
 		sleep (1);
@@ -1807,7 +1924,7 @@ void mover_procesos_a_ready()
 				sem_post(&sem_procesos);
 
 				queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
-				printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
+				//printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
 				char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
 				log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
 				free(cadena_pids);
@@ -1878,12 +1995,12 @@ void interrumpir_por_quantum()
 {
 	int quantumAUsar = atoi(QUANTUM);
 	unsigned int quantum = quantumAUsar;
-	printf("El quantum sera: %d\n",quantumAUsar);
+	//printf("El quantum sera: %d\n",quantumAUsar);
 	usleep(quantum*1000);
 	//MANDAR A MEMORIA FIN DE QUANTUM POR DISPATCH
 	int* enteroRandom = malloc(sizeof(int));
 	*enteroRandom = 0;
- 	printf("Me desperte uwu\n");
+ 	//printf("Me desperte uwu\n");
 	enviarEntero(enteroRandom,fd_cpu_interrupt,FIN_DE_QUANTUM);
 }
 
@@ -1964,13 +2081,13 @@ void enviar_pcb_a_cpu_vrr()
 	sem_wait(&sem_ready_prio);
 	if( queue_size(cola_ready_prioridad) > 0 )
 	{
-		printf("Entré en esta guarda\n");
+		//printf("Entré en esta guarda\n");
 
 		pcb_cola = queue_pop(cola_ready_prioridad); //saca el proceso de la cola de ready
 	}
 	else
 	{
-		printf("Entré en esta guarda\n");
+		//printf("Entré en esta guarda\n");
 		sem_wait(&sem_cant_ready);   // mutex hace wait
 		sem_wait(&sem_ready);   // mutex hace wait
 		pcb_cola = queue_pop(cola_ready); //saca el proceso de la cola de ready
@@ -1994,10 +2111,11 @@ void enviar_pcb_a_cpu_vrr()
 	sem_wait(&sem_procesos);
 	PCB* actualizado = encontrarProceso(lista_procesos,pcb_cola->PID);
 	actualizado->estado = EXEC;
+	log_info(kernel_logs_obligatorios,"PID: <%u> - Estado Anterior : <READY> - Estado Actual: <EXEC>\n",actualizado->PID);
 	sem_post(&sem_procesos);
 
-	printf("Enviaremos un proceso\n");
-	printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
+	//printf("Enviaremos un proceso\n");
+	//printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
 	sem_wait(&sem_mutex_cpu_ocupada);
 	cpu_ocupada = true;

@@ -172,6 +172,7 @@ void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamani
     free(paquete);
 }
 
+/*
 void recuperarArchivos(const char* path, t_list* lista_archivos) {
     DIR *dir;
     struct dirent *ent;
@@ -224,6 +225,79 @@ void recuperarArchivos(const char* path, t_list* lista_archivos) {
 					archivo->bloque_inicial = bloque_inicial;
 
 					config_destroy(config);
+
+                    // Añade la estructura Archivo a la lista
+                    list_add(lista_archivos, archivo);
+                }
+            }
+        }
+        closedir(dir);
+    } else {
+        // No se pudo abrir el directorio
+        perror("Error al abrir el directorio");
+    }
+}
+*/
+
+void recuperarArchivos(const char* path, t_list* lista_archivos) {
+    DIR *dir;
+    struct dirent *ent;
+
+    // Verifica si la lista es nula
+    if (lista_archivos == NULL) {
+        fprintf(stderr, "La lista proporcionada es nula.\n");
+        return;
+    }
+
+    // Abre el directorio
+    if ((dir = opendir(path)) != NULL) {
+        // Lee cada entrada en el directorio
+        while ((ent = readdir(dir)) != NULL) {
+            // Omite "." y ".."
+            if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+                // Omite "bloques.dat" y "bitmap.dat"
+                if (strcmp(ent->d_name, "bloques.dat") != 0 && strcmp(ent->d_name, "bitmap.dat") != 0) {
+                    // Construye el path completo
+                    size_t path_len = strlen(path);
+                    size_t name_len = strlen(ent->d_name);
+                    char *path_completo = malloc(path_len + name_len + 2); // +2 para '/' y '\0'
+
+                    if (path_completo == NULL) {
+                        perror("Error al asignar memoria");
+                        closedir(dir);
+                        return; // Salir sin liberar la lista ya que puede que haya elementos válidos
+                    }
+
+                    // Construye el path completo
+                    snprintf(path_completo, path_len + name_len + 2, "%s/%s", path, ent->d_name);
+
+                    // Crea una nueva estructura Archivo
+                    Archivo *archivo = malloc(sizeof(Archivo));
+                    if (archivo == NULL) {
+                        perror("Error al asignar memoria para Archivo");
+                        free(path_completo); // Libera el path si ocurre un error
+                        closedir(dir);
+                        return; // Salir sin liberar la lista ya que puede que haya elementos válidos
+                    }
+
+                    archivo->path_length = name_len;
+                    archivo->path = path_completo;
+                    archivo->fd_archivo = -1; // No se abre el descriptor de archivo aquí
+
+                    // Abre el config y guarda el bloque inicial
+                    t_config* config = config_create(archivo->path);
+                    if (config == NULL) {
+                        perror("Error al crear el archivo de configuración");
+                        free(path_completo); // Libera el path si ocurre un error
+                        free(archivo);       // Libera el archivo si ocurre un error
+                        closedir(dir);
+                        return; // Salir sin liberar la lista ya que puede que haya elementos válidos
+                    }
+
+                    int bloque_inicial = config_get_int_value(config, "BLOQUE_INICIAL");
+                    archivo->bloque_inicial = bloque_inicial;
+
+                    config_destroy(config);
 
                     // Añade la estructura Archivo a la lista
                     list_add(lista_archivos, archivo);
@@ -347,6 +421,7 @@ Archivo* encontrar_archivo(t_list* lista_archivos, char* nombre)
 		if( strcmp(path_partido[4], nombre) == 0 )
 		{
 			to_ret = a;
+			string_array_destroy(path_partido);
 			return to_ret;
 		}
 		string_array_destroy(path_partido);
@@ -895,6 +970,7 @@ void truncarArchivo(char* nombre, int cantidad)
 		config_set_value(metadata_archivo,"TAMANIO_ARCHIVO",cantidad_string);
 		config_save_in_file(metadata_archivo,archivo->path);
 	}
+	config_destroy(metadata_archivo);
 }
 
 void escribirArchivo(char** instruccion)
@@ -922,12 +998,13 @@ void escribirArchivo(char** instruccion)
 	new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_fs,IO_FS_WRITE);
 	free(tamanio_fs);
 	list_clean_and_destroy_elements(lista_direcciones,free);
+	list_destroy(lista_direcciones);
 	printf("ESTOY ITERANDO\n");
 
 	sem_wait(&sem_activacion1);
 	char* a_escribir_en_archivo = malloc(strlen(dialfs_to_write)+1);
 	strcpy(a_escribir_en_archivo,dialfs_to_write);
-
+	free(dialfs_to_write);
 	sem_post(&sem_activacion2);
 	//llegamos acá y tenemos
 	printf("%s\n",a_escribir_en_archivo);
@@ -960,8 +1037,11 @@ void escribirArchivo(char** instruccion)
 	msync(bloques,BLOCK_COUNT * BLOCK_SIZE,MS_SYNC);
 	close(fd_bloque);
 	munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
+	config_destroy(config_archivo);
+	free(a_escribir_en_archivo);
 }
 
+/*
 void liberarElementoLista(t_list* lista_archivos, char* name)
 {
 	for(int i = 0; i < list_size(lista_archivos); i++)
@@ -974,6 +1054,35 @@ void liberarElementoLista(t_list* lista_archivos, char* name)
 		}
 		string_array_destroy(path_partido);
 	}
+}
+*/
+
+void liberarElementoLista(t_list* lista_archivos, char* name)
+{
+    for(int i = 0; i < list_size(lista_archivos); )
+    {
+        Archivo* a = list_get(lista_archivos, i);
+        char** path_partido = string_split(a->path, "/");
+
+        // Compara el nombre para encontrar el archivo a eliminar
+        if (strcmp(path_partido[4], name) == 0)
+        {
+            // Elimina el elemento y libera la memoria asociada
+            free(a->path); // Libera el path
+            free(a); // Libera la estructura Archivo
+
+            // Elimina el elemento de la lista y libera la memoria asociada
+            list_remove(lista_archivos,i);
+        }
+        else
+        {
+            // Solo incrementa el índice si no se eliminó el elemento
+            i++;
+        }
+
+        // Libera el array de strings
+        string_array_destroy(path_partido);
+    }
 }
 
 void eliminarArchivo(char** instruccion_fs_partida_delete)
@@ -1013,6 +1122,7 @@ void eliminarArchivo(char** instruccion_fs_partida_delete)
     }
 
 	liberarElementoLista(lista_archivos,instruccion_fs_partida_delete[2]);
+	config_destroy(config_archivo);
 }
 
 void entradasalida_escuchar_memoria (){
@@ -1079,7 +1189,7 @@ void entradasalida_escuchar_memoria (){
 			switch (cod_op) {
 			case STDOUT_TOPRINT:
 				printf("Entramos acá adentro reyes\n");
-				char* text_to_print = malloc(paquete->buffer->size);
+				char* text_to_print = malloc(paquete->buffer->size + 1);  // Reservar un byte extra para '\0'
 				if (text_to_print != NULL) {
                     memcpy(text_to_print, paquete->buffer->stream, paquete->buffer->size);
                     text_to_print[paquete->buffer->size] = '\0'; // para terminar la cadena
@@ -1100,20 +1210,19 @@ void entradasalida_escuchar_memoria (){
 			case IO_FS_WRITE:
 				//
 				printf("Entramos acá adentro reyes\n");
-				char* dialfs_to_write = malloc(paquete->buffer->size + 1);
+				dialfs_to_write = malloc(paquete->buffer->size + 1);
                 if (dialfs_to_write != NULL) {
                     memcpy(dialfs_to_write, paquete->buffer->stream, paquete->buffer->size);
                     dialfs_to_write[paquete->buffer->size] = '\0'; // Asegúrate de terminar la cadena
                     printf("%s\n", dialfs_to_write);
-                    free(dialfs_to_write);
+					sem_post(&sem_activacion1);
+					sem_wait(&sem_activacion2);				
                 }
 				/*
 				dialfs_to_write = malloc(paquete->buffer->size);
 				dialfs_to_write = paquete->buffer->stream;
 				printf("%s\n",dialfs_to_write);
 				*/
-				sem_post(&sem_activacion1);
-				sem_wait(&sem_activacion2);
 				break;
 			case MENSAJE:
 				//
@@ -1391,7 +1500,7 @@ void entradasalida_escuchar_kernel (){
 				free(c_in);
 				free(df_to_send_in);
 				free(leido_in);
-				free(tamanio_instruccion_in);
+				//free(tamanio_instruccion_in);
 				free(instruccion_in);
 				string_array_destroy(instruccion_partida_in);
 				// new_enviar_stdin_to_write_memoria(direccionFisica, caracter);
@@ -1413,14 +1522,33 @@ void entradasalida_escuchar_kernel (){
 				memcpy(instruccion_out, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_out);
 				printf("Llegó el siguiente tamaño: %d\n",*tamanio_instruccion_out);
 				printf("Llegó la siguiente instrucción: %s\n",instruccion_out);
-				char** instrucciones_partidas_out = string_split(instruccion_out," ");
 				
+				char** instrucciones_partidas_out = string_split(instruccion_out," ");
+				if (instrucciones_partidas_out == NULL) {
+					perror("string_split");
+					free(instruccion_out);
+					free(paquete->buffer->stream);
+					free(paquete->buffer);
+					free(paquete);
+					continue;
+				}
 				printf("CHECKPOINT DEL OUT 2\n");
+
 				//creamos una lista de las direcciones que vayamos obteniendo	
 				t_list* lista_direcciones = list_create();
+				if (lista_direcciones == NULL) {
+					perror("list_create");
+					free(instrucciones_partidas_out);
+					free(instruccion_out);
+					free(paquete->buffer->stream);
+					free(paquete->buffer);
+					free(paquete);
+					continue;
+				}
 				int* tamanio_out = malloc(sizeof(int));
 				if (tamanio_out == NULL) {
                     perror("malloc");
+					free(instrucciones_partidas_out);
                     free(instruccion_out);
                     free(paquete->buffer->stream);
                     free(paquete->buffer);
@@ -1435,6 +1563,7 @@ void entradasalida_escuchar_kernel (){
                         perror("malloc");
                         list_destroy_and_destroy_elements(lista_direcciones, free);
                         free(tamanio_out);
+                        free(instrucciones_partidas_out);
                         free(instruccion_out);
                         free(paquete->buffer->stream);
                         free(paquete->buffer);
@@ -1453,6 +1582,8 @@ void entradasalida_escuchar_kernel (){
 				list_destroy_and_destroy_elements(lista_direcciones, free);
                 free(tamanio_out);
                 free(instruccion_out);
+                string_array_destroy(instrucciones_partidas_out);
+
 				break;
 
 			case NUEVOPID:

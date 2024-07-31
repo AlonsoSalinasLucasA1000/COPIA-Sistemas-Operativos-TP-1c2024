@@ -141,6 +141,7 @@ cola_ready_prioridad = queue_create();
 cola_blocked = queue_create();
 
 kernel_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
+log_info(kernel_logs_obligatorios,"////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////\n");
 
 if (kernel_logs_obligatorios == NULL)
 {
