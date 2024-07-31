@@ -61,18 +61,42 @@ void inicializar_path_bloques(const char* PATH_BASE_DIALFS)
 
 void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
 {
+	
+	// Verificamos si los punteros son válidos
+    if (direccionFisica == NULL || caracter == NULL) {
+        fprintf(stderr, "Error: punteros de entrada (new_enviar_stdin_to_write_memoria) son NULL.\n");
+        return;
+    }
+	
 	printf("ONE\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	if (buffer == NULL) {
+        perror("malloc");
+        return;
+    }
+
 	buffer->offset = 0;
 	buffer->size = sizeof(int) + sizeof(char) + 1;
 	buffer->stream = malloc(buffer->size);
-
+	 if (buffer->stream == NULL) {
+        perror("malloc");
+        free(buffer);
+        return;
+    }
+	//copiamos los datos al buffer
 	memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
     buffer->offset += sizeof(int);
 	memcpy(buffer->stream + buffer->offset,caracter, sizeof(char));
 
 	printf("TWO\n");
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+	if (paquete == NULL) {
+        perror("malloc");
+        free(buffer->stream);
+        free(buffer);
+        return;
+    }
+
     //Podemos usar una constante por operación
     paquete->codigo_operacion = STDIN_TOWRITE;
 	paquete->buffer = buffer;
@@ -80,6 +104,13 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
 	printf("THREE\n");
 	//Empaquetamos el Buffer
     void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+	if (a_enviar == NULL) {
+        perror("malloc");
+        free(paquete->buffer->stream);
+        free(paquete->buffer);
+        free(paquete);
+        return;
+    }
     int offset = 0;
     memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
     offset += sizeof(op_code);
@@ -1360,10 +1391,13 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
 	to_send->fd_cliente = 0;
 	to_send->nombre_length = strlen(datos[0])+1;
 	to_send->nombre = malloc(to_send->nombre_length);
-	to_send->nombre = datos[0];
+	memcpy(to_send->nombre, datos[0], to_send->nombre_length);
+	//to_send->nombre = datos[0];
 	to_send->path_length = strlen(datos[1])+1;
 	to_send->path = malloc(to_send->path_length);
-	to_send->path = datos[1];
+	memcpy(to_send->path, datos[1], to_send->path_length);
+	//to_send->path = datos[1];
+
 
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 	//calculamos su tamaño
@@ -1433,7 +1467,9 @@ void enviarDatos(int fd_servidor, char** datos, char* tipo_interfaz)
     send(fd_servidor, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
-    //free(to_send);
+    free(to_send->nombre);
+    free(to_send->path);
+	free(to_send);
 	free(a_enviar);
     free(paquete->buffer->stream);
     free(paquete->buffer);
