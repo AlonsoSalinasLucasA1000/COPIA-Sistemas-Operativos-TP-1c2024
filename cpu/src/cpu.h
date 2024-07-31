@@ -143,6 +143,18 @@ TLB* buscar_en_TLB(int numero_Pagina, PCB* proceso) {
     return NULL; // Retorna NULL si no se encuentra la entrada en la TLB (TLB HIT)
 }
 
+TLB* buscar_en_TLB_PID(int numero_Pagina, int pid)
+{
+	for (int i = 0; i < list_size(listaTLB); i++) { 
+		TLB* entrada = list_get(listaTLB, i);
+		if (entrada->PID == pid && entrada->pagina == numero_Pagina) {
+				
+			return entrada; // Retorna la entrada de la TLB encontrada
+		}
+    }
+    return NULL; // Retorna NULL si no se encuentra la entrada en la TLB (TLB HIT)
+}
+
 //Funcion para agregar a lista de TLB el pid del proceso y su numero_pagina
 void agregar_a_TLB(int pid, int numero_Pagina, int marco) 
 {
@@ -181,6 +193,14 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 		// Mover la entrada más antigua al final de la lista (simulando FIFO)
 		*/	
 		list_remove(listaTLB, 0);
+
+		for(int i=0; i < list_size(listaTLB); i++){
+		
+		TLB* entrada_tlb = list_get(listaTLB, i);
+
+		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
+
+	}
 		//list_add(listaTLB, entrada_mas_antigua);
 		
 	}   
@@ -210,7 +230,7 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 	//ver2
 		if(strcmp(ALGORITMO_TLB, "LRU")==0)
 	{
-		TLB* entradaLRU = buscar_en_TLB(numero_Pagina, pid);
+		TLB* entradaLRU = buscar_en_TLB_PID(numero_Pagina, pid);
 		int LRU_counter = 0; //
 
 		if(entradaLRU != NULL)
@@ -234,6 +254,15 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 				entrada_menos_usada->marco = marco;
 				entrada_menos_usada->contadorLRU = LRU_counter++;
 			}
+		}
+
+		for(int i=0; i < list_size(listaTLB); i++)
+		{
+		
+		TLB* entrada_tlb = list_get(listaTLB, i);
+
+		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
+
 		}
 	}
 	//else   
@@ -318,12 +347,15 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 				agregar_a_TLB(proceso->PID, numero_Pagina, *num_marco);	//agregamos los datos del proceso a la TLB
 			} else{														// pero si lo esta debo implementar el algoritmo
 				//el algoritmo FIFO	y LRU
+				printf("La TLB está llena, necesitamos utilizar un algoritmo de sustitición\n");
 				algoritmoSustitucion(proceso->PID, numero_Pagina, *num_marco);
 			}
 
 			dir_fisica =  *num_marco * *TAM_PAGINA + desplazamiento;
 			//return *num_marco + desplazamiento; //Devuelve la direccion fisica		
 		} 
+		printf("En estos instantes /////CANTIDAD ENTRADAS TLB: %d\n",CANTIDAD_ENTRADAS_TLB);
+		printf("En estos instantes /////TAMANIO DE LA LISTA TLB ES: %d\n",list_size(listaTLB));
 		printf("La direccion fisica %d es: %d\n",i , dir_fisica);
 		list_add(listDireccionesFisicas, dir_fisica); //
 		dir_Logica++;
@@ -432,6 +464,7 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
 
 void* obtener_registro(char* registro, PCB* proceso)
 {
+	printf("Buscamos el siguiente registro: [%s]\n",registro);
 	if( strcmp(registro,"AX") == 0 )
 	{
 		return (void*)&(proceso->registro.AX); // Devuelve un puntero al valor de AX
@@ -1334,16 +1367,19 @@ void ejecutar_proceso(PCB* proceso)
 		 //CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
 		 if (strcmp(instruccion_split[0], "MOV_OUT") == 0)
 		 {
+			printf("Chequeo de MOV OUT 1\n");
 		 	if( esRegistroUint8(instruccion_split[1])) //REGISTRO DIRECCION UNIT8
 		 	{
 		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[1],proceso); //REGISTRO DONDE SE GUARDARA
 		 		int direc_logica = (int)*registro_uint8;
+				printf("Chequeo de MOV OUT - el primero es uint8\n");
 
 				//REGISTRO DATOS
 				if ( esRegistroUint8(instruccion_split[2])){
 					uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
 					direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
 					
+					printf("Chequeo de MOV OUT - el primero es uint8 y el segundo es uint8\n");
 					int direccion_fisica;
 					for(int i=0; i < list_size(direcciones_fisicas);i++)
 					{
@@ -1362,7 +1398,7 @@ void ejecutar_proceso(PCB* proceso)
 					if ( esRegistroUint32(instruccion_split[2])){
 						uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 						direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
-
+						printf("Chequeo de MOV OUT - el primero es uint8 y el segundo es uint32\n");
 						
 						//uint32_t* v = ...; // Tu puntero uint32_t
 						uint8_t* ptr_registro_datos = (uint8_t *)registro_datos;
@@ -1379,22 +1415,25 @@ void ejecutar_proceso(PCB* proceso)
 							pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
 							sem_wait(&sem_escritura);
 						}
-
 					}
 				}
+				printf("No entré a ninguna guarda\n");
 		 	}
 		 	else
 		 	{
+				printf("Chequeo de MOV OUT - el primero es uint32\n");
 		 		if( esRegistroUint32(instruccion_split[1])) //REGISTRO DIRECCION UNIT32
 		 		{
 		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
 		 			int direc_logica = (int)*registro_uint32;
 
+					printf("Chequeo de MOV OUT - el primero es uint32\n");
 		 			//REGISTRO DATOS UNIT8
 		 			if ( esRegistroUint8(instruccion_split[2])){
 		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
 						direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
-							
+						
+						printf("Chequeo de MOV OUT - el primero es uint32 y el segundo es uint8\n");
 						int direccion_fisica;
 						for(int i=0; i < list_size(direcciones_fisicas);i++)
 						{
@@ -1414,7 +1453,7 @@ void ejecutar_proceso(PCB* proceso)
 							uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 							direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
 
-							
+							printf("Chequeo de MOV OUT - el primero es uint32 y el segundo es uint32\n");
 							//uint32_t* v = ...; // Tu puntero uint32_t
 							uint8_t* ptr_registro_datos = (uint8_t *)registro_datos;
 							uint8_t byte[4];
