@@ -46,6 +46,8 @@ t_bitarray* bit_map;
 char* dialfs_to_write;
 char* path_bloques;
 
+Archivo* elemento_especial; //sirve para que, a la hora de ordenar, dicho archivo quede al final (por la compactación)
+
 void inicializar_path_bloques(const char* PATH_BASE_DIALFS)
 {
 	path_bloques = malloc(strlen(PATH_BASE_DIALFS) + strlen("/bloques.dat") + 1);
@@ -183,6 +185,14 @@ void recuperarArchivos(const char* path, t_list* lista_archivos) {
                     archivo->path_length = name_len;
                     archivo->path = path_completo;
                     archivo->fd_archivo = -1; // No se abre el descriptor de archivo aquí
+					//abrimos el config y guardamos el bloque inicial
+
+					t_config* config = config_create(archivo->path);
+					int bloque_inicial = config_get_int_value(config,"BLOQUE_INICIAL");
+
+					archivo->bloque_inicial = bloque_inicial;
+
+					config_destroy(config);
 
                     // Añade la estructura Archivo a la lista
                     list_add(lista_archivos, archivo);
@@ -333,7 +343,7 @@ void crear_archivo(char* nombre)
 		archivo->path = malloc(archivo->path_length);
 		strcpy(archivo->path, path_copia);
 		archivo->fd_archivo = fd_random;
-		list_add(lista_archivos, archivo);
+		
 
 		//le asignamos un bloque:
 		int i = 0;
@@ -357,6 +367,8 @@ void crear_archivo(char* nombre)
 			i++;
 		}
 
+		archivo->bloque_inicial = i;
+		list_add(lista_archivos, archivo);
 		msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
 		//escribimos en el archivo los datos obtenidos
 		char first_block[12]; // 12 es suficiente para almacenar cualquier entero de 32 bits
@@ -367,7 +379,7 @@ void crear_archivo(char* nombre)
 		void* mapeo = mmap(NULL,strlen(to_write)+1, PROT_WRITE, MAP_SHARED, fd_random, 0);
 		memcpy(mapeo,to_write,strlen(to_write)+1);
 		msync(mapeo,strlen(mapeo)+1,MS_SYNC);
-
+		close(fd_random); //QUIZÁ NOS CAUSE PROBLEMAS - MIRAR LAS PRUEBAS MÁS TARDE 30/7 19:50
 		munmap(mapeo,strlen(to_write)+1);
 		free(path_copia);
 	}
@@ -440,6 +452,287 @@ bool hay_bloques_libres(t_bitarray* bitarray, int cantidad_bloques) {
     }
     return false;
 }
+
+// Función de comparación
+bool comparar_bloque_inicial(void* a, void* b) {
+    Archivo* archivo_a = (Archivo*)a;
+    Archivo* archivo_b = (Archivo*)b;
+
+    // Si uno de los elementos es el elemento especial, el especial siempre va al final
+    if (archivo_a == elemento_especial) return false;
+    if (archivo_b == elemento_especial) return true;
+
+    return archivo_a->bloque_inicial < archivo_b->bloque_inicial;
+}
+
+
+void compactacion_a(Archivo* archivo, t_config* archivo_config, int nuevo_tamanio)
+{
+	printf("Se compactará el FS para truncar al archivo %s\n",archivo->path);
+	int bloque_base = config_get_int_value(archivo_config,"BLOQUE_INICIAL");
+	int tamanio_archivo = config_get_int_value(archivo_config,"TAMANIO_ARCHIVO");
+	int cant_bloques = (int)ceil((double)tamanio_archivo / BLOCK_SIZE);
+	elemento_especial = archivo;
+
+	//mapeamos bloques.dat
+	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+
+	if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+	// Mapeamos el archivo en memoria
+    bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+	//nos guardamos de forma auxiliar lo que estaba en ese archivo
+	void* aux = malloc(cant_bloques*BLOCK_SIZE);
+	memmove(aux,bloques + bloque_base*BLOCK_SIZE,tamanio_archivo);
+
+	//liberamos los bits
+	for(int i = bloque_base; i < cant_bloques; i++)
+	{
+		int value = bitarray_test_bit(bit_map,i);
+		printf("El valor del bit es %d\n",value);
+		if( value == 1 )
+		{
+			bitarray_clean_bit(bit_map,i);
+		}
+		msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+	}
+
+	//ya tenemos guardado el archivo de forma auxiliar, debemos ordenar los archivos de nuestro FS según donde se encuentre su bloque inicial
+	list_sort(lista_archivos,comparar_bloque_inicial);
+	
+	//Teniendo la lista ordenada es momento de COMPACTAR
+	int pointer = 0; //puntero dentro del archivo
+	for(int i = 0; i < list_size(lista_archivos); i++)
+	{
+		printf("DialFS - Inicio Compactación: PID %d",pid_actual);
+		Archivo* got = list_get(lista_archivos,i);
+		t_config* config_got = config_create(got->path);
+		int bloque_base_got = config_get_int_value(config_got,"BLOQUE_INICIAL");
+		int tamanio_got = config_get_int_value(config_got,"TAMANIO_ARCHIVO");
+		int cant_bloques_got = (int)ceil((double)tamanio_got / BLOCK_SIZE); 
+
+		memmove(bloques + pointer, bloque_base_got + tamanio_got*BLOCK_SIZE, cant_bloques_got*BLOCK_SIZE); //copiamos los bytes de la cantidad de bloques, llevandonos la fragmentación interna
+		//actualizamos el bloque_base del config
+		int new_base = pointer/BLOCK_SIZE;
+		char base_string_got[32];
+		sprintf(base_string_got,"%d",new_base);
+		config_set_value(config_got,"BLOQUE_INICIAL",base_string_got);
+		config_save_in_file(config_got,archivo->path);
+		archivo->bloque_inicial = new_base;
+		
+
+		//liberamos los bits anteriores
+		for(int i = bloque_base_got; i < cant_bloques_got; i++)
+		{
+			int value = bitarray_test_bit(bit_map,i);
+			printf("El valor del bit es %d\n",value);
+			if( value == 1 )
+			{
+				bitarray_clean_bit(bit_map,i);
+			}
+			msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+		}
+
+		//ocupamos los nuevos
+		for(int i = new_base; i < cant_bloques_got; i++)
+		{
+			int value = bitarray_test_bit(bit_map,i);
+			printf("El valor del bit es %d\n",value);
+			bitarray_set_bit(bit_map,i);
+			msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+		}
+
+		pointer = pointer + cant_bloques_got*BLOCK_SIZE;
+
+		int nueva_base_compactado = encontrar_bloques_continuos(bit_map,cant_bloques);
+		if( nueva_base_compactado != (-1))
+		{
+			//encontramos una nueva secuencia de bloques libres, actualizamos bloque base y asignamos tamaño
+			printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
+
+			//antes liberamos el bloque que poseía anteriormente
+			//bitarray_clean_bit(bit_map,base);
+
+			//llevamos a cabo la asignación
+			for(int i = nueva_base_compactado; i < cant_bloques+nueva_base_compactado; i++)
+			{
+				int value = bitarray_test_bit(bit_map,i);
+				printf("El valor del bit es %d\n",value);
+				if( value == 0 )
+				{
+					bitarray_set_bit(bit_map,i);
+				}
+				//guardamos
+				/*
+				memcpy(espacio_bit_map,bit_map->bitarray,BLOCK_COUNT/8);
+				*/
+				msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+				
+				//escribimos en el config el nuevo valor
+			}
+
+			//actualizamos la base
+			char base_string[32];
+			sprintf(base_string,"%d",nueva_base_compactado);
+			config_set_value(archivo_config,"BLOQUE_INICIAL",base_string);
+			config_save_in_file(archivo_config,archivo->path);
+			archivo->bloque_inicial = nueva_base_compactado;
+
+			//actualizamos el tamanio
+			char cantidad_string[32];
+			sprintf(cantidad_string,"%d",nuevo_tamanio);
+			config_set_value(archivo_config,"TAMANIO_ARCHIVO",cantidad_string);
+			config_save_in_file(archivo_config,archivo->path);
+			printf("DialFS - Fin Compactación: PID %d",pid_actual);
+			
+			//cerramos todo
+			memmove(bloques + pointer, aux, cant_bloques*BLOCK_SIZE);	
+			msync(bloques,BLOCK_COUNT * BLOCK_SIZE,MS_SYNC);
+			close(fd_bloque);
+			munmap(bloques,BLOCK_COUNT * BLOCK_SIZE);
+			config_destroy(config_got);
+			free(aux);
+			return;
+		}
+		config_destroy(config_got);
+	}
+}
+
+void compactacion(Archivo* archivo, t_config* archivo_config, int nuevo_tamanio)
+{
+    printf("Se compactará el FS para truncar al archivo %s\n", archivo->path);
+    int bloque_base = config_get_int_value(archivo_config, "BLOQUE_INICIAL");
+    int tamanio_archivo = config_get_int_value(archivo_config, "TAMANIO_ARCHIVO");
+    int cant_bloques = (int)ceil((double)tamanio_archivo / BLOCK_SIZE);
+    elemento_especial = archivo;
+
+    // Mapeamos bloques.dat
+    int fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_bloque == -1) {
+        perror("Error al abrir el archivo");
+        exit(EXIT_FAILURE);
+    }
+
+    if (ftruncate(fd_bloque, BLOCK_COUNT * BLOCK_SIZE) != 0) {
+        perror("Error ajustando el tamaño del archivo");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+    void* bloques = mmap(NULL, BLOCK_COUNT * BLOCK_SIZE, PROT_WRITE, MAP_SHARED, fd_bloque, 0);
+    if (bloques == MAP_FAILED) {
+        perror("Error en mmap");
+        close(fd_bloque);
+        exit(EXIT_FAILURE);
+    }
+
+    // Guardamos de forma auxiliar lo que estaba en ese archivo
+    void* aux = malloc(cant_bloques*BLOCK_SIZE);
+    memmove(aux, bloques + bloque_base * BLOCK_SIZE, tamanio_archivo);
+
+    // Liberamos los bits
+    for (int i = bloque_base; i < bloque_base + cant_bloques; i++) {
+        if (bitarray_test_bit(bit_map, i)) {
+            bitarray_clean_bit(bit_map, i);
+        }
+    }
+    msync(espacio_bit_map, BLOCK_COUNT / 8, MS_SYNC);
+
+    // Ordenamos la lista de archivos
+    list_sort(lista_archivos, comparar_bloque_inicial);
+
+    // Compactamos
+    int pointer = 0;
+    for (int i = 0; i < list_size(lista_archivos)-1; i++) 
+	{
+        printf("DialFS - Inicio Compactación: PID %d\n", *pid_actual);
+        Archivo* got = list_get(lista_archivos, i);
+        t_config* config_got = config_create(got->path);
+        int bloque_base_got = config_get_int_value(config_got, "BLOQUE_INICIAL");
+        int tamanio_got = config_get_int_value(config_got, "TAMANIO_ARCHIVO");
+        int cant_bloques_got = (int)ceil((double)tamanio_got / BLOCK_SIZE);
+
+        memmove(bloques + pointer, bloques + bloque_base_got * BLOCK_SIZE, cant_bloques_got * BLOCK_SIZE);
+
+        // Actualizamos el bloque_base del config
+        int new_base = pointer / BLOCK_SIZE;
+		printf("La nueba base es %d\n",new_base);
+        char base_string_got[32];
+        sprintf(base_string_got, "%d", new_base);
+        config_set_value(config_got, "BLOQUE_INICIAL", base_string_got);
+        config_save_in_file(config_got, got->path);
+        got->bloque_inicial = new_base;
+
+        // Liberamos los bits anteriores
+        for (int j = bloque_base_got; j < bloque_base_got + cant_bloques_got; j++) {
+            bitarray_clean_bit(bit_map, j);
+			msync(espacio_bit_map, BLOCK_COUNT / 8, MS_SYNC);
+        }
+
+        // Ocupamos los nuevos
+        for (int j = new_base; j < new_base + cant_bloques_got; j++) {
+            bitarray_set_bit(bit_map, j);
+			msync(espacio_bit_map, BLOCK_COUNT / 8, MS_SYNC);
+        }
+
+        pointer += cant_bloques_got * BLOCK_SIZE;
+
+        config_destroy(config_got);
+    }
+
+    int nueva_base_compactado = encontrar_bloques_continuos(bit_map, cant_bloques);
+	printf("La nueva base encontrada es: %d\n",nueva_base_compactado);
+    if (nueva_base_compactado != -1) 
+	{
+        printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
+
+        // Asignamos los nuevos bloques
+        for (int i = nueva_base_compactado; i < nueva_base_compactado + cant_bloques; i++) {
+            if (!bitarray_test_bit(bit_map, i)) {
+                bitarray_set_bit(bit_map, i);
+            }
+        }
+        msync(espacio_bit_map, BLOCK_COUNT / 8, MS_SYNC);
+
+        // Actualizamos la base y tamaño en el archivo de configuración
+        char base_string[32];
+        sprintf(base_string, "%d", nueva_base_compactado);
+        config_set_value(archivo_config, "BLOQUE_INICIAL", base_string);
+        config_save_in_file(archivo_config, archivo->path);
+        archivo->bloque_inicial = nueva_base_compactado;
+
+        char cantidad_string[32];
+        sprintf(cantidad_string, "%d", nuevo_tamanio);
+        config_set_value(archivo_config, "TAMANIO_ARCHIVO", cantidad_string);
+        config_save_in_file(archivo_config, archivo->path);
+        printf("DialFS - Fin Compactación: PID %d\n", *pid_actual);
+
+        // Movemos los datos auxiliares al nuevo espacio
+        memmove(bloques + nueva_base_compactado * BLOCK_SIZE, aux, tamanio_archivo);
+        msync(bloques, BLOCK_COUNT * BLOCK_SIZE, MS_SYNC);
+    }
+
+    // Liberamos memoria y cerramos todo
+    free(aux);
+    close(fd_bloque);
+    munmap(bloques, BLOCK_COUNT * BLOCK_SIZE);
+}
+
+
 
 void truncarArchivo(char* nombre, int cantidad)
 {
@@ -521,6 +814,7 @@ void truncarArchivo(char* nombre, int cantidad)
 				sprintf(base_string,"%d",new_base);
 				config_set_value(metadata_archivo,"BLOQUE_INICIAL",base_string);
 				config_save_in_file(metadata_archivo,archivo->path);
+				archivo->bloque_inicial = new_base;
 
 				//actualizamos el tamanio
 				char cantidad_string[32];
@@ -535,6 +829,7 @@ void truncarArchivo(char* nombre, int cantidad)
 				if( hay_bloques_libres(bit_map,cant_bloques) )
 				{
 					printf("Existe la cantidad de bloques libres, pero no se encuentran de forma continua. Debemos llevar a cabo la compactación\n");
+					compactacion(archivo,metadata_archivo,tamanio);
 				}
 				else
 				{

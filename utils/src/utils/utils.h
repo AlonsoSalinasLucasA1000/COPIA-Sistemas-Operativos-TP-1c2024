@@ -175,6 +175,7 @@ typedef struct
 	uint32_t path_length;
 	char* path;
 	int fd_archivo; //fd de la metadata abierto
+	int bloque_inicial;
 } Archivo;
 
 

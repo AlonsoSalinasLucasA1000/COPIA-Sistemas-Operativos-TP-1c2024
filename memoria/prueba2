@@ -1,1 +1,3 @@
-IO_FS_CREATE FS Goku.config
+SET CX 70
+IO_FS_TRUNCATE FS archivo2.txt CX
+EXIT
