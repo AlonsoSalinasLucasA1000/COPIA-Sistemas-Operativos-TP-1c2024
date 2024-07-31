@@ -68,8 +68,9 @@ typedef enum
 	IO_FS_DELETE,
 	IO_FS_TRUNCATE,
 	IO_FS_WRITE,
-	IO_FS_READ
-	
+	IO_FS_READ,
+	FINSUCCESS,
+	INTERRUPTED_BY_USER
 }op_code;
 
 

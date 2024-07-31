@@ -61,11 +61,11 @@ int main(int argc, char* argv[]) {
     log_info(kernel_logger, "IP_CPU: %s", IP_CPU);
     log_info(kernel_logger, "PUERTO_CPU_DISPATCH: %s", PUERTO_CPU_DISPATCH);
     log_info(kernel_logger, "PUERTO_CPU_INTERRUPT: %s", PUERTO_CPU_INTERRUPT);
-    log_info(kernel_logger, "ALGORITMO_PLANIFICACION: %s", ALGORITMO_PLANIFICACION);
     log_info(kernel_logger, "QUANTUM: %s", QUANTUM);
     log_info(kernel_logger, "RECURSOS: %s", RECURSOS);
     log_info(kernel_logger, "INSTANCIAS_RECURSOS: %s", INSTANCIAS_RECURSOS);
     log_info(kernel_logger, "GRADO_MULTIPROGRAMACION: %s", GRADO_MULTIPROGRAMACION);
+    log_info(kernel_logger, "ALGORITMO_PLANIFICACION: %s", ALGORITMO_PLANIFICACION);
 
 grado_multiprogramacion = atoi(GRADO_MULTIPROGRAMACION);
 //creamos los recursos

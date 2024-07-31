@@ -1022,21 +1022,74 @@ void entradasalida_escuchar_memoria (){
 			printf("Codigo de operación de memoria recibido\n");
 
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			if (paquete == NULL) {
+			perror("malloc");
+			continue;
+       		}
 			paquete->buffer = malloc(sizeof(t_newBuffer));
+			if (paquete->buffer == NULL) {
+            perror("malloc");
+            continue;
+        	}
+			// Recibimos el tamaño del buffer
+			ssize_t received_size = recv(fd_memoria, &(paquete->buffer->size), sizeof(uint32_t), 0);
+			if (received_size <= 0) {
+				log_error(entradasalida_logger, "Error al recibir tamaño del buffer o desconexión.");
+				control_key = false;
+				free(paquete->buffer);
+				free(paquete);
+				continue;
+			}
 			
-			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			//recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			//asignamos memoria para el byffer
 			paquete->buffer->stream = malloc(paquete->buffer->size);
+			if (paquete->buffer->stream == NULL) {
+            perror("malloc");
+            free(paquete->buffer);
+            free(paquete);
+            continue;
+        	}
+
+			//recibimos offset si es encesario
 			if( cod_op == 14 || cod_op == 33) //ojo con este hardcodeo, de añadir mas codigos de operacion pueden modificarse
 			{
-				recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
+				received_size = recv(fd_memoria, &(paquete->buffer->offset), sizeof(uint32_t), 0);
+				if (received_size <= 0) {
+					log_error(entradasalida_logger, "Error al recibir offset o desconexión.");
+					free(paquete->buffer->stream);
+					free(paquete->buffer);
+					free(paquete);
+					continue;
+				}
+				//recv(fd_memoria,&(paquete->buffer->offset), sizeof(uint32_t),0);
 			}
-			recv(fd_memoria,paquete->buffer->stream, paquete->buffer->size,0);
+
+			//recibimos stream
+			//recv(fd_memoria,paquete->buffer->stream, paquete->buffer->size,0);
+			received_size = recv(fd_memoria, paquete->buffer->stream, paquete->buffer->size, 0);
+			if (received_size <= 0) {
+				log_error(entradasalida_logger, "Error al recibir datos del buffer o desconexión.");
+				free(paquete->buffer->stream);
+				free(paquete->buffer);
+				free(paquete);
+				continue;
+			}
+
 			switch (cod_op) {
 			case STDOUT_TOPRINT:
 				printf("Entramos acá adentro reyes\n");
 				char* text_to_print = malloc(paquete->buffer->size);
+				if (text_to_print != NULL) {
+                    memcpy(text_to_print, paquete->buffer->stream, paquete->buffer->size);
+                    text_to_print[paquete->buffer->size] = '\0'; // para terminar la cadena
+                    printf("%s\n", text_to_print);
+                    free(text_to_print);
+                }
+				/*
 				text_to_print = paquete->buffer->stream;
 				printf("%s\n",text_to_print);
+				*/
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				break;
 			case DESPERTAR:
@@ -1047,9 +1100,18 @@ void entradasalida_escuchar_memoria (){
 			case IO_FS_WRITE:
 				//
 				printf("Entramos acá adentro reyes\n");
+				char* dialfs_to_write = malloc(paquete->buffer->size + 1);
+                if (dialfs_to_write != NULL) {
+                    memcpy(dialfs_to_write, paquete->buffer->stream, paquete->buffer->size);
+                    dialfs_to_write[paquete->buffer->size] = '\0'; // Asegúrate de terminar la cadena
+                    printf("%s\n", dialfs_to_write);
+                    free(dialfs_to_write);
+                }
+				/*
 				dialfs_to_write = malloc(paquete->buffer->size);
 				dialfs_to_write = paquete->buffer->stream;
 				printf("%s\n",dialfs_to_write);
+				*/
 				sem_post(&sem_activacion1);
 				sem_wait(&sem_activacion2);
 				break;
@@ -1183,15 +1245,53 @@ void entradasalida_escuchar_kernel (){
 
 			printf("Checkpoin1 \n");
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+			if (paquete == NULL) {
+            perror("malloc");
+            continue;
+        	}
+			
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-			recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			if (paquete->buffer == NULL) {
+            perror("malloc");
+            free(paquete);
+            continue;
+	        }
+
+			// Recibimos el tamaño del buffer
+			ssize_t received_size = recv(fd_kernel, &(paquete->buffer->size), sizeof(uint32_t), 0);
+			if (received_size <= 0) {
+				log_error(entradasalida_logger, "Error al recibir tamaño del buffer o desconexión.");
+				free(paquete->buffer);
+				free(paquete);
+				control_key = false;
+				continue;
+			}
+			//recv(fd_kernel,&(paquete->buffer->size),sizeof(uint32_t),0);
+
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
+			if (paquete->buffer->stream == NULL) {
+            perror("malloc");
+            free(paquete->buffer);
+            free(paquete);
+            continue;
+        	}
+			//recv(fd_kernel,paquete->buffer->stream, paquete->buffer->size,0);
+
+			received_size = recv(fd_kernel, paquete->buffer->stream, paquete->buffer->size, 0);
+			if (received_size <= 0) {
+				log_error(entradasalida_logger, "Error al recibir datos del buffer o desconexión.");
+				free(paquete->buffer->stream);
+				free(paquete->buffer);
+				free(paquete);
+				continue;
+			}
+
 
 			switch (cod_op) {
 			case GENERICA:
 
 				printf("Checkpoin2 \n");
+				/*
 				//hay que deserializar, dado que es solo un int
 				int* unidadesDeTrabajo = malloc(sizeof(int));
 				unidadesDeTrabajo = paquete->buffer->stream;
@@ -1199,17 +1299,38 @@ void entradasalida_escuchar_kernel (){
 				printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n",*unidadesDeTrabajo);
 				printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO ));
 				sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO)/1000);
-
-				//DEVOLVER AL KERNEL PARA DESPERTAR
-				//avisar_despertar_kernel();
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
+				*/
+				{
+                    int* unidadesDeTrabajo = (int*)paquete->buffer->stream; // Evitamos duplicar memoria
+
+                    printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n", *unidadesDeTrabajo);
+                    printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO));
+                    sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO) / 1000);
+
+                    // DEVOLVER AL KERNEL PARA DESPERTAR
+                    enviarEntero(pid_actual, fd_kernel, DESPERTAR);
+                }
+				
 				break;
 			case STDIN:
 				// DESEMPAQUETAMOS
-				int* tamanio_instruccion_in = malloc(sizeof(int));
+				/*int* tamanio_instruccion_in = malloc(sizeof(int));
 				memcpy(tamanio_instruccion_in, paquete->buffer->stream, sizeof(int));
 				char* instruccion_in = malloc(*tamanio_instruccion_in);
 				memcpy(instruccion_in, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_in);
+				*/
+				int* tamanio_instruccion_in = (int*)paquete->buffer->stream;
+                char* instruccion_in = malloc(*tamanio_instruccion_in);
+                if (instruccion_in == NULL) {
+                    perror("malloc");
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+	                continue;
+                }
+                memcpy(instruccion_in, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_in);
+
 
 				// Mostremos por pantalla
 				printf("La instruccion que ha llegado es: %s\n", instruccion_in);
@@ -1230,22 +1351,46 @@ void entradasalida_escuchar_kernel (){
 				{
 					printf("ESTOY ITERANDO\n");
 					int* df_to_send_in = malloc(sizeof(int)); //liberar
+					if (df_to_send_in == NULL) {
+                        perror("malloc");
+                        break;
+                    }
+
 					*df_to_send_in = atoi(instruccion_partida_in[5 + i]);
 					char* c_in = malloc(sizeof(char)); //liberar
+					if (c_in == NULL) {
+                        perror("malloc");
+                        free(df_to_send_in);
+                        break;
+                    }
+					
 					*c_in = leido_in[i];
 					new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
 					free(c_in);
-					//free(df_to_send_in);
+					free(df_to_send_in);
 				}
 
 				printf("ESTOY ITERANDO\n");
 				int* df_to_send_in = malloc(sizeof(int)); //liberar
+				 if (df_to_send_in == NULL) {
+                    perror("malloc");
+                    free(leido_in);
+                    break;
+                }
+				
 				*df_to_send_in = -1;
 				char* c_in = malloc(sizeof(char)); //liberar
+				if (c_in == NULL) {
+                    perror("malloc");
+                    free(df_to_send_in);
+                    free(leido_in);
+                    break;
+                }
 				*c_in = 'L';
 				new_enviar_stdin_to_write_memoria(df_to_send_in, c_in);
 				free(c_in);
-				//free(df_to_send_in);
+				free(df_to_send_in);
+				free(leido_in);
 				free(tamanio_instruccion_in);
 				free(instruccion_in);
 				string_array_destroy(instruccion_partida_in);
@@ -1256,22 +1401,46 @@ void entradasalida_escuchar_kernel (){
 			case STDOUT:
 				
 				printf("CHECKPOINT DEL OUT 1\n");
-				int* tamanio_instruccion_out = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_out, paquete->buffer->stream, sizeof(int));
+				int* tamanio_instruccion_out = (int*)paquete->buffer->stream;
 				char* instruccion_out = malloc(*tamanio_instruccion_out);
+				if (instruccion_out == NULL) {
+                    perror("malloc");
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+                    continue;
+                }
 				memcpy(instruccion_out, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_out);
 				printf("Llegó el siguiente tamaño: %d\n",*tamanio_instruccion_out);
 				printf("Llegó la siguiente instrucción: %s\n",instruccion_out);
 				char** instrucciones_partidas_out = string_split(instruccion_out," ");
-
+				
 				printf("CHECKPOINT DEL OUT 2\n");
 				//creamos una lista de las direcciones que vayamos obteniendo	
 				t_list* lista_direcciones = list_create();
 				int* tamanio_out = malloc(sizeof(int));
+				if (tamanio_out == NULL) {
+                    perror("malloc");
+                    free(instruccion_out);
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+                    continue;
+                }
 				*tamanio_out = atoi(instrucciones_partidas_out[4]);
 				for(int i = 0; i < *tamanio_out; i++)
 				{
 					int* df_out = malloc(sizeof(int));
+					if (df_out == NULL) {
+                        perror("malloc");
+                        list_destroy_and_destroy_elements(lista_direcciones, free);
+                        free(tamanio_out);
+                        free(instruccion_out);
+                        free(paquete->buffer->stream);
+                        free(paquete->buffer);
+                        free(paquete);
+                        continue;
+                    }
 					*df_out = atoi(instrucciones_partidas_out[5+i]);
 					list_add(lista_direcciones,df_out);
 				}
@@ -1281,42 +1450,48 @@ void entradasalida_escuchar_kernel (){
 				new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_out,STDOUT_TOPRINT);
 
 				printf("CHECKPOINT DEL OUT 3\n");
-				//free(tamanio_instruccion_out);
-				//free(instruccion_out);
-				/*
-				//DESEMPAQUETAMOS
-				int* direccionFisicaOUT = malloc(sizeof(int));
-				direccionFisicaOUT = paquete->buffer->stream;
-				int* tamanioOUT = malloc(sizeof(int));
-				tamanioOUT = paquete->buffer->stream + sizeof(int);
-				printf("La direccion física que ha llegado es: %d\n",*direccionFisicaOUT);
-				printf("La direccion física que ha llegado es: %d\n",*tamanioOUT);
-
-				enviar_stdout_to_print_memoria(direccionFisicaOUT, tamanioOUT);
-				*/
+				list_destroy_and_destroy_elements(lista_direcciones, free);
+                free(tamanio_out);
+                free(instruccion_out);
 				break;
+
 			case NUEVOPID:
-				int* new_pid = paquete->buffer->stream;
+				int* new_pid = (int*)paquete->buffer->stream;
 				*pid_actual = *new_pid;
 				printf("Esta interfaz está siendo usada actualmente por el proceso cuyo PID es %d\n",*pid_actual);
 				break;
 			case IO_FS_CREATE:
 				// DESEMPAQUETAMOS
-				int* tamanio_instruccion_fs_create = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_fs_create, paquete->buffer->stream, sizeof(int));
+				int* tamanio_instruccion_fs_create = (int*)paquete->buffer->stream;
 				char* instruccion_fs_create = malloc(*tamanio_instruccion_fs_create);
+				if (instruccion_fs_create == NULL) {
+                    perror("malloc");
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+                    continue;
+                }
 				memcpy(instruccion_fs_create, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_create);
 				char** instruccion_fs_partida_create = string_split(instruccion_fs_create, " ");
 
 				// Mostremos por pantalla
 				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_create);
 				crear_archivo(instruccion_fs_partida_create[2]);
+				free(instruccion_fs_create);
+				string_array_destroy(instruccion_fs_partida_create);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			case IO_FS_TRUNCATE:
-				int* tamanio_instruccion_fs_truncate = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_fs_truncate, paquete->buffer->stream, sizeof(int));
+				int* tamanio_instruccion_fs_truncate = (int*)paquete->buffer->stream;
 				char* instruccion_fs_truncate = malloc(*tamanio_instruccion_fs_truncate);
+                    if (instruccion_fs_truncate == NULL) {
+                        perror("malloc");
+                        free(paquete->buffer->stream);
+                        free(paquete->buffer);
+                        free(paquete);
+                        continue;
+                    }
+				
 				memcpy(instruccion_fs_truncate, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_truncate);
 				char** instruccion_fs_partida_truncate = string_split(instruccion_fs_truncate, " ");
 
@@ -1324,14 +1499,22 @@ void entradasalida_escuchar_kernel (){
 				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_truncate);
 				// Realiza la operación de truncamiento aquí (por ejemplo, llamando a una función)
 				truncarArchivo(instruccion_fs_partida_truncate[2], atoi(instruccion_fs_partida_truncate[4]));
+				free(instruccion_fs_truncate);
+				string_array_destroy(instruccion_fs_partida_truncate);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			break;
 			case IO_FS_WRITE:
 
-				int* tamanio_instruccion_fs_write = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_fs_write, paquete->buffer->stream, sizeof(int));
-				char* instruccion_fs_write = malloc(*tamanio_instruccion_fs_write);
+				int* tamanio_instruccion_fs_write = (int*)paquete->buffer->stream;
+                char* instruccion_fs_write = malloc(*tamanio_instruccion_fs_write);
+                if (instruccion_fs_write == NULL) {
+                    perror("malloc");
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+                    continue;
+                }
 				memcpy(instruccion_fs_write, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_write);
 				char** instruccion_fs_partida_write = string_split(instruccion_fs_write, " ");
 
@@ -1339,13 +1522,21 @@ void entradasalida_escuchar_kernel (){
 				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_write);
 				// Realiza la operación de escritura aquí (por ejemplo, llamando a una función)
 				escribirArchivo(instruccion_fs_partida_write);
+				free(instruccion_fs_write);
+				string_array_destroy(instruccion_fs_partida_write);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			case IO_FS_READ:
 				//
-				int* tamanio_instruccion_fs_read = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_fs_read, paquete->buffer->stream, sizeof(int));
-				char* instruccion_fs_read = malloc(*tamanio_instruccion_fs_read);
+				 int* tamanio_instruccion_fs_read = (int*)paquete->buffer->stream;
+                char* instruccion_fs_read = malloc(*tamanio_instruccion_fs_read);
+                if (instruccion_fs_read == NULL) {
+                    perror("malloc");
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+                    continue;
+                }
 				memcpy(instruccion_fs_read, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_read);
 				char** instruccion_fs_partida_read = string_split(instruccion_fs_read, " ");
 
@@ -1353,12 +1544,21 @@ void entradasalida_escuchar_kernel (){
 				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_read);
 				// Realiza la operación de lectura aquí (por ejemplo, llamando a una función)
 				leerArchivo(instruccion_fs_partida_read);
+				free(instruccion_fs_read);
+                string_array_destroy(instruccion_fs_partida_read);
 				break;
+
 			case IO_FS_DELETE:
 			//
-				int* tamanio_instruccion_fs_delete = malloc(sizeof(int));
-				memcpy(tamanio_instruccion_fs_delete, paquete->buffer->stream, sizeof(int));
-				char* instruccion_fs_delete = malloc(*tamanio_instruccion_fs_delete);
+				int* tamanio_instruccion_fs_delete = (int*)paquete->buffer->stream;
+                char* instruccion_fs_delete = malloc(*tamanio_instruccion_fs_delete);
+                if (instruccion_fs_delete == NULL) {
+                    perror("malloc");
+                    free(paquete->buffer->stream);
+                    free(paquete->buffer);
+                    free(paquete);
+                    continue;
+                }
 				memcpy(instruccion_fs_delete, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_delete);
 				char** instruccion_fs_partida_delete = string_split(instruccion_fs_delete, " ");
 
@@ -1366,6 +1566,8 @@ void entradasalida_escuchar_kernel (){
 				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_delete);
 				// Realiza la operación de eliminación aquí (por ejemplo, llamando a una función)
 				eliminarArchivo(instruccion_fs_partida_delete);
+				free(instruccion_fs_delete);
+                string_array_destroy(instruccion_fs_partida_delete);
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 			break;
 			case PAQUETE:

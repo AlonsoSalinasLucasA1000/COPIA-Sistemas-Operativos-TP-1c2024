@@ -175,6 +175,7 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 
 	}
 	printf("Fin de agregar entradas a la TLB\n");
+
 }
 
 void algoritmoSustitucion(int pid, int numero_Pagina, int marco) 
@@ -327,12 +328,13 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 		TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
 			
 		if(retorno_TLB!=NULL){  											 // Si el TLB obtiene el numero_Pagina  -> TLB Hit
-			log_info(cpu_logger, "TLB Hit: PID: %d- TLB HIT - Pagina: %d", proceso->PID, numero_Pagina );  
+			log_info(cpu_logs_obligatorios, "PID: <%d> - TLB HIT - Pagina: <%d>", proceso->PID, numero_Pagina );  
 			
 			dir_fisica = retorno_TLB->marco * *TAM_PAGINA + desplazamiento; //se calcula la direccion fisica TAM_PAGINA
 			//return (retorno_TLB->marco) + desplazamiento;   				 //devuelve la direccion fisica
 		} else{																// Si no -> Se consulta a memoria por el marco correcto a la pagina buscada
 			//log_info(cpu_logger, "TLB Miss: PID: %d- TLB MISS - Pagina: %d", proceso->PID, numero_Pagina ); ---------------------------------------> chequear
+			//log_info(cpu_logs_obligatorios, "PID: <%d> - TLB MISS - Pagina: <%d>", proceso->PID, numero_Pagina);
 			enviar_paginaypid_a_memoria(numero_Pagina, proceso->PID, MARCO); //pide a memoria  
 
 			//printf("Llegué hasta antes del semaforo\n");
@@ -340,6 +342,8 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 			sem_wait(&sem_mmu);
 			
 			printf("Obtuve el marco de proceso %d\n",proceso->PID);
+			//log_info(cpu_logs_obligatorios, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", proceso->PID, numero_Pagina, num_marco);
+			
 			//num_marco es global
 			if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
 				
@@ -459,6 +463,9 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
+
+	free(direccion_a_enviar);
+	free(entero_a_enviar);
 }
 
 
@@ -675,6 +682,8 @@ void enviarDirecciones(int direccion_origen, int direccion_destino)
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
+	free(d1_to_send); //
+	free(d2_to_send); //
 }
 
 
@@ -683,7 +692,7 @@ void ejecutar_proceso(PCB* proceso)
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 	instruccionActual = "Goku";
 	enviar_pcb_memoria(proceso->PID,proceso->PC);
-
+	//
 	sem_wait(&interrupt_mutex);
 	*any_interrupcion = 0;	
 	sem_post(&interrupt_mutex);
@@ -881,7 +890,7 @@ void ejecutar_proceso(PCB* proceso)
 			printf("Puedo continuar wiii\n");
 			if( asignacion_or_out_of_memory == 1 ) //no puede seguir
 			{
-				enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN); //el codigo de operacion termina al proceso
+				enviarPCB(proceso,fd_kernel_dispatch,OUT_OF_MEMORY); //el codigo de operacion termina al proceso
 				printf("ERROR, OUT OF MEMORY\n");
 				return;
 			}
@@ -1063,6 +1072,19 @@ void ejecutar_proceso(PCB* proceso)
 		 	instruccionActual = "";
 			free(instruccion);
 			free(instruccion_to_send);
+
+			/* intentar con:
+			free(instruccionActual);
+			instruccionActual = malloc(1);
+			strcpy(instruccionActual, "");
+			if(instruccion != NULL){
+				free(instruccion);
+			}
+			if(instruccion_to_send != NULL){
+				free(instruccion_to_send);
+			}
+			*/
+
 		 	return;
 		}
 
@@ -1240,6 +1262,18 @@ void ejecutar_proceso(PCB* proceso)
 		 	instruccionActual = "";
 			free(instruccion);
 			free(instruccion_to_send);
+
+			/* intentar con:
+			free(instruccionActual);
+			instruccionActual = malloc(1);
+			strcpy(instruccionActual, "");
+			if(instruccion != NULL){
+				free(instruccion);
+			}
+			if(instruccion_to_send != NULL){
+				free(instruccion_to_send);
+			}
+			*/
 		 	return;
 		}
 
@@ -1822,7 +1856,7 @@ void ejecutar_proceso(PCB* proceso)
 			//si la variable tiene el pid del proceso, se debe finalizar.
 			if( *any_interrupcion == proceso->PID)
 			{
-				enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
+				enviarPCB(proceso,fd_kernel_dispatch,INTERRUPTED_BY_USER);
 				*any_interrupcion = 0;
 				sem_post(&interrupt_mutex);
 				return;

@@ -95,6 +95,41 @@ PCB* encontrarProceso(t_list* lista, uint32_t pid)
 	return ret;
 }
 
+char* obtener_cadena_pids(t_list* lista)
+{
+    // Calculamos la longitud total de la cadena
+    size_t longitud_total = 2; // Incluye '[' y ']'
+    for (size_t i = 0; i < list_size(lista); ++i)
+    {
+        PCB* pcb = list_get(lista, i);
+        // Suponemos que el PID es un número de un solo dígito
+        longitud_total += 1; // Espacio para el PID
+        if (i < list_size(lista) - 1)
+            longitud_total += 2; // Espacio para la coma y el espacio
+    }
+
+    // Reservamos memoria para la cadena
+    char* cadena_pids = (char*)malloc(longitud_total);
+    if (!cadena_pids)
+    {
+        perror("Error al reservar memoria");
+        exit(EXIT_FAILURE);
+    }
+
+    // Construimos la cadena
+    sprintf(cadena_pids, "[");
+    for (size_t i = 0; i < list_size(lista); ++i)
+    {
+        PCB* pcb = list_get(lista, i);
+        sprintf(cadena_pids + strlen(cadena_pids), "%u", pcb->PID);
+        if (i < list_size(lista) - 1)
+            strcat(cadena_pids, ", ");
+    }
+    strcat(cadena_pids, "]");
+
+    return cadena_pids;
+}
+
 
 char* estado_proceso_to_string(estado_proceso estado) {
     switch (estado) {
@@ -438,7 +473,8 @@ void kernel_escuchar_cpu ()
 				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n",proceso->PID);
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso->PID, estado_anterior, estado_actual);
-
+				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <SUCCESS>\n",proceso->PID);
+			
 				//ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
 				PCB* actualizado_fin = encontrarProceso(lista_procesos,proceso->PID);
@@ -463,6 +499,92 @@ void kernel_escuchar_cpu ()
 				}				
 			//	
                 break;
+			case OUT_OF_MEMORY:
+				PCB* proceso_out_of_memory = deserializar_proceso_cpu(paquete->buffer);
+				char* estado_anterior_out_of_memory = estado_proceso_to_string(proceso_out_of_memory->estado);
+				proceso_out_of_memory->estado = EXIT;
+				char* estado_actual_out_of_memory = estado_proceso_to_string(proceso_out_of_memory->estado);
+				printf("Recibimos el proceso con el pid: %d\n", proceso_out_of_memory->PID);
+				printf("Recibimos el proceso con el quantum en: %d\n", proceso_out_of_memory->quantum);
+				printf("Recibimos el proceso con el AX: %d\n", proceso_out_of_memory->registro.AX);
+				printf("Recibimos el proceso con el BX: %d\n", proceso_out_of_memory->registro.BX);
+				printf("Recibimos el proceso con el CX: %d\n", proceso_out_of_memory->registro.CX);
+				printf("Recibimos el proceso con el DX: %d\n", proceso_out_of_memory->registro.DX);
+				printf("Recibimos el proceso con el EAX: %d\n", proceso_out_of_memory->registro.EAX);
+				printf("Recibimos el proceso con el EBX: %d\n", proceso_out_of_memory->registro.EBX);
+				printf("Recibimos el proceso con el ECX: %d\n", proceso_out_of_memory->registro.ECX);
+				printf("Recibimos el proceso con el EDX: %d\n", proceso_out_of_memory->registro.EDX);
+				printf("Recibimos el proceso con el SI: %d\n", proceso_out_of_memory->registro.SI);
+				printf("Recibimos el proceso con el DI: %d\n", proceso_out_of_memory->registro.DI);
+				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_out_of_memory->PID);
+				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_out_of_memory->PID, estado_anterior_out_of_memory, estado_actual_out_of_memory);
+				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <OUT_OF_MEMORT>\n",proceso_out_of_memory->PID);
+
+				// ACTUALIZAMOS EN LA LISTA GENERAL
+				sem_wait(&sem_procesos);
+				PCB* actualizado_fin_out_of_memory = encontrarProceso(lista_procesos, proceso_out_of_memory->PID);
+				actualizado_fin_out_of_memory->estado = EXIT;
+				sem_post(&sem_procesos);
+
+				liberar_recursos(proceso_out_of_memory->PID);
+				enviarPCB(proceso_out_of_memory, fd_memoria, PROCESOFIN);
+
+				free(proceso_out_of_memory->path);
+				free(proceso_out_of_memory);
+
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);
+
+				printf("Los recursos han quedado de la siguiente forma:\n");
+				for (int i = 0; i < list_size(listRecursos); i++)
+				{
+					Recurso* got_out_of_memory = list_get(listRecursos, i);
+					printf("El nombre del recurso es %s y tiene %d instancias\n", got_out_of_memory->name, got_out_of_memory->instancias);
+				}
+			break;
+			case INTERRUPTED_BY_USER:
+				PCB* proceso_interrupted_by_user = deserializar_proceso_cpu(paquete->buffer);
+				char* estado_anterior_interrupted_by_user = estado_proceso_to_string(proceso_interrupted_by_user->estado);
+				proceso_interrupted_by_user->estado = EXIT;
+				char* estado_actual_interrupted_by_user = estado_proceso_to_string(proceso_interrupted_by_user->estado);
+				printf("Recibimos el proceso con el pid: %d\n", proceso_interrupted_by_user->PID);
+				printf("Recibimos el proceso con el quantum en: %d\n", proceso_interrupted_by_user->quantum);
+				printf("Recibimos el proceso con el AX: %d\n", proceso_interrupted_by_user->registro.AX);
+				printf("Recibimos el proceso con el BX: %d\n", proceso_interrupted_by_user->registro.BX);
+				printf("Recibimos el proceso con el CX: %d\n", proceso_interrupted_by_user->registro.CX);
+				printf("Recibimos el proceso con el DX: %d\n", proceso_interrupted_by_user->registro.DX);
+				printf("Recibimos el proceso con el EAX: %d\n", proceso_interrupted_by_user->registro.EAX);
+				printf("Recibimos el proceso con el EBX: %d\n", proceso_interrupted_by_user->registro.EBX);
+				printf("Recibimos el proceso con el ECX: %d\n", proceso_interrupted_by_user->registro.ECX);
+				printf("Recibimos el proceso con el EDX: %d\n", proceso_interrupted_by_user->registro.EDX);
+				printf("Recibimos el proceso con el SI: %d\n", proceso_interrupted_by_user->registro.SI);
+				printf("Recibimos el proceso con el DI: %d\n", proceso_interrupted_by_user->registro.DI);
+				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_interrupted_by_user->PID);
+				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INTERRUPTED_BY_USER>\n", proceso_interrupted_by_user->PID);
+				// ACTUALIZAMOS EN LA LISTA GENERAL
+				sem_wait(&sem_procesos);
+				PCB* actualizado_fin_interrupted_by_user = encontrarProceso(lista_procesos, proceso_interrupted_by_user->PID);
+				actualizado_fin_interrupted_by_user->estado = EXIT;
+				sem_post(&sem_procesos);
+
+				liberar_recursos(proceso_interrupted_by_user->PID);
+				enviarPCB(proceso_interrupted_by_user, fd_memoria, PROCESOFIN);
+
+				free(proceso_interrupted_by_user->path);
+				free(proceso_interrupted_by_user);
+
+				sem_wait(&sem_mutex_cpu_ocupada);
+				cpu_ocupada = false;
+				sem_post(&sem_mutex_cpu_ocupada);
+
+				printf("Los recursos han quedado de la siguiente forma:\n");
+				for (int i = 0; i < list_size(listRecursos); i++)
+				{
+					Recurso* got_interrupted_by_user = list_get(listRecursos, i);
+					printf("El nombre del recurso es %s y tiene %d instancias\n", got_interrupted_by_user->name, got_interrupted_by_user->instancias);
+				}
+			break;
 			case PROCESOIO:
 
 				PCB* proceso_io = deserializar_proceso_cpu(paquete->buffer);
@@ -590,11 +712,17 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_gen->proceso.PID);
 					sem_post(&sem_blocked);	
 
+					char* estado_anterior_proceso_to_end = estado_proceso_to_string(proceso_to_end->estado);
+
 					sem_wait(&sem_procesos);
 					PCB* actualizado_gen = encontrarProceso(lista_procesos,instruccion_io_gen->proceso.PID);
 					actualizado_gen->estado = EXIT;
 					sem_post(&sem_procesos);
 
+					char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_gen->estado);
+
+					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
+					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 					
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
@@ -648,15 +776,19 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdin->proceso.PID);
 					sem_post(&sem_blocked);	
 
+					char* estado_anterior_proceso_to_end = estado_proceso_to_string(proceso_to_end->estado);
+
 					printf("1Another checkpoint\n");
 					sem_wait(&sem_procesos);
 					PCB* actualizado_in = encontrarProceso(lista_procesos,instruccion_io_stdin->proceso.PID);
 					actualizado_in->estado = EXIT;
-					//log_info (kernel_logs_obligatorios,"Finaliza el proceso <%d> - Motivo: <INVALID_INTERFACE>",
-					//sem_post(&PID);sem_procesos);
+					char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_in->estado);
 					sem_post(&sem_procesos);
 					printf("2Another checkpoint\n");
 
+					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
+					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
+					
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
@@ -713,10 +845,16 @@ void kernel_escuchar_cpu ()
 					PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements,instruccion_io_stdout->proceso.PID);
 					sem_post(&sem_blocked);
 
+					char* estado_anterior_proceso_to_end = estado_proceso_to_string(proceso_to_end->estado);
+
 					sem_wait(&sem_procesos);
 					PCB* actualizado_out = encontrarProceso(lista_procesos,instruccion_io_stdout->proceso.PID);
 					actualizado_out->estado = EXIT;
+					char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_out->estado);
 					sem_post(&sem_procesos);
+
+					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
+					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 
 					printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PC);
@@ -1051,10 +1189,16 @@ void kernel_escuchar_cpu ()
 						PCB* proceso_to_end = encontrar_por_pid(cola_blocked->elements, instruccion_io_fs->proceso.PID);
 						sem_post(&sem_blocked);
 
+						char* estado_anterior_proceso_to_end = estado_proceso_to_string(proceso_to_end->estado);
+
 						sem_wait(&sem_procesos);
 						PCB* actualizado_fs = encontrarProceso(lista_procesos, instruccion_io_fs->proceso.PID);
 						actualizado_fs->estado = EXIT;
+						char* estado_actual_proceso_to_end = estado_proceso_to_string(actualizado_fs->estado);
 						sem_post(&sem_procesos);
+
+						log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
+						log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 
 						printf("Este proceso ha terminado\n");
 						liberar_recursos(proceso_to_end->PC);
@@ -1406,7 +1550,7 @@ void iniciar_proceso(char* path)
 	
 	//procesos_en_new++;
 	
-	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW, funcion iniciar proceso\n", pcb->PID);
+	log_info (kernel_logs_obligatorios, "Se crea el proceso <%d> en NEW\n", pcb->PID);
 }
 
 void finalizar_proceso (char* pid) {
@@ -1631,14 +1775,6 @@ void consolaInteractiva()
 		validarFuncionesConsola(leido);
 		free(leido);
 		leido = readline("> ");
-		/*
-		sem_wait(&sem_blocked);
-		sem_wait(&sem_ready);
-		printf("Ahora la cola de READY tiene %d procesos\n",queue_size(cola_ready));
-		printf("Ahora la cola de BLOCKED tiene %d procesos\n",queue_size(cola_blocked));
-		sem_post(&sem_blocked);
-		sem_post(&sem_ready);
-		*/
 	}
 }
 
@@ -1657,7 +1793,7 @@ void mover_procesos_a_ready()
 			sem_wait(&sem_ready);
 			if( (queue_size(cola_ready) + queue_size(cola_blocked) + 1) < grado_multiprogramacion )
 			{
-				printf("[NICE] EL GRADO DE MULTIPROGRAMACIÓN NO HA SIDO SUPERADO, UN NUEVO PROCESO ES ADMITIDO\n");
+				//printf("[NICE] EL GRADO DE MULTIPROGRAMACIÓN NO HA SIDO SUPERADO, UN NUEVO PROCESO ES ADMITIDO\n");
 				//si se cumple, significa que podemos incluir un nuevo proceso en ready
 				PCB* pcb = queue_pop(cola_new);
 				sem_post(&sem_blocked);
@@ -1672,6 +1808,9 @@ void mover_procesos_a_ready()
 
 				queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
 				printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
+				char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
+				log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+				free(cadena_pids);
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", pcb->PID, estado_anterior, estado_actual);
 				
 				sem_post(&sem_ready); 
@@ -1680,7 +1819,7 @@ void mover_procesos_a_ready()
 			}
 			else
 			{
-				printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
+				//printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
 				sem_post(&sem_grado_mult);
 				sem_post(&sem_blocked);
 				sem_post(&sem_ready);
@@ -1707,78 +1846,6 @@ void planificador_de_largo_plazo()
 			//sem_post(&sem);   // mutex hace signal
 		}
 	}	
-}
-
-//FUNCIÓN OBSOLETA
-void informar_memoria_nuevo_procesoNEW()
-{
-	//CREAMOS BUFFER
-	//POR EL MOMENTO ESTAMOS HARCODEANDO para intentar mandar algo a memoria
-	ProcesoMemoria* proceso = malloc(sizeof(ProcesoMemoria));
-
-	PCB* pcb = queue_pop(cola_new);//
-	proceso->path = malloc(strlen(pcb->path)+1);
-	//proceso->path = pcb->path;
-	strcpy(proceso->path, pcb->path);
-	proceso->PID = pcb->PID;
-	proceso->path_length = strlen(pcb->path)+1;
-	proceso->TablaDePaginas = list_create();
-	
-	enviarProcesoMemoria(proceso,fd_memoria);
-	
-	sem_wait(&sem_ready);   // mutex hace wait
-	queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
-    sem_post(&sem_ready); 
-	sem_post(&sem_cant_ready);  // mutex hace wait
-	
-}
-
-//FUNCIÓN OBSOLETA
-void VIEJO_planificador_largo_plazo()
-{
-    // //Obtenemos el grado de multiprogramación especificado por el archivo de configuración
-    // //int grado_multiprogramacion = config_get_int_value(kernel_config, "GRADO_MULTIPROGRAMACION");
-	// int grado_multiprogramacion = 20;
-	// //pregunto constantemente
-	// while(1)
-	// {
-	// 	//hay nuevos procesos en new?
-	// 	if( procesos_en_new > 0 )
-	// 	{
-	// 		//avisar a memoria
-	// 		//USAR QUEUE Pop
-	while(1)
-	{
-		//SEMAFOROS (PRODUCTOR-CONSUMIDOR)  consumidor de la cola de NEW
-
-		//if( queue_size(cola_new) > 0)
-		//{	
-		    sem_wait(&sem_cant);   // mutex hace wait
-		    sem_wait(&sem);   // mutex hace wait
-
-			informar_memoria_nuevo_procesoNEW();
-			
-			sem_post(&sem);   // mutex hace signal
-
-			//sem_post(&sem_cant_ready); //avisamos al planificador que hay un nuevo proceso listo
-			
-		//}
-
-	}			
-	// 	}
-	// 	else
-	// 	{
-	// 		//algun proceso terminó?
-	// 		if(procesos_fin > 0 )
-	// 		{
-	// 			//
-	// 			printf("esta parte es la del fin del proceso");
-	// 		}
-	// 	}
-	// 	//luego de esto muevo los procesos a ready mientras pueda
-	// 	//mover_procesos_ready(grado_multiprogramacion);
-	// 	sleep(1);
-	//}	
 }
 
 void interrumpir_por_quantum_vrr(int proceso_quantum)
@@ -1840,9 +1907,9 @@ void enviar_pcb_a_cpu()
 	sem_wait(&sem_ready);   // mutex hace wait
 
 	PCB* pcb_cola = queue_pop(cola_ready); //saca el proceso de la cola de ready
-	printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->PID);
-	printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->quantum);
-	printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->path_length);
+	//printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->PID);
+	//printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->quantum);
+	//printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->path_length);
 			
 	sem_post(&sem_ready); // mutex hace signal
 	
@@ -1862,11 +1929,12 @@ void enviar_pcb_a_cpu()
 	sem_wait(&sem_procesos);
 	PCB* actualizado = encontrarProceso(lista_procesos,pcb_cola->PID);
 	actualizado->estado = EXEC;
+	log_info(kernel_logs_obligatorios,"PID: <%u> - Estado Anterior : <READY> - Estado Actual: <EXEC>\n",actualizado->PID);
 	sem_post(&sem_procesos);
 
 
-	printf("Enviaremos un proceso\n");
-	printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
+	//printf("Enviaremos un proceso\n");
+	//printf("Enviaremos el proceso cuyo pid es %d\n",to_send->PID);
 	enviarPCB(to_send, fd_cpu_dispatch,PROCESO);
 	sem_wait(&sem_mutex_cpu_ocupada);
 	cpu_ocupada = true;
