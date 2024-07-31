@@ -125,7 +125,7 @@ void memoria_escuchar_cpu (){
 				//printf("Enviaremos a la cpu: %s\n",instruccion); 
 				//enviamos, sin antes dormir el tiempo esperado
 				//printf("Me voy a mimir, buenas noches\n");
-				sleep(RETARDO_RESPUESTA/1000);
+				usleep(RETARDO_RESPUESTA*1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
 				break;
 

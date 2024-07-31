@@ -68,7 +68,6 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
         return;
     }
 	
-	printf("ONE\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 	if (buffer == NULL) {
         perror("malloc");
@@ -88,7 +87,6 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
     buffer->offset += sizeof(int);
 	memcpy(buffer->stream + buffer->offset,caracter, sizeof(char));
 
-	printf("TWO\n");
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 	if (paquete == NULL) {
         perror("malloc");
@@ -101,7 +99,6 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
     paquete->codigo_operacion = STDIN_TOWRITE;
 	paquete->buffer = buffer;
 
-	printf("THREE\n");
 	//Empaquetamos el Buffer
     void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
 	if (a_enviar == NULL) {
@@ -120,7 +117,6 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
     //Por último enviamos
     send(fd_memoria, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
 
-	printf("FOUR\n");
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
     free(paquete->buffer->stream);
@@ -146,7 +142,7 @@ void new_enviar_stdout_to_print_memoria(t_list* direcciones_fisicas, int* tamani
 		memcpy(buffer->stream + buffer->offset,list_get(direcciones_fisicas,i), sizeof(int));
     	buffer->offset += sizeof(int);
 		int* df = list_get(direcciones_fisicas,i);
-		printf("Mandaremos la siguiente direccion física: %d\n",*df);
+		//printf("Mandaremos la siguiente direccion física: %d\n",*df);
 	}
 
 	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -457,7 +453,7 @@ void crear_archivo(char* nombre)
 		while( i < BLOCK_COUNT && finished != true)
 		{
 			int value = bitarray_test_bit(bit_map,i); //obtenemos el valor actual de dicho bit array en la posición i
-			printf("El valor actual es: %d\n",value);
+			//printf("El valor actual es: %d\n",value);
 			if( value == 0 )
 			{
 				//si es cero, está libre, así que lo ocupamos y actualizamos el archivo de bitmap
@@ -469,7 +465,7 @@ void crear_archivo(char* nombre)
 				finished = true;
 				i--;
 			}
-			printf("valor de i es: %d\n",i);
+			//printf("valor de i es: %d\n",i);
 			i++;
 		}
 
@@ -720,7 +716,7 @@ void compactacion_a(Archivo* archivo, t_config* archivo_config, int nuevo_tamani
 
 void compactacion(Archivo* archivo, t_config* archivo_config, int nuevo_tamanio)
 {
-    printf("Se compactará el FS para truncar al archivo %s\n", archivo->path);
+    //printf("Se compactará el FS para truncar al archivo %s\n", archivo->path);
     int bloque_base = config_get_int_value(archivo_config, "BLOQUE_INICIAL");
     int tamanio_archivo = config_get_int_value(archivo_config, "TAMANIO_ARCHIVO");
     int cant_bloques = (int)ceil((double)tamanio_archivo / BLOCK_SIZE);
@@ -762,10 +758,10 @@ void compactacion(Archivo* archivo, t_config* archivo_config, int nuevo_tamanio)
     list_sort(lista_archivos, comparar_bloque_inicial);
 
     // Compactamos
+	log_info(entradasalida_logger,"PID: <%d> - Inicio Compactación.",*pid_actual);
     int pointer = 0;
     for (int i = 0; i < list_size(lista_archivos)-1; i++) 
 	{
-        printf("DialFS - Inicio Compactación: PID %d\n", *pid_actual);
         Archivo* got = list_get(lista_archivos, i);
         t_config* config_got = config_create(got->path);
         int bloque_base_got = config_get_int_value(config_got, "BLOQUE_INICIAL");
@@ -800,11 +796,15 @@ void compactacion(Archivo* archivo, t_config* archivo_config, int nuevo_tamanio)
         config_destroy(config_got);
     }
 
+	usleep(RETRASO_COMPACTACION*1000);
+	log_info(entradasalida_logger,"PID: <%d> - Fin Compactación.",*pid_actual);
+	
+
     int nueva_base_compactado = encontrar_bloques_continuos(bit_map, cant_bloques);
-	printf("La nueva base encontrada es: %d\n",nueva_base_compactado);
+	//printf("La nueva base encontrada es: %d\n",nueva_base_compactado);
     if (nueva_base_compactado != -1) 
 	{
-        printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
+        //printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
 
         // Asignamos los nuevos bloques
         for (int i = nueva_base_compactado; i < nueva_base_compactado + cant_bloques; i++) {
@@ -825,7 +825,7 @@ void compactacion(Archivo* archivo, t_config* archivo_config, int nuevo_tamanio)
         sprintf(cantidad_string, "%d", nuevo_tamanio);
         config_set_value(archivo_config, "TAMANIO_ARCHIVO", cantidad_string);
         config_save_in_file(archivo_config, archivo->path);
-        printf("DialFS - Fin Compactación: PID %d\n", *pid_actual);
+        //printf("DialFS - Fin Compactación: PID %d\n", *pid_actual);
 
         // Movemos los datos auxiliares al nuevo espacio
         memmove(bloques + nueva_base_compactado * BLOCK_SIZE, aux, tamanio_archivo);
@@ -849,7 +849,7 @@ void truncarArchivo(char* nombre, int cantidad)
 	int base = config_get_int_value(metadata_archivo,"BLOQUE_INICIAL");
 	int tamanio = config_get_int_value(metadata_archivo,"TAMANIO_ARCHIVO");
 	int cant_bloques = (int)ceil((double)cantidad / BLOCK_SIZE);
-	printf("Para el archivo: %s, necesitamos la cantidad de bloques de %d\n",nombre,cant_bloques);
+	//printf("Para el archivo: %s, necesitamos la cantidad de bloques de %d\n",nombre,cant_bloques);
 
 	if( cantidad > tamanio )
 	{
@@ -857,14 +857,14 @@ void truncarArchivo(char* nombre, int cantidad)
 		if( esPosibleTruncar(base,cantidad) )
 		{
 			//realizamos la asignación
-			printf("Hay espacio suficiente, PODEMOS TRUNCAR\n");
-			printf("La base es la siguiente: %d\n",base);
-			printf("La cantidad de bloque es %d\n",cant_bloques);
+			//printf("Hay espacio suficiente, PODEMOS TRUNCAR\n");
+			//printf("La base es la siguiente: %d\n",base);
+			//printf("La cantidad de bloque es %d\n",cant_bloques);
 			//se lleva a cabo la asignación
 			for(int i = base+1; i < cant_bloques+base; i++)
 			{
 				int value = bitarray_test_bit(bit_map,i);
-				printf("El valor del bit es %d\n",value);
+				//printf("El valor del bit es %d\n",value);
 				if( value == 0 )
 				{
 					bitarray_set_bit(bit_map,i);
@@ -885,14 +885,14 @@ void truncarArchivo(char* nombre, int cantidad)
 		else
 		{
 			//introducir lógica de compactación
-			printf("Desafortunadamente no podemos truncar de forma continua\n");
+			//printf("Desafortunadamente no podemos truncar de forma continua\n");
 			//Debemos introducir otro if para determinar si hay espacio suficiente
-			printf("Verificaremos si hay, en alguna parte del espacio de memoria, alguna secuencia de bloques libres de forma continua\n");
+			//printf("Verificaremos si hay, en alguna parte del espacio de memoria, alguna secuencia de bloques libres de forma continua\n");
 			int new_base = encontrar_bloques_continuos(bit_map,cant_bloques);
 			if( new_base != (-1))
 			{
 				//encontramos una nueva secuencia de bloques libres, actualizamos bloque base y asignamos tamaño
-				printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
+				//printf("Hemos encontrado una secuencia de bloques libres, podemos asignar\n");
 
 				//antes liberamos el bloque que poseía anteriormente
 				bitarray_clean_bit(bit_map,base);
@@ -901,7 +901,7 @@ void truncarArchivo(char* nombre, int cantidad)
 				for(int i = new_base; i < cant_bloques+new_base; i++)
 				{
 					int value = bitarray_test_bit(bit_map,i);
-					printf("El valor del bit es %d\n",value);
+					//printf("El valor del bit es %d\n",value);
 					if( value == 0 )
 					{
 						bitarray_set_bit(bit_map,i);
@@ -934,7 +934,7 @@ void truncarArchivo(char* nombre, int cantidad)
 				//antes de llevar a cabo la compactación debemos ver si siquiera existe la cantidad de bloques libres 
 				if( hay_bloques_libres(bit_map,cant_bloques) )
 				{
-					printf("Existe la cantidad de bloques libres, pero no se encuentran de forma continua. Debemos llevar a cabo la compactación\n");
+					//printf("Existe la cantidad de bloques libres, pero no se encuentran de forma continua. Debemos llevar a cabo la compactación\n");
 					compactacion(archivo,metadata_archivo,tamanio);
 				}
 				else
@@ -948,11 +948,11 @@ void truncarArchivo(char* nombre, int cantidad)
 	else
 	{
 		//se busca reducir el tamanio
-		printf("Se busca reducir el archivo %s\n", nombre);
+		//printf("Se busca reducir el archivo %s\n", nombre);
 		for(int i = base+1; i < cant_bloques+base; i++)
 		{
 			int value = bitarray_test_bit(bit_map,i);
-			printf("El valor del bit es %d\n",value);
+			//printf("El valor del bit es %d\n",value);
 			if( value == 1 )
 			{
 				bitarray_clean_bit(bit_map,i);
@@ -999,7 +999,7 @@ void escribirArchivo(char** instruccion)
 	free(tamanio_fs);
 	list_clean_and_destroy_elements(lista_direcciones,free);
 	list_destroy(lista_direcciones);
-	printf("ESTOY ITERANDO\n");
+	//printf("ESTOY ITERANDO\n");
 
 	sem_wait(&sem_activacion1);
 	char* a_escribir_en_archivo = malloc(strlen(dialfs_to_write)+1);
@@ -1008,7 +1008,7 @@ void escribirArchivo(char** instruccion)
 	sem_post(&sem_activacion2);
 	//llegamos acá y tenemos
 	printf("%s\n",a_escribir_en_archivo);
-	printf("No se qué más hacer jajajaj\n");
+	//printf("No se qué más hacer jajajaj\n");
 
 
 	fd_bloque = open(path_bloques, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -1100,7 +1100,7 @@ void eliminarArchivo(char** instruccion_fs_partida_delete)
 	for(int i = base; i < cant_bloques; i++)
 	{
 		int value = bitarray_test_bit(bit_map,i);
-		printf("El valor del bit es %d\n",value);
+		//printf("El valor del bit es %d\n",value);
 		if( value == 1 )
 		{
 			bitarray_clean_bit(bit_map,i);
@@ -1129,7 +1129,7 @@ void entradasalida_escuchar_memoria (){
 	bool control_key = 1;
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_memoria);
-			printf("Codigo de operación de memoria recibido\n");
+			//printf("Codigo de operación de memoria recibido\n");
 
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			if (paquete == NULL) {
@@ -1293,7 +1293,7 @@ void leerArchivo(char** instruccion_fs_partida_read)
     // Copiamos lo leído
     strncpy(to_read, bloques + BLOCK_SIZE * bloque_base + pointer, cant_df);
     to_read[cant_df] = '\0'; // Aseguramos que la cadena esté terminada en nulo
-    printf("Lo que hemos leído fue: %s\n", to_read);
+    //printf("Lo que hemos leído fue: %s\n", to_read);
 
     // Cerramos todo
     close(fd_bloque);
@@ -1301,7 +1301,7 @@ void leerArchivo(char** instruccion_fs_partida_read)
 
     // Escribimos todo en memoria
     for (int i = 0; i < cant_df; i++) {
-        printf("ESTOY ITERANDO\n");
+        //printf("ESTOY ITERANDO\n");
         int* df_to_send_in = malloc(sizeof(int));
         if (df_to_send_in == NULL) {
             perror("Error al asignar memoria para df_to_send_in");
@@ -1322,7 +1322,7 @@ void leerArchivo(char** instruccion_fs_partida_read)
         free(df_to_send_in);
     }
 
-    printf("ESTOY ITERANDO\n");
+    //printf("ESTOY ITERANDO\n");
     int* df_to_send_in = malloc(sizeof(int));
     if (df_to_send_in == NULL) {
         perror("Error al asignar memoria para df_to_send_in");
@@ -1344,6 +1344,7 @@ void leerArchivo(char** instruccion_fs_partida_read)
 
     // Liberamos la memoria asignada para to_read
     free(to_read);
+	config_destroy(config_archivo);
 }
 
 
@@ -1399,8 +1400,9 @@ void entradasalida_escuchar_kernel (){
 			switch (cod_op) {
 			case GENERICA:
 
-				printf("Checkpoin2 \n");
+				//printf("Checkpoin2 \n");
 				/*
+				
 				//hay que deserializar, dado que es solo un int
 				int* unidadesDeTrabajo = malloc(sizeof(int));
 				unidadesDeTrabajo = paquete->buffer->stream;
@@ -1410,17 +1412,19 @@ void entradasalida_escuchar_kernel (){
 				sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO)/1000);
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 				*/
-				{
-                    int* unidadesDeTrabajo = (int*)paquete->buffer->stream; // Evitamos duplicar memoria
-
-                    printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n", *unidadesDeTrabajo);
-                    printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO));
-                    sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO) / 1000);
-
-                    // DEVOLVER AL KERNEL PARA DESPERTAR
-                    enviarEntero(pid_actual, fd_kernel, DESPERTAR);
-                }
+				log_info (entradasalida_logger, "PID: <%d> - Operación: <INTERFAZ_GENÉRICA_SLEEP>",*pid_actual);
 				
+				int* unidadesDeTrabajo = (int*)paquete->buffer->stream; // Evitamos duplicar memoria
+
+				log_info (entradasalida_logger, "PID: <%d> - Operación: <INTERFAZ_GENÉRICA_SLEEP> - DUERME: <%d>",*pid_actual,*unidadesDeTrabajo);
+
+				//printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n", *unidadesDeTrabajo);
+				//printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO));
+				//sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO) / 1000);
+
+				usleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO)*1000);
+				// DEVOLVER AL KERNEL PARA DESPERTAR
+				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			case STDIN:
 				// DESEMPAQUETAMOS
@@ -1429,6 +1433,8 @@ void entradasalida_escuchar_kernel (){
 				char* instruccion_in = malloc(*tamanio_instruccion_in);
 				memcpy(instruccion_in, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_in);
 				*/
+				log_info (entradasalida_logger, "PID: <%d> - Operación: <INTERFAZ_STDIN>",*pid_actual);
+
 				int* tamanio_instruccion_in = (int*)paquete->buffer->stream;
                 char* instruccion_in = malloc(*tamanio_instruccion_in);
                 if (instruccion_in == NULL) {
@@ -1442,23 +1448,23 @@ void entradasalida_escuchar_kernel (){
 
 
 				// Mostremos por pantalla
-				printf("La instruccion que ha llegado es: %s\n", instruccion_in);
+				//printf("La instruccion que ha llegado es: %s\n", instruccion_in);
 				char** instruccion_partida_in = string_split(instruccion_in, " ");
 				int tamanio_in = atoi(instruccion_partida_in[4]);
-				printf("Tamaño de la instrucción: %d\n", tamanio_in);
+				//printf("Tamaño de la instrucción: %d\n", tamanio_in);
 
 				// Ingresamos el texto a escribir
-				printf("Vamos a llevar a cabo STDIN\n");
-				printf("Ingrese un texto por teclado: \n");
+				//printf("Vamos a llevar a cabo STDIN\n");
+				//printf("Ingrese un texto por teclado: \n");
 				char* leido_in;
 				leido_in = readline(">> ");
-				printf("Texto leído: %s\n", leido_in);
+				//printf("Texto leído: %s\n", leido_in);
 
 				// Debemos ir enviando poco a poco las direcciones físicas a memoria para que las vaya escribiendo
 				// REFERENCIA // IO_STDIN_READ Int1 BX CX 12 15 16 17 18 19 20 21 22 23 24 25 26
 				for (int i = 0; i < tamanio_in; i++) 
 				{
-					printf("ESTOY ITERANDO\n");
+					//printf("ESTOY ITERANDO\n");
 					int* df_to_send_in = malloc(sizeof(int)); //liberar
 					if (df_to_send_in == NULL) {
                         perror("malloc");
@@ -1479,7 +1485,7 @@ void entradasalida_escuchar_kernel (){
 					free(df_to_send_in);
 				}
 
-				printf("ESTOY ITERANDO\n");
+				//printf("ESTOY ITERANDO\n");
 				int* df_to_send_in = malloc(sizeof(int)); //liberar
 				 if (df_to_send_in == NULL) {
                     perror("malloc");
@@ -1509,7 +1515,9 @@ void entradasalida_escuchar_kernel (){
 				break;
 			case STDOUT:
 				
-				printf("CHECKPOINT DEL OUT 1\n");
+				log_info (entradasalida_logger, "PID: <%d> - Operación: <INTERFAZ_STDOUT>",*pid_actual);
+
+				//printf("CHECKPOINT DEL OUT 1\n");
 				int* tamanio_instruccion_out = (int*)paquete->buffer->stream;
 				char* instruccion_out = malloc(*tamanio_instruccion_out);
 				if (instruccion_out == NULL) {
@@ -1520,8 +1528,8 @@ void entradasalida_escuchar_kernel (){
                     continue;
                 }
 				memcpy(instruccion_out, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_out);
-				printf("Llegó el siguiente tamaño: %d\n",*tamanio_instruccion_out);
-				printf("Llegó la siguiente instrucción: %s\n",instruccion_out);
+				//printf("Llegó el siguiente tamaño: %d\n",*tamanio_instruccion_out);
+				//printf("Llegó la siguiente instrucción: %s\n",instruccion_out);
 				
 				char** instrucciones_partidas_out = string_split(instruccion_out," ");
 				if (instrucciones_partidas_out == NULL) {
@@ -1532,7 +1540,7 @@ void entradasalida_escuchar_kernel (){
 					free(paquete);
 					continue;
 				}
-				printf("CHECKPOINT DEL OUT 2\n");
+				//printf("CHECKPOINT DEL OUT 2\n");
 
 				//creamos una lista de las direcciones que vayamos obteniendo	
 				t_list* lista_direcciones = list_create();
@@ -1573,12 +1581,12 @@ void entradasalida_escuchar_kernel (){
 					*df_out = atoi(instrucciones_partidas_out[5+i]);
 					list_add(lista_direcciones,df_out);
 				}
-				printf("CHECKPOINT DEL OUT 3\n");
+				//printf("CHECKPOINT DEL OUT 3\n");
 
 				//una ves tengamos la lista hecha habra que empaquetarlo de alguna forma
 				new_enviar_stdout_to_print_memoria(lista_direcciones,tamanio_out,STDOUT_TOPRINT);
 
-				printf("CHECKPOINT DEL OUT 3\n");
+				//printf("CHECKPOINT DEL OUT 3\n");
 				list_destroy_and_destroy_elements(lista_direcciones, free);
                 free(tamanio_out);
                 free(instruccion_out);
@@ -1605,8 +1613,10 @@ void entradasalida_escuchar_kernel (){
 				memcpy(instruccion_fs_create, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_create);
 				char** instruccion_fs_partida_create = string_split(instruccion_fs_create, " ");
 
+				log_info (entradasalida_logger, "PID: <%d> -Crear Archivo: <%s>",*pid_actual,instruccion_fs_partida_create[2]);
+
 				// Mostremos por pantalla
-				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_create);
+				//printf("La instrucción que ha llegado es: %s\n", instruccion_fs_create);
 				crear_archivo(instruccion_fs_partida_create[2]);
 				free(instruccion_fs_create);
 				string_array_destroy(instruccion_fs_partida_create);
@@ -1626,8 +1636,10 @@ void entradasalida_escuchar_kernel (){
 				memcpy(instruccion_fs_truncate, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_truncate);
 				char** instruccion_fs_partida_truncate = string_split(instruccion_fs_truncate, " ");
 
+				log_info (entradasalida_logger, "PID: <%d> - Truncar Archivo: <%s> - Tamaño: <%s>",*pid_actual,instruccion_fs_partida_truncate[2],instruccion_fs_partida_truncate[4]);
+
 				// Mostremos por pantalla
-				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_truncate);
+				//printf("La instrucción que ha llegado es: %s\n", instruccion_fs_truncate);
 				// Realiza la operación de truncamiento aquí (por ejemplo, llamando a una función)
 				truncarArchivo(instruccion_fs_partida_truncate[2], atoi(instruccion_fs_partida_truncate[4]));
 				free(instruccion_fs_truncate);
@@ -1649,8 +1661,10 @@ void entradasalida_escuchar_kernel (){
 				memcpy(instruccion_fs_write, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_write);
 				char** instruccion_fs_partida_write = string_split(instruccion_fs_write, " ");
 
+				log_info (entradasalida_logger, "PID: <%d> - Escribir Archivo: <%s> - Tamaño a Leer: <%s> - Puntero Archivo: <%s>",*pid_actual,instruccion_fs_partida_write[2],instruccion_fs_partida_write[7],instruccion_fs_partida_write[6]);				
+
 				// Mostremos por pantalla
-				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_write);
+				//printf("La instrucción que ha llegado es: %s\n", instruccion_fs_write);
 				// Realiza la operación de escritura aquí (por ejemplo, llamando a una función)
 				escribirArchivo(instruccion_fs_partida_write);
 				free(instruccion_fs_write);
@@ -1671,8 +1685,11 @@ void entradasalida_escuchar_kernel (){
 				memcpy(instruccion_fs_read, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_read);
 				char** instruccion_fs_partida_read = string_split(instruccion_fs_read, " ");
 
+				//IO_FS_READ FS Goku.config AX ECX EDX //base//0 //tamanio//14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+				log_info (entradasalida_logger, "PID: <%d> - Leer Archivo: <%s> - Tamaño a Leer: <%s> - Puntero Archivo: <%s>",*pid_actual,instruccion_fs_partida_read[2],instruccion_fs_partida_read[7],instruccion_fs_partida_read[6]);
+
 				// Mostramos por pantalla
-				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_read);
+				//printf("La instrucción que ha llegado es: %s\n", instruccion_fs_read);
 				// Realiza la operación de lectura aquí (por ejemplo, llamando a una función)
 				leerArchivo(instruccion_fs_partida_read);
 				free(instruccion_fs_read);
@@ -1693,8 +1710,10 @@ void entradasalida_escuchar_kernel (){
 				memcpy(instruccion_fs_delete, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_delete);
 				char** instruccion_fs_partida_delete = string_split(instruccion_fs_delete, " ");
 
+				log_info (entradasalida_logger, "PID: <%d> - Eliminar Archivo: <%s>",*pid_actual,instruccion_fs_partida_delete[2]);
+				
 				// Mostramos por pantalla
-				printf("La instrucción que ha llegado es: %s\n", instruccion_fs_delete);
+				//printf("La instrucción que ha llegado es: %s\n", instruccion_fs_delete);
 				// Realiza la operación de eliminación aquí (por ejemplo, llamando a una función)
 				eliminarArchivo(instruccion_fs_partida_delete);
 				free(instruccion_fs_delete);
