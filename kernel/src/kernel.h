@@ -78,6 +78,8 @@ char* RECURSOS;
 char* INSTANCIAS_RECURSOS;
 char* GRADO_MULTIPROGRAMACION; //Da segmentation fault si lo defino como int
 
+void ejecutar_script (char* path);
+
 PCB* encontrarProceso(t_list* lista, uint32_t pid)
 {
 	PCB* ret;
@@ -159,6 +161,26 @@ bool es_elemento_buscado(void* elemento, void* valor_buscado) {
     return *((uint32_t*)elemento) == *((uint32_t*)valor_buscado);
 }
 
+bool eliminar_elemento_pid(t_list* lista, uint32_t valor) 
+{
+    uint32_t* valor_buscado = malloc(sizeof(uint32_t));
+    *valor_buscado = valor;
+    bool to_ret = false;
+
+    // Iterar sobre la lista para encontrar el elemento
+    for (int i = 0; i < list_size(lista); i++) {
+        uint32_t* elemento = list_get(lista, i);
+        if (es_elemento_buscado(elemento, valor_buscado)) {
+            list_remove_and_destroy_element(lista, i, free);
+            to_ret = true;
+            break;  // Elemento encontrado y eliminado, salimos del bucle
+        }
+    }
+
+    free(valor_buscado);  // Liberamos valor_buscado siempre, ya que ya no lo necesitamos
+    return to_ret;
+}
+
 
 bool eliminar_elemento(t_list* lista, uint32_t pid_buscado) 
 {
@@ -168,7 +190,7 @@ bool eliminar_elemento(t_list* lista, uint32_t pid_buscado)
         if (elemento->PID == pid_buscado) {  // Comparar el PID
             list_remove(lista, i);  // Eliminar el elemento de la lista
             // Liberar la memoria del elemento si es necesario
-            free(elemento->path);  // Liberar el campo path, si es dinámico
+            //free(elemento->path);  // Liberar el campo path, si es dinámico
             free(elemento);  // Liberar el PCB en sí
             to_ret = true;
             break;  // Salir del bucle después de eliminar el elemento
@@ -176,7 +198,6 @@ bool eliminar_elemento(t_list* lista, uint32_t pid_buscado)
     }
     return to_ret;
 }
-
 
 //Función para generar los recursos a partir del archivo de configuración
 t_list* generarRecursos(char* recursos, char* instancias_recursos)
@@ -351,7 +372,7 @@ void liberar_recursos(int pid)
 		bool borrado = true;
 		while( borrado )
 		{
-			borrado = eliminar_elemento(r->pid_procesos,pid);
+			borrado = eliminar_elemento_pid(r->pid_procesos,pid);
 			if( borrado )
 			{
 				r->instancias++;
@@ -560,6 +581,9 @@ void kernel_escuchar_cpu ()
 
 				
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Desalojado por fin de Quantum", proceso_fin_de_quantum->PID);
+
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_fin_de_quantum->PID,estado_anterior_fin_de_quantum,estado_actual_fin_de_quantum);
+
 
 				//el quantum vuelve al valor original
 				proceso_fin_de_quantum->quantum = atoi(QUANTUM);
@@ -810,7 +834,7 @@ void kernel_escuchar_cpu ()
 					i_wait++;
 				}
 
-				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Realizó un WAIT del recurso <%s>\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
 
 				//si existe
 				if( existe_wait )
@@ -821,15 +845,21 @@ void kernel_escuchar_cpu ()
 					//si es menor a cero, se bloquea
 					if( recurso_wait->instancias < 0 )
 					{
+						log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
+
 						//de lo contrario lo añadimos a la cola de bloqueados del recurso y también a la cola de bloqueados general
 						PCB* proceso_recurso = malloc(sizeof(PCB));
 						*proceso_recurso = instruccion_recurso_wait->proceso;
+						
+						PCB* proceso_to_block = malloc(sizeof(PCB));
+						*proceso_to_block = instruccion_recurso_wait->proceso;
+						printf("Vamos a guardar a la lista de bloqueados el proceso con el siguiente pid %d\n",proceso_recurso->PID);
 						list_add(recurso_wait->listBloqueados,proceso_recurso);
 
 						char* estado_anterior_proceso_wait = estado_proceso_to_string(proceso_recurso->estado);
 						
 						sem_wait(&sem_blocked);
-						queue_push(cola_blocked,proceso_recurso);
+						queue_push(cola_blocked,proceso_to_block);
 						sem_post(&sem_blocked);
 			
 						
@@ -842,16 +872,17 @@ void kernel_escuchar_cpu ()
 						char* estado_actual_proceso_wait = estado_proceso_to_string(actualizado_wait->estado);
 
 						log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_recurso->PID, estado_anterior_proceso_wait, estado_actual_proceso_wait);
-						log_info(kernel_logs_obligatorios, "El proceso de PID: <%d> - Ha sido bloqueado porque no hay instancias disponibles del recurso\n");
+						log_info(kernel_logs_obligatorios, "El proceso de PID: <%d> - Ha sido bloqueado porque no hay instancias disponibles del recurso\n",actualizado_wait->PID);
 
 						//CPU desocupada
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = false;
 						sem_post(&sem_mutex_cpu_ocupada);
-						//printf("En este momento la cola de ready consta de %d procesos\n",queue_size(cola_ready));
 					}
 					else
 					{
+						log_info(kernel_logs_obligatorios,"PID: <%d> - Tomó el recurso: <%s> con éxito.\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
+
 						//SI EL PROCESO TOMÓ LA INSTANCIA, DEBE VOLVER A EJECUTARSE.
 						//indicamos que hay un proceso que tomó una instancia
 						uint32_t* pid = malloc(sizeof(uint32_t));
@@ -863,48 +894,17 @@ void kernel_escuchar_cpu ()
 						PCB* proceso_recurso = malloc(sizeof(PCB));
 						*proceso_recurso = instruccion_recurso_wait->proceso;
 
-						/*
-						if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
-						{
-							encolar_procesos_vrr(proceso_recurso);
-						}
-						else
-						{
-							sem_wait(&sem_ready);   // mutex hace wait
-							queue_push(cola_ready,proceso_recurso);	//agrega el proceso a la cola de ready
-							sem_post(&sem_ready); 
-							sem_post(&sem_cant_ready);  // mutex hace wait
-						}
-						*/
-						//printf("Enviaremos un proceso\n");
-						//printf("Enviaremos el proceso cuyo pid es %d\n",proceso_recurso->PID);
+						
 						enviarPCB(proceso_recurso, fd_cpu_dispatch,PROCESO);
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = true;
 						sem_post(&sem_mutex_cpu_ocupada);
-
-						/*
-						sem_wait(&sem_mutex_cpu_ocupada);
-						cpu_ocupada = false;
-						sem_post(&sem_mutex_cpu_ocupada);
-						*/
-
-						/*
-						printf("Los recursos han quedado de la siguiente forma:\n");
-						for(int i = 0; i < list_size(listRecursos); i++)
-						{
-							Recurso* got = list_get(listRecursos,i);
-							printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
-						}
-						*/
+						free(proceso_recurso);
 					}
 				}
 				else
 				{
-					//el recurso no existe, debemos terminarlo
-					//printf("El recurso no existe\n");
-					//printf("Este proceso ha terminado\n");
-
+					log_info(kernel_logs_obligatorios,"PID: <%d> - El recurso: <%s> no existe.\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
 					char* estado_anterior_proceso_to_end = estado_proceso_to_string(instruccion_recurso_wait->proceso.estado);
 
 					sem_wait(&sem_procesos);
@@ -932,6 +932,8 @@ void kernel_escuchar_cpu ()
 					sem_post(&sem_mutex_cpu_ocupada);
 				}
 				string_array_destroy(instruccion_partida_wait);
+				free(instruccion_recurso_wait->instruccion);
+				free(instruccion_recurso_wait);
 				break;
 			case SIGNAL:
 				// Deserializamos el recurso
@@ -952,7 +954,7 @@ void kernel_escuchar_cpu ()
 					i_signal++;
 				}
 
-				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_signal->proceso.PID,instruccion_partida_signal[1]);
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Realizó un SIGNAL del recurso: <%s>\n",instruccion_recurso_signal->proceso.PID,instruccion_partida_signal[1]);
 
 				// Si existe
 				if (existe_signal) 
@@ -963,6 +965,7 @@ void kernel_escuchar_cpu ()
 					// Si hay procesos bloqueados, los desbloqueamos
 					if (recurso_signal->instancias <= 0) 
 					{
+
 						PCB* proceso_desbloqueado = list_remove(recurso_signal->listBloqueados, 0);
 						sem_wait(&sem_blocked);
 						eliminar_elemento(cola_blocked->elements,proceso_desbloqueado->PID);
@@ -1005,7 +1008,7 @@ void kernel_escuchar_cpu ()
 					}
 					
 					//Tenemos que sacar el pid de la lista del recurso
-					eliminar_elemento(recurso_signal->pid_procesos, instruccion_recurso_signal->proceso.PID);
+					eliminar_elemento_pid(recurso_signal->pid_procesos, instruccion_recurso_signal->proceso.PID);
 
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
@@ -1017,7 +1020,7 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = true;
 					sem_post(&sem_mutex_cpu_ocupada);
-					
+					free(proceso_recurso);
 
 				} 
 				else 
@@ -1025,6 +1028,7 @@ void kernel_escuchar_cpu ()
 					// El recurso no existe, debemos terminarlo
 					//printf("El recurso no existe\n");
 					//printf("Este proceso ha terminado\n");
+					log_info(kernel_logs_obligatorios,"PID: <%d> - El recurso: <%s> no existe\n",instruccion_recurso_signal->proceso.PID,instruccion_partida_signal[1]);
 
 					char* estado_anterior_proceso_to_end = estado_proceso_to_string(instruccion_recurso_signal->proceso.estado);
 
@@ -1050,6 +1054,8 @@ void kernel_escuchar_cpu ()
 					sem_post(&sem_mutex_cpu_ocupada);
 				}
 				string_array_destroy(instruccion_partida_signal);
+				free(instruccion_recurso_signal->instruccion);
+				free(instruccion_recurso_signal);
 				break;				
 			case DIALFS:
 				
@@ -1486,16 +1492,16 @@ void iniciar_proceso(char* path)
 	pcb->registro.DI = 0;//cambios
 	pcb->registro.SI = 0;//cambios
 	pcb->estado = NEW;
-	pcb->path_length = strlen(path)+1;
-	pcb->path = string_duplicate(path); //consejo
+	//pcb->path_length = strlen(path)+1;
+	//pcb->path = string_duplicate(path); //consejo
 
 	//en este punto aprovecho para enviarlo a memoria
 	ProcesoMemoria* proceso = malloc(sizeof(ProcesoMemoria));
-	proceso->path = malloc(strlen(pcb->path)+1);
+	proceso->path = malloc(strlen(path)+1);
 	//proceso->path = pcb->path;
-	strcpy(proceso->path, pcb->path);
+	strcpy(proceso->path, path);
 	proceso->PID = pcb->PID;
-	proceso->path_length = strlen(pcb->path)+1;
+	proceso->path_length = strlen(path)+1;
 
 	enviarProcesoMemoria(proceso,fd_memoria);
 
@@ -1506,7 +1512,7 @@ void iniciar_proceso(char* path)
 	
 	PCB* new_pcb = malloc(sizeof(PCB));
 	memcpy(new_pcb, pcb, sizeof(PCB));
-    new_pcb->path = strdup(pcb->path);
+    new_pcb->path = strdup(path);
 
 	sem_wait(&sem_procesos);
 	list_add(lista_procesos,new_pcb);
@@ -1602,7 +1608,22 @@ void cambio_multiprogramacion (char* valor){
 	sem_post(&sem_grado_mult);
 }
 
+char* remove_last_two_chars(const char* str) {
+    int len = strlen(str);
+    if (len <= 2) {
+        return strdup(""); // Devuelve una cadena vacía si la longitud es menor o igual a 2
+    }
 
+    char* new_str = (char*)malloc((len - 1) * sizeof(char)); // Reserva memoria para la nueva cadena
+    if (new_str == NULL) {
+        return NULL; // Manejo de error en caso de que malloc falle
+    }
+
+    strncpy(new_str, str, len - 2); // Copia la cadena original sin los dos últimos caracteres
+    new_str[len - 2] = '\0'; // Añade el carácter nulo al final
+
+    return new_str;
+}
 
 void atender_instruccion (char* leido)
 {
@@ -1700,23 +1721,6 @@ void validarFuncionesConsola(char* leido)
 	 string_array_destroy(valorLeido);
 }
 
-char* remove_last_two_chars(const char* str) {
-    int len = strlen(str);
-    if (len <= 2) {
-        return strdup(""); // Devuelve una cadena vacía si la longitud es menor o igual a 2
-    }
-
-    char* new_str = (char*)malloc((len - 1) * sizeof(char)); // Reserva memoria para la nueva cadena
-    if (new_str == NULL) {
-        return NULL; // Manejo de error en caso de que malloc falle
-    }
-
-    strncpy(new_str, str, len - 2); // Copia la cadena original sin los dos últimos caracteres
-    new_str[len - 2] = '\0'; // Añade el carácter nulo al final
-
-    return new_str;
-}
-
 void ejecutar_script (char* path)
 {
 	FILE *file = fopen(path, "r");
@@ -1736,6 +1740,7 @@ void ejecutar_script (char* path)
     }
 	fclose(file);
 }
+
 
 void consolaInteractiva()
 {
@@ -1890,7 +1895,7 @@ void enviar_pcb_a_cpu()
 	to_send->registro.CX = pcb_cola->registro.CX;//cambios
 	to_send->registro.DX = pcb_cola->registro.DX;//cambios*/
 
-	to_send->path = string_duplicate( pcb_cola->path);
+	//to_send->path = string_duplicate( pcb_cola->path);
 
 	//ACTUALIZAMOS EN LA LISTA GENERAL
 	sem_wait(&sem_procesos);
@@ -1910,9 +1915,9 @@ void enviar_pcb_a_cpu()
 	{
 		interrumpir_por_quantum();
 	}
-	free(pcb_cola->path);
+	//free(pcb_cola->path);
 	free(pcb_cola);
-	free(to_send->path);
+	//free(to_send->path);
 	free(to_send);
 }
 
@@ -1955,7 +1960,7 @@ void enviar_pcb_a_cpu_vrr()
 	to_send->quantum = pcb_cola->quantum;
 	to_send->estado = EXEC;
 	to_send->registro = pcb_cola->registro;//cambios
-	to_send->path = string_duplicate( pcb_cola->path);
+	//to_send->path = string_duplicate( pcb_cola->path);
 
 	//ACTUALIZAMOS EN LA LISTA GENERAL
 	sem_wait(&sem_procesos);
@@ -1974,9 +1979,9 @@ void enviar_pcb_a_cpu_vrr()
 	{
 		interrumpir_por_quantum_vrr(pcb_cola->quantum);
 	}
-	free(pcb_cola->path);
+	//free(pcb_cola->path);
 	free(pcb_cola);
-	free(to_send->path);
+	//free(to_send->path);
 	free(to_send);
 }
 
