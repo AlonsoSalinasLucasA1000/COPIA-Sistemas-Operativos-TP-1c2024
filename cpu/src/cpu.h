@@ -378,9 +378,10 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 	{
 		return listDireccionesFisicas;
 	}else{
+		list_destroy(listDireccionesFisicas);
 		return -1;
 	}
-	list_destroy(listDireccionesFisicas);
+	
 }
 
 
@@ -878,16 +879,8 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccionActual);
 			free(instruccion);
 			instruccionActual = malloc(1);
-			/*if(instruccionActual != NULL){
-				intruccionActual[0] = '\0';
-			}*/
 			instruccionActual = "";
-			/*
-			//dormir un poco antes de enviar, para no solaparse a la hora de mandar
-			//usleep(1000);
-			proceso->PC++;
-			enviarPCB(proceso,fd_kernel_dispatch,PROCESOIO);
-			*/
+	
 			return;
 		}
 		//CASO DE TERNER UNA INSTRUCCION RESIZE
@@ -927,9 +920,6 @@ void ejecutar_proceso(PCB* proceso)
 		 		printf("El valor del registro encontrado es: %d\n",*registro_uint8);
 		 		printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
-		 		//TODAVIA NO SE IMPLEMENTÓ LA MMU A ESTA INSTRUCCIÓN
-		 		//IO_STDIN_READ Int1 BX CX
-		 		//IO_STDIN_READ Int1 BX CX 10 1 2 3 4 5 6 7 8 9 10
 		 		//GUARDAMOS EL TAMAÑO
 		 		if( esRegistroUint8(instruccion_split[3]) )
 		 		{
@@ -938,12 +928,6 @@ void ejecutar_proceso(PCB* proceso)
 		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
 		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 			char tamanioToSend[20];
-		 			sprintf(tamanioToSend, "%d", tamanio);
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, tamanioToSend);   //CONCATENAR
-					*/
 		 		}
 		 		else
 		 		{
@@ -952,12 +936,6 @@ void ejecutar_proceso(PCB* proceso)
 		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
 		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 			char tamanioToSend[20];
-		 			sprintf(tamanioToSend, "%d", tamanio);
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, tamanioToSend);  //CONCATENAR
-					*/
 		 		}
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
@@ -999,15 +977,6 @@ void ejecutar_proceso(PCB* proceso)
 		 			int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
 		 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
-		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-
-		 			//contenamos la direccion fisica
-		 			char direccionFisica[20];
-					sprintf(direccionFisica, "%d", direc_logica);
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, direccionFisica);//CONCATENAR
-					*/
-
 		 			//GUARDAMOS EL TAMAÑO
 		 			if( esRegistroUint8(instruccion_split[3]) )
 		 			{
@@ -1016,12 +985,6 @@ void ejecutar_proceso(PCB* proceso)
 		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
 		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 				char tamanioToSend[20];
-		 				sprintf(tamanioToSend, "%d", tamanio);
-		 				strcat(instruccion," ");//CONCATENAR
-		 				strcat(instruccion, tamanioToSend);//CONCATENAR
-						*/
 		 			}
 		 			else
 		 			{
@@ -1030,12 +993,6 @@ void ejecutar_proceso(PCB* proceso)
 		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
 		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 				char tamanioToSend[20];
-		 				sprintf(tamanioToSend, "%d", tamanio);
-		 				strcat(instruccion," ");//CONCATENAR
-		 				strcat(instruccion, tamanioToSend);//CONCATENAR
-						*/
 		 			}
 					
 		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
@@ -1085,18 +1042,6 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccion);
 			free(instruccion_to_send);
 
-			/* intentar con:
-			free(instruccionActual);
-			instruccionActual = malloc(1);
-			strcpy(instruccionActual, "");
-			if(instruccion != NULL){
-				free(instruccion);
-			}
-			if(instruccion_to_send != NULL){
-				free(instruccion_to_send);
-			}
-			*/
-
 		 	return;
 		}
 
@@ -1116,9 +1061,6 @@ void ejecutar_proceso(PCB* proceso)
 		 		printf("El valor del registro encontrado es: %d\n",*registro_uint8);
 		 		printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
-		 		//TODAVIA NO SE IMPLEMENTÓ LA MMU A ESTA INSTRUCCIÓN
-		 		//IO_STDIN_READ Int1 BX CX
-		 		//IO_STDIN_READ Int1 BX CX 10 1 2 3 4 5 6 7 8 9 10
 		 		//GUARDAMOS EL TAMAÑO
 		 		if( esRegistroUint8(instruccion_split[3]) )
 		 		{
@@ -1127,12 +1069,6 @@ void ejecutar_proceso(PCB* proceso)
 		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
 		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 			char tamanioToSend[20];
-		 			sprintf(tamanioToSend, "%d", tamanio);
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, tamanioToSend);   //CONCATENAR
-					*/
 		 		}
 		 		else
 		 		{
@@ -1141,12 +1077,6 @@ void ejecutar_proceso(PCB* proceso)
 		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
 		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 			char tamanioToSend[20];
-		 			sprintf(tamanioToSend, "%d", tamanio);
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, tamanioToSend);  //CONCATENAR
-					*/
 		 		}
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
@@ -1188,15 +1118,6 @@ void ejecutar_proceso(PCB* proceso)
 		 			int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
 		 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
-		 			/*int direccion_fisica = mmu (direc_logica, proceso); 
-
-		 			//contenamos la direccion fisica
-		 			char direccionFisica[20];
-					sprintf(direccionFisica, "%d", direc_logica);
-		 			strcat(instruccion," ");//CONCATENAR
-		 			strcat(instruccion, direccionFisica);//CONCATENAR
-					*/
-
 		 			//GUARDAMOS EL TAMAÑO
 		 			if( esRegistroUint8(instruccion_split[3]) )
 		 			{
@@ -1205,12 +1126,6 @@ void ejecutar_proceso(PCB* proceso)
 		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
 		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 				char tamanioToSend[20];
-		 				sprintf(tamanioToSend, "%d", tamanio);
-		 				strcat(instruccion," ");//CONCATENAR
-		 				strcat(instruccion, tamanioToSend);//CONCATENAR
-						*/
 		 			}
 		 			else
 		 			{
@@ -1219,12 +1134,6 @@ void ejecutar_proceso(PCB* proceso)
 		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
 		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
-		 				/*int direccion_fisica = mmu (direc_logica, proceso); 
-		 				char tamanioToSend[20];
-		 				sprintf(tamanioToSend, "%d", tamanio);
-		 				strcat(instruccion," ");//CONCATENAR
-		 				strcat(instruccion, tamanioToSend);//CONCATENAR
-						*/
 		 			}
 					
 		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
@@ -1275,17 +1184,6 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccion);
 			free(instruccion_to_send);
 
-			/* intentar con:
-			free(instruccionActual);
-			instruccionActual = malloc(1);
-			strcpy(instruccionActual, "");
-			if(instruccion != NULL){
-				free(instruccion);
-			}
-			if(instruccion_to_send != NULL){
-				free(instruccion_to_send);
-			}
-			*/
 		 	return;
 		}
 
@@ -1331,13 +1229,7 @@ void ejecutar_proceso(PCB* proceso)
 								valores_leidos[i] =  *valor_leido;
 								printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
 							}
-		 					
-							/*
-							uint8_t a = ...; // Primer byte
-							uint8_t b = ...; // Segundo byte
-							uint8_t c = ...; // Tercer byte
-							uint8_t d = ...; // Cuarto byte
-							*/
+
 						
 							uint32_t valor_uint32 = ((uint32_t)valores_leidos[3] << 24) | ((uint32_t)valores_leidos[2] << 16) | ((uint32_t)valores_leidos[1] << 8) | valores_leidos[0];
 							*registro_datos = valor_uint32;
@@ -1388,13 +1280,7 @@ void ejecutar_proceso(PCB* proceso)
 								printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
 							}
 		 					
-							/*
-							uint8_t a = ...; // Primer byte
-							uint8_t b = ...; // Segundo byte
-							uint8_t c = ...; // Tercer byte
-							uint8_t d = ...; // Cuarto byte
-							*/
-						
+
 							uint32_t valor_uint32 = ((uint32_t)valores_leidos[3] << 24) | ((uint32_t)valores_leidos[2] << 16) | ((uint32_t)valores_leidos[1] << 8) | valores_leidos[0];
 							*registro_datos = valor_uint32;
 							printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
@@ -1527,7 +1413,7 @@ void ejecutar_proceso(PCB* proceso)
 		 }
 
 
-		//rehacemos en esta parte copy string
+		//CASO DE TENER UNA INSTRUCCION COPY_STRING 
 		 if ( strcmp(instruccion_split[0], "COPY_STRING") == 0)
 		{
 			//debemos obtener la cantidad de bytes
@@ -1880,6 +1766,9 @@ void ejecutar_proceso(PCB* proceso)
 		printf("------------------------------\n");
 		sem_post(&sem_exe_a);
 		sem_wait(&sem_exe_b);
+		free(instruccion);
+		free(instruccionActual);
+		string_array_destroy(instruccion_split);
 	}
 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
 }
@@ -2015,9 +1904,13 @@ void cpu_escuchar_memoria (){
 			case MENSAJE:
 			    sem_wait(&sem_exe_a);
 				//variable global con 
-				instruccionActual = malloc(paquete->buffer->size);
+				free(instruccionActual);
+                instruccionActual = string_duplicate(paquete->buffer->stream);
+				
+				/*instruccionActual = malloc(paquete->buffer->size);
 				char* instruccionQueLlego = paquete->buffer->stream;
 				instruccionActual = string_duplicate(instruccionQueLlego);
+				*/
 				//printf("La instruccion que llego fue: %s\n",instruccionActual);
 				//instruccionActual = paquete->buffer->stream;
 				sem_post(&sem_exe_b);
@@ -2033,6 +1926,7 @@ void cpu_escuchar_memoria (){
 				sem_post(&sem_memoria_aviso_cpu);
 				break;
 			case LECTURA:
+				free(valor_leido);
 				valor_leido = malloc(sizeof(uint8_t));
 				uint8_t* leidoQueLlego = paquete->buffer->stream;
 				memcpy(valor_leido, leidoQueLlego, sizeof(uint8_t));  
@@ -2053,6 +1947,7 @@ void cpu_escuchar_memoria (){
 
 				//llega el marco de memoria
 				printf("Me encuentro en la parte de marco\n");
+				free(num_marco);
 				num_marco = malloc(sizeof(int));
 				int* marcoLeido = paquete->buffer->stream;
 				memcpy(num_marco, marcoLeido, sizeof(int));
@@ -2066,7 +1961,7 @@ void cpu_escuchar_memoria (){
 				*/
 				break;
 			case TAMPAGINA:
-				
+				free(TAM_PAGINA);
 				TAM_PAGINA = malloc(sizeof(int));
 
 				int* tamaño = paquete->buffer->stream;
