@@ -945,7 +945,7 @@ void ejecutar_proceso(PCB* proceso)
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 
-				instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+				instruccion_to_send = malloc(strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
 				strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
 
 				if(list_size(direcciones_fisicas) > 0)
@@ -1002,7 +1002,7 @@ void ejecutar_proceso(PCB* proceso)
 					
 		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 					
-		 			instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+		 			instruccion_to_send = malloc(strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
 					strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
 
 					if(list_size(direcciones_fisicas) > 0)
@@ -1088,7 +1088,7 @@ void ejecutar_proceso(PCB* proceso)
 
 		 		direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 
-				instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+				instruccion_to_send = malloc(strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
 				strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
 
 				if(list_size(direcciones_fisicas) > 0)
@@ -1145,7 +1145,7 @@ void ejecutar_proceso(PCB* proceso)
 					
 		 			direcciones_fisicas = mmu (direc_logica, proceso, tamanio); //me devuelve una lista
 					
-		 			instruccion_to_send = malloc(strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+		 			instruccion_to_send = malloc(strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
 					strncpy(instruccion_to_send,instruccion,strlen(instruccion)+1);
 
 					if(list_size(direcciones_fisicas) > 0)
@@ -1513,7 +1513,7 @@ void ejecutar_proceso(PCB* proceso)
 			}
 			printf("El valor que nos ha quedado es: %d\n",*cant_bloques);
 
-			char* instruccion_to_send = malloc(strlen(instruccion) + 5);
+			char* instruccion_to_send = malloc(strlen(instruccion) + 100);
 			strncpy(instruccion_to_send, instruccion, strlen(instruccion)+1);
 			
 			strcat(instruccion_to_send," ");
@@ -1582,7 +1582,7 @@ void ejecutar_proceso(PCB* proceso)
 			printf("El valor que nos ha quedado es: %d\n",*pointer_archivo);
 
 			direcciones_fisicas = mmu(*d_logica, proceso, *tamanio);
-			char* instruccion_to_send = malloc( strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+			char* instruccion_to_send = malloc( strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
 			strncpy(instruccion_to_send,instruccion, strlen(instruccion)+1);
 			if(list_size(direcciones_fisicas) > 0)
 			{
@@ -1679,7 +1679,7 @@ void ejecutar_proceso(PCB* proceso)
 			printf("El valor que nos ha quedado es: %d\n",*pointer_archivo);
 
 			direcciones_fisicas = mmu(*d_logica, proceso, *tamanio);
-			char* instruccion_to_send = malloc( strlen(instruccion) + 1 + 4*list_size(direcciones_fisicas));
+			char* instruccion_to_send = malloc( strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
 			strncpy(instruccion_to_send,instruccion, strlen(instruccion)+1);
 			if(list_size(direcciones_fisicas) > 0)
 			{
