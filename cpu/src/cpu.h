@@ -718,7 +718,17 @@ void ejecutar_proceso(PCB* proceso)
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
 		char** instruccion_split = string_split (instruccion, " ");
 
-		log_info(cpu_logs_obligatorios, "PID: <%d> - Ejecutando: <%s> - <>",proceso->PID, instruccion_split[0]);
+		char* parametros = string_new();
+
+		for(int i = 1; instruccion_split[i] != NULL; i++){
+			if(i > 1){
+				string_append(&parametros," ");
+			}
+			string_append(&parametros, instruccion_split[i]);
+		}
+
+		log_info(cpu_logs_obligatorios, "PID: <%d> - Ejecutando: <%s> - <%s>",proceso->PID, instruccion_split[0], parametros);
+		
 		proceso->PC++;
 
 		//CASO DE TENER UNA INSTRUCCION SET
@@ -886,6 +896,7 @@ void ejecutar_proceso(PCB* proceso)
 			//instruccionActual = malloc(1);
 			//instruccionActual = "";
 			string_array_destroy(instruccion_split);
+			free(parametros);
 			return;
 		}
 		//CASO DE TERNER UNA INSTRUCCION RESIZE
@@ -902,6 +913,10 @@ void ejecutar_proceso(PCB* proceso)
 			{
 				enviarPCB(proceso,fd_kernel_dispatch,OUT_OF_MEMORY); //el codigo de operacion termina al proceso
 				printf("ERROR, OUT OF MEMORY\n");
+				free(instruccionActual);
+				free(instruccion);
+				string_array_destroy(instruccion_split);
+				free(parametros);
 				return;
 			}
 			else
@@ -1047,8 +1062,9 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccion);
 			free(instruccion_to_send);
 			string_array_destroy(instruccion_split);
+			free(parametros);
 			//DEBEMOS LIBERAR LISTA Y SUS ELEMENTOS
-			list_destroy(direcciones_fisicas);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
 		 	return;
 		}
 
@@ -1191,7 +1207,9 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccion);
 			free(instruccion_to_send);
 			string_array_destroy(instruccion_split);
-			list_destroy(direcciones_fisicas);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			free(parametros);
+
 		 	return;
 		}
 
@@ -1304,7 +1322,7 @@ void ejecutar_proceso(PCB* proceso)
 		 			printf("El registro no se encontró en el proceso.\n");
 		 		}
 		 	}
-			list_destroy(direcciones_fisicas);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
 		}
 
 
@@ -1427,7 +1445,7 @@ void ejecutar_proceso(PCB* proceso)
 		 		}
 				
 		 	}
-			list_destroy(direcciones_fisicas);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
 		 }
 
 
@@ -1453,8 +1471,8 @@ void ejecutar_proceso(PCB* proceso)
 			}
 			
 			printf("Copia finalizada\n");
-			list_destroy(direcciones_fisicas);
-			list_destroy(direcciones_fisicas_destino);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy_and_destroy_elements(direcciones_fisicas_destino,free);
 		} 
 
 
@@ -1473,6 +1491,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = "";
 			free(instruccion);
 			string_array_destroy(instruccion_split);
+			free(parametros);
 		 	return;
 		 }
 
@@ -1489,6 +1508,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = "";
 			free(instruccion);
 			string_array_destroy(instruccion_split);
+			free(parametros);
 		 	return;
 		}
 
@@ -1534,6 +1554,7 @@ void ejecutar_proceso(PCB* proceso)
 			string_array_destroy(instruccion_split);
 			free(instruccion);
 			free(cant_bloques);
+			free(parametros);
 		 	return;
 		}	
 
@@ -1624,7 +1645,7 @@ void ejecutar_proceso(PCB* proceso)
 			free(d_logica);
 			free(tamanio);
 			free(pointer_archivo);
-			list_destroy(direcciones_fisicas);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
 		 	free(instruccionActual);
 		 	//instruccionActual = malloc(1);
 		 	//instruccionActual = "";
@@ -1726,7 +1747,8 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = malloc(1);
 		 	//instruccionActual = "";
 			string_array_destroy(instruccion_split);
-			list_destroy(direcciones_fisicas);
+			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			free(parametros);
 			free(instruccion);
 			free(instruccion_to_send);
 		 	return;
@@ -1762,6 +1784,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = "";
 			free(instruccion);
 			string_array_destroy(instruccion_split);
+			free(parametros);
 		 	return;
 		 }
 		
@@ -1776,6 +1799,7 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccion);
 			free(instruccionActual);
 			string_array_destroy(instruccion_split);
+			free(parametros);
 			return;
 		}
 		else
@@ -1789,6 +1813,7 @@ void ejecutar_proceso(PCB* proceso)
 				free(instruccion);
 				free(instruccionActual);
 				string_array_destroy(instruccion_split);
+				free(parametros);
 				return;
 			}
 		}
@@ -1796,6 +1821,7 @@ void ejecutar_proceso(PCB* proceso)
 
 		free(instruccion);
 		free(instruccionActual);
+		free(parametros);
 		string_array_destroy(instruccion_split);
 		enviar_pcb_memoria(proceso->PID,proceso->PC);
 		printf("------------------------------\n");

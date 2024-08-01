@@ -127,6 +127,9 @@ void memoria_escuchar_cpu (){
 				//printf("Me voy a mimir, buenas noches\n");
 				usleep(RETARDO_RESPUESTA*1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
+				free(proceso->path);
+				free(proceso);
+				free(instruccion);
 				break;
 
 			case RESIZE:
@@ -670,6 +673,9 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
+			free(paquete->buffer->stream);
+    	    free(paquete->buffer);
+	        free(paquete);
 		}
 }
 
@@ -762,6 +768,9 @@ char* abrir_archivo(char* path, int PC)
 		//to_ret = newContent[PC];
 		if (to_ret == NULL) {
         printf("Error al asignar memoria para to_ret\n");
+		free(content);
+		string_array_destroy(newContent);
+		fclose(file);
         // Manejar el error apropiadamente
     	}
     	
@@ -769,10 +778,18 @@ char* abrir_archivo(char* path, int PC)
 	}
 	else
 	{
-		to_ret = "";
+		to_ret = strdup("");
+		if (to_ret == NULL){
+			free(content);
+			string_array_destroy(newContent);
+			fclose(file);
+			return NULL;
+		}
+		
 	}
 
     free(content);
+	string_array_destroy(newContent);
 	fclose(file);
 	return to_ret;
 }
@@ -841,6 +858,8 @@ void memoria_escuchar_kernel (){
 					list_destroy(dato->TablaDePaginas);
 					free(dato->path);
 					free(dato);
+					free(proceso->path);
+					free(proceso);
 					printf("Proceso borrado con exito\n");
 					break;
 			case PAQUETE:
