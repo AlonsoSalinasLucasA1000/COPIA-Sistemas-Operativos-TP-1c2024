@@ -530,8 +530,8 @@ void kernel_escuchar_cpu ()
 					int64_t quantum_transcurrido= temporal_gettime(cronometro);
 					//printf("La cantidad de tiempo que ha transcurrido: %d\n",quantum_transcurrido);
 					sem_post(&sem_mutex_cronometro);
+					//temporal_destroy(cronometro);
 					proceso_io->quantum -= quantum_transcurrido;
-					temporal_destroy(cronometro);
 					//printf("[ACTUALIZACIÓN] Hemos actualizado el quantum y ha quedado de la siguiente forma: %d\n",proceso_io->quantum);
 				}
 
@@ -1504,8 +1504,12 @@ void iniciar_proceso(char* path)
 
 	//agrego el pcb a la cola new
 	
+	PCB* new_pcb = malloc(sizeof(PCB));
+	memcpy(new_pcb, pcb, sizeof(PCB));
+    new_pcb->path = strdup(pcb->path);
+
 	sem_wait(&sem_procesos);
-	list_add(lista_procesos,pcb);
+	list_add(lista_procesos,new_pcb);
 	//printf("Agregué el proceso %d a la lista de procesos\n", pcb->PID);
 	sem_post(&sem_procesos);
 	
@@ -1835,6 +1839,10 @@ void interrumpir_por_quantum_vrr(int proceso_quantum)
 	*enteroRandom = 0;
 	enviarEntero(enteroRandom,fd_cpu_interrupt,FIN_DE_QUANTUM);
 	free(enteroRandom);
+	sem_wait(&sem_mutex_cronometro);
+	temporal_destroy(cronometro);
+	sem_post(&sem_mutex_cronometro);
+
 }
 
 void interrumpir_por_quantum()

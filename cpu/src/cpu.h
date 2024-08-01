@@ -710,6 +710,7 @@ void ejecutar_proceso(PCB* proceso)
 	*any_interrupcion = 0;	
 	sem_post(&interrupt_mutex);
 	sem_wait(&sem_exe_b);
+
 	while( strcmp(instruccionActual,"") != 0 )
 	{
 		//obtengo instruccion actual
@@ -717,6 +718,7 @@ void ejecutar_proceso(PCB* proceso)
 		printf("%s\n",instruccion); //verificamos que la instruccion actual sea correcta
 		char** instruccion_split = string_split (instruccion, " ");
 
+		log_info(cpu_logs_obligatorios, "PID: <%d> - Ejecutando: <%s> - <>",proceso->PID, instruccion_split[0]);
 		proceso->PC++;
 
 		//CASO DE TENER UNA INSTRUCCION SET
@@ -1216,7 +1218,7 @@ void ejecutar_proceso(PCB* proceso)
 		 				sem_wait(&sem_lectura);
 					
 		 				*registro_datos = *valor_leido; //asigna ese valor al registro
-						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%d>",proceso->PID, direccion_fisica, *valor_leido);
+						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <LEER> - Dirección Física: <%d> - Valor: <%d>",proceso->PID, direccion_fisica, *valor_leido);
 		 			}
 		 			else 
 		 			{	//REGISTRO DATOS
@@ -1235,7 +1237,7 @@ void ejecutar_proceso(PCB* proceso)
 
 								valores_leidos[i] =  *valor_leido;
 								//printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
-								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%u>",proceso->PID, direccion_fisica, valores_leidos[i]);
+								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <LEER> - Dirección Física: <%d> - Valor: <%u>",proceso->PID, direccion_fisica, valores_leidos[i]);
 							}
 
 						
@@ -1268,7 +1270,7 @@ void ejecutar_proceso(PCB* proceso)
 		 				sem_wait(&sem_lectura);
 					
 		 				*registro_datos = *valor_leido; //asigna ese valor al registro
-						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%d>",proceso->PID, direccion_fisica, *valor_leido);
+						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <LEER> - Dirección Física: <%d> - Valor: <%d>",proceso->PID, direccion_fisica, *valor_leido);
 		 			}
 		 			else 
 		 			{	//REGISTRO DATOS
@@ -1287,7 +1289,7 @@ void ejecutar_proceso(PCB* proceso)
 
 								valores_leidos[i] =  *valor_leido;
 								//printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
-								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%u>",proceso->PID, direccion_fisica, valores_leidos[i]);
+								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <LEER> - Dirección Física: <%d> - Valor: <%u>",proceso->PID, direccion_fisica, valores_leidos[i]);
 							}
 		 					
 
@@ -1358,7 +1360,7 @@ void ejecutar_proceso(PCB* proceso)
 							//printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
 							pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
 							sem_wait(&sem_escritura);
-							//log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d>"
+							log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%u>", proceso->PID, direccion_fisica, byte[i]);
 						}
 					}
 				}
@@ -1390,6 +1392,7 @@ void ejecutar_proceso(PCB* proceso)
 
 						pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
 						sem_wait(&sem_escritura);
+						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%d>", proceso->PID, direccion_fisica, *registro_datos);
 
 		 			}
 		 			else 
@@ -1413,6 +1416,7 @@ void ejecutar_proceso(PCB* proceso)
 								printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
 								pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
 								sem_wait(&sem_escritura);
+								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%u>", proceso->PID, direccion_fisica, byte[i]);
 							}
 		 				}
 		 			}
@@ -1790,13 +1794,13 @@ void ejecutar_proceso(PCB* proceso)
 		}
 		sem_post(&interrupt_mutex);
 
+		free(instruccion);
+		free(instruccionActual);
+		string_array_destroy(instruccion_split);
 		enviar_pcb_memoria(proceso->PID,proceso->PC);
 		printf("------------------------------\n");
 		sem_post(&sem_exe_a);
 		sem_wait(&sem_exe_b);
-		free(instruccion);
-		free(instruccionActual);
-		string_array_destroy(instruccion_split);
 	}
 	enviarPCB(proceso,fd_kernel_dispatch,PROCESOFIN);
 }
@@ -1932,7 +1936,7 @@ void cpu_escuchar_memoria (){
 			case MENSAJE:
 			    sem_wait(&sem_exe_a);
 				//variable global con 
-				free(instruccionActual);
+				//free(instruccionActual);
                 instruccionActual = string_duplicate(paquete->buffer->stream);
 				
 				/*instruccionActual = malloc(paquete->buffer->size);
