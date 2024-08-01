@@ -202,7 +202,9 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 			
 		// Mover la entrada más antigua al final de la lista (simulando FIFO)
 		*/	
-		list_remove(listaTLB, 0);
+		//list_remove(listaTLB, 0);
+
+		list_remove_and_destroy_element(listaTLB,0,free);
 
 		for(int i=0; i < list_size(listaTLB); i++){
 		
@@ -350,25 +352,25 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 			//tiene que esperar que llegue el marco de memoria
 			sem_wait(&sem_mmu);
 			
-			printf("Obtuve el marco de proceso %d\n",proceso->PID);
-			//log_info(cpu_logs_obligatorios, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", proceso->PID, numero_Pagina, num_marco);
+			//printf("Obtuve el marco de proceso %d\n",proceso->PID);
+			log_info(cpu_logs_obligatorios, "PID: <%d> - OBTENER MARCO - Página: <%d> - Marco: <%d>", proceso->PID, numero_Pagina, *num_marco);
 			
 			//num_marco es global
 			if(list_size(listaTLB) < CANTIDAD_ENTRADAS_TLB){ 			//Si la nueva entrada a la TLB aun no esta llena
 				
-				printf("Voy agregar el proceso %d  a la TLB\n", proceso->PID);
+				//printf("Voy agregar el proceso %d  a la TLB\n", proceso->PID);
 				agregar_a_TLB(proceso->PID, numero_Pagina, *num_marco);	//agregamos los datos del proceso a la TLB
 			} else{														// pero si lo esta debo implementar el algoritmo
 				//el algoritmo FIFO	y LRU
-				printf("La TLB está llena, necesitamos utilizar un algoritmo de sustitición\n");
+				//printf("La TLB está llena, necesitamos utilizar un algoritmo de sustitición\n");
 				algoritmoSustitucion(proceso->PID, numero_Pagina, *num_marco);
 			}
 
 			dir_fisica =  *num_marco * *TAM_PAGINA + desplazamiento;
 			//return *num_marco + desplazamiento; //Devuelve la direccion fisica		
 		} 
-		printf("En estos instantes /////CANTIDAD ENTRADAS TLB: %d\n",CANTIDAD_ENTRADAS_TLB);
-		printf("En estos instantes /////TAMANIO DE LA LISTA TLB ES: %d\n",list_size(listaTLB));
+		//printf("En estos instantes /////CANTIDAD ENTRADAS TLB: %d\n",CANTIDAD_ENTRADAS_TLB);
+		//printf("En estos instantes /////TAMANIO DE LA LISTA TLB ES: %d\n",list_size(listaTLB));
 		printf("La direccion fisica %d es: %d\n",i , dir_fisica);
 		list_add(listDireccionesFisicas, dir_fisica); //
 		dir_Logica++;
@@ -702,7 +704,8 @@ void ejecutar_proceso(PCB* proceso)
 	//enviar mensaje a memoria, debemos recibir primera interrupcion
 	instruccionActual = "Goku";
 	enviar_pcb_memoria(proceso->PID,proceso->PC);
-	//log_info(cpu_logs_obligatorios, "PID: <%d> - FETCH - Program Counter: <%d>", proceso->PID, proceso->PC);
+	log_info(cpu_logs_obligatorios, "PID: <%d> - FETCH - Program Counter: <%d>", proceso->PID, proceso->PC);
+	
 	sem_wait(&interrupt_mutex);
 	*any_interrupcion = 0;	
 	sem_post(&interrupt_mutex);
@@ -878,9 +881,9 @@ void ejecutar_proceso(PCB* proceso)
 			//se bloquea el proceso, devolvemos al kernel
 			free(instruccionActual);
 			free(instruccion);
-			instruccionActual = malloc(1);
-			instruccionActual = "";
-	
+			//instruccionActual = malloc(1);
+			//instruccionActual = "";
+			string_array_destroy(instruccion_split);
 			return;
 		}
 		//CASO DE TERNER UNA INSTRUCCION RESIZE
@@ -890,9 +893,9 @@ void ejecutar_proceso(PCB* proceso)
 			enviarPCB(proceso,fd_memoria,RESIZE);
 
 			//esperamos a que sea reactivado
-			printf("Voy a esperar a que memoria me avise\n");
+			//printf("Voy a esperar a que memoria me avise\n");
 			sem_wait(&sem_memoria_aviso_cpu);
-			printf("Puedo continuar wiii\n");
+			//printf("Puedo continuar wiii\n");
 			if( asignacion_or_out_of_memory == 1 ) //no puede seguir
 			{
 				enviarPCB(proceso,fd_kernel_dispatch,OUT_OF_MEMORY); //el codigo de operacion termina al proceso
@@ -1037,11 +1040,13 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion);
 			free(instruccion_to_send);
-
+			string_array_destroy(instruccion_split);
+			//DEBEMOS LIBERAR LISTA Y SUS ELEMENTOS
+			list_destroy(direcciones_fisicas);
 		 	return;
 		}
 
@@ -1179,11 +1184,12 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion);
 			free(instruccion_to_send);
-
+			string_array_destroy(instruccion_split);
+			list_destroy(direcciones_fisicas);
 		 	return;
 		}
 
@@ -1210,6 +1216,7 @@ void ejecutar_proceso(PCB* proceso)
 		 				sem_wait(&sem_lectura);
 					
 		 				*registro_datos = *valor_leido; //asigna ese valor al registro
+						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%d>",proceso->PID, direccion_fisica, *valor_leido);
 		 			}
 		 			else 
 		 			{	//REGISTRO DATOS
@@ -1227,7 +1234,8 @@ void ejecutar_proceso(PCB* proceso)
 								sem_wait(&sem_lectura);
 
 								valores_leidos[i] =  *valor_leido;
-								printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
+								//printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
+								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%u>",proceso->PID, direccion_fisica, valores_leidos[i]);
 							}
 
 						
@@ -1260,6 +1268,7 @@ void ejecutar_proceso(PCB* proceso)
 		 				sem_wait(&sem_lectura);
 					
 		 				*registro_datos = *valor_leido; //asigna ese valor al registro
+						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%d>",proceso->PID, direccion_fisica, *valor_leido);
 		 			}
 		 			else 
 		 			{	//REGISTRO DATOS
@@ -1277,7 +1286,8 @@ void ejecutar_proceso(PCB* proceso)
 								sem_wait(&sem_lectura);
 
 								valores_leidos[i] =  *valor_leido;
-								printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
+								//printf("El valor leído de memoria de tipo uint8_t es: %u\n",valores_leidos[i]);
+								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: LEER - Dirección Física: <%d> - Valor: <%u>",proceso->PID, direccion_fisica, valores_leidos[i]);
 							}
 		 					
 
@@ -1291,27 +1301,27 @@ void ejecutar_proceso(PCB* proceso)
 		 		{
 		 			printf("El registro no se encontró en el proceso.\n");
 		 		}
-				
 		 	}
+			list_destroy(direcciones_fisicas);
 		}
 
 
 		 //CASO DE TENER UNA INSTRUCCION MOV_OUT (Registro Direccion, Registro Datos)
 		 if (strcmp(instruccion_split[0], "MOV_OUT") == 0)
 		 {
-			printf("Chequeo de MOV OUT 1\n");
+			//printf("Chequeo de MOV OUT 1\n");
 		 	if( esRegistroUint8(instruccion_split[1])) //REGISTRO DIRECCION UNIT8
 		 	{
 		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[1],proceso); //REGISTRO DONDE SE GUARDARA
 		 		int direc_logica = (int)*registro_uint8;
-				printf("Chequeo de MOV OUT - el primero es uint8\n");
+				//printf("Chequeo de MOV OUT - el primero es uint8\n");
 
 				//REGISTRO DATOS
 				if ( esRegistroUint8(instruccion_split[2])){
 					uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
 					direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
 					
-					printf("Chequeo de MOV OUT - el primero es uint8 y el segundo es uint8\n");
+					//printf("Chequeo de MOV OUT - el primero es uint8 y el segundo es uint8\n");
 					int direccion_fisica;
 					for(int i=0; i < list_size(direcciones_fisicas);i++)
 					{
@@ -1324,13 +1334,15 @@ void ejecutar_proceso(PCB* proceso)
 					pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
 					sem_wait(&sem_escritura);
 
+					log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%d>", proceso->PID, direccion_fisica, *registro_datos);
+
 				}
 				else 
 				{	//REGISTRO DATOS
 					if ( esRegistroUint32(instruccion_split[2])){
 						uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 						direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
-						printf("Chequeo de MOV OUT - el primero es uint8 y el segundo es uint32\n");
+						//printf("Chequeo de MOV OUT - el primero es uint8 y el segundo es uint32\n");
 						
 						//uint32_t* v = ...; // Tu puntero uint32_t
 						uint8_t* ptr_registro_datos = (uint8_t *)registro_datos;
@@ -1343,9 +1355,10 @@ void ejecutar_proceso(PCB* proceso)
 						for(int i=0; i < list_size(direcciones_fisicas);i++)
 						{
 							int direccion_fisica = list_get(direcciones_fisicas,i);
-							printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
+							//printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
 							pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
 							sem_wait(&sem_escritura);
+							//log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d>"
 						}
 					}
 				}
@@ -1353,19 +1366,19 @@ void ejecutar_proceso(PCB* proceso)
 		 	}
 		 	else
 		 	{
-				printf("Chequeo de MOV OUT - el primero es uint32\n");
+				//printf("Chequeo de MOV OUT - el primero es uint32\n");
 		 		if( esRegistroUint32(instruccion_split[1])) //REGISTRO DIRECCION UNIT32
 		 		{
 		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
 		 			int direc_logica = (int)*registro_uint32;
 
-					printf("Chequeo de MOV OUT - el primero es uint32\n");
+					//printf("Chequeo de MOV OUT - el primero es uint32\n");
 		 			//REGISTRO DATOS UNIT8
 		 			if ( esRegistroUint8(instruccion_split[2])){
 		 				uint8_t* registro_datos = (uint8_t*)obtener_registro(instruccion_split[2],proceso); //REGISTRO QUE ESCRIBIREMOS EN LA MEMORIA
 						direcciones_fisicas = mmu (direc_logica, proceso, sizeof(uint8_t)); 
 						
-						printf("Chequeo de MOV OUT - el primero es uint32 y el segundo es uint8\n");
+						//printf("Chequeo de MOV OUT - el primero es uint32 y el segundo es uint8\n");
 						int direccion_fisica;
 						for(int i=0; i < list_size(direcciones_fisicas);i++)
 						{
@@ -1385,7 +1398,7 @@ void ejecutar_proceso(PCB* proceso)
 							uint32_t* registro_datos = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
 							direcciones_fisicas = mmu (direc_logica, proceso,sizeof(uint32_t)); //fc a implementar (MMU)
 
-							printf("Chequeo de MOV OUT - el primero es uint32 y el segundo es uint32\n");
+							//printf("Chequeo de MOV OUT - el primero es uint32 y el segundo es uint32\n");
 							//uint32_t* v = ...; // Tu puntero uint32_t
 							uint8_t* ptr_registro_datos = (uint8_t *)registro_datos;
 							uint8_t byte[4];
@@ -1410,6 +1423,7 @@ void ejecutar_proceso(PCB* proceso)
 		 		}
 				
 		 	}
+			list_destroy(direcciones_fisicas);
 		 }
 
 
@@ -1435,6 +1449,8 @@ void ejecutar_proceso(PCB* proceso)
 			}
 			
 			printf("Copia finalizada\n");
+			list_destroy(direcciones_fisicas);
+			list_destroy(direcciones_fisicas_destino);
 		} 
 
 
@@ -1449,10 +1465,10 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion);
-
+			string_array_destroy(instruccion_split);
 		 	return;
 		 }
 
@@ -1465,10 +1481,10 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion);
-
+			string_array_destroy(instruccion_split);
 		 	return;
 		}
 
@@ -1508,9 +1524,10 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion_to_send);
+			string_array_destroy(instruccion_split);
 			free(instruccion);
 			free(cant_bloques);
 		 	return;
@@ -1603,10 +1620,11 @@ void ejecutar_proceso(PCB* proceso)
 			free(d_logica);
 			free(tamanio);
 			free(pointer_archivo);
-			
+			list_destroy(direcciones_fisicas);
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
+			string_array_destroy(instruccion_split);
 			free(instruccion);
 			free(instruccion_to_send);
 		 	return;
@@ -1701,8 +1719,10 @@ void ejecutar_proceso(PCB* proceso)
 			free(pointer_archivo);
 			
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
+			string_array_destroy(instruccion_split);
+			list_destroy(direcciones_fisicas);
 			free(instruccion);
 			free(instruccion_to_send);
 		 	return;
@@ -1719,9 +1739,10 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion);
+			string_array_destroy(instruccion_split);
 		 	return;
 		 }
 		//CASO DE TENER UNA INSTRUCCION SIGNAL (Recurso): 
@@ -1733,9 +1754,10 @@ void ejecutar_proceso(PCB* proceso)
 			
 		 	//se bloquea el proceso, devolvemos al kernel
 		 	free(instruccionActual);
-		 	instruccionActual = malloc(1);
-		 	instruccionActual = "";
+		 	//instruccionActual = malloc(1);
+		 	//instruccionActual = "";
 			free(instruccion);
+			string_array_destroy(instruccion_split);
 		 	return;
 		 }
 		
@@ -1743,10 +1765,13 @@ void ejecutar_proceso(PCB* proceso)
 		sem_wait(&interrupt_mutex);
 		if( *any_interrupcion == (-1) )//fin de quantum
 		{
-			printf("AL PROCESO SE LE HA ACABADO EL QUANTUM\n");
+			//printf("AL PROCESO SE LE HA ACABADO EL QUANTUM\n");
 			enviarPCB(proceso,fd_kernel_dispatch,FIN_DE_QUANTUM);
 			*any_interrupcion = 0;
 			sem_post(&interrupt_mutex);
+			free(instruccion);
+			free(instruccionActual);
+			string_array_destroy(instruccion_split);
 			return;
 		}
 		else
@@ -1757,6 +1782,9 @@ void ejecutar_proceso(PCB* proceso)
 				enviarPCB(proceso,fd_kernel_dispatch,INTERRUPTED_BY_USER);
 				*any_interrupcion = 0;
 				sem_post(&interrupt_mutex);
+				free(instruccion);
+				free(instruccionActual);
+				string_array_destroy(instruccion_split);
 				return;
 			}
 		}
@@ -1795,7 +1823,7 @@ void cpu_escuchar_kernel_dispatch (){
 				break;
 			case PROCESO:
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
-				printf("/////////////\n");
+				/*printf("/////////////\n");
 				printf("Recibi el siguiente proceso:\n");
 				printf("Su PID es: %d\n",proceso->PID);
 				printf("El quamtum actual es de: %d\n",proceso->quantum);
@@ -1805,7 +1833,7 @@ void cpu_escuchar_kernel_dispatch (){
 				printf("Su DX es: %d\n",proceso->registro.DX);
 				printf("Su DI es: %d\n",proceso->registro.DI);//cambios
 				printf("Su EAX es: %d\n",proceso->registro.EAX);
-				printf("/////////////\n");
+				printf("/////////////\n");*/
 				ejecutar_proceso(proceso);
 
 				free(proceso->path);
@@ -1887,7 +1915,7 @@ void cpu_escuchar_memoria (){
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
 
-			printf("RECIBI EL CÓDIGO DE OPERACIÓN: %d\n",cod_op);
+			//printf("RECIBI EL CÓDIGO DE OPERACIÓN: %d\n",cod_op);
 
             //deserializamos el mensaje, primero el tamaño del buffer, luego el offset
 			recv(fd_memoria,&(paquete->buffer->size),sizeof(uint32_t),0);		
@@ -1916,12 +1944,12 @@ void cpu_escuchar_memoria (){
 				sem_post(&sem_exe_b);
 				break;
 			case ASIGNACION_CORRECTA:
-				printf("Voy a avisarle a ejecutar proceso que puede seguir\n");
+				//printf("Voy a avisarle a ejecutar proceso que puede seguir\n");
 				asignacion_or_out_of_memory = 0;
 				sem_post(&sem_memoria_aviso_cpu);
 				break;
 			case OUT_OF_MEMORY:
-				printf("Voy a avisarle a ejecutar proceso NO puede seguir\n");
+				//printf("Voy a avisarle a ejecutar proceso NO puede seguir\n");
 				asignacion_or_out_of_memory = 1;
 				sem_post(&sem_memoria_aviso_cpu);
 				break;
@@ -1930,23 +1958,23 @@ void cpu_escuchar_memoria (){
 				valor_leido = malloc(sizeof(uint8_t));
 				uint8_t* leidoQueLlego = paquete->buffer->stream;
 				memcpy(valor_leido, leidoQueLlego, sizeof(uint8_t));  
-				printf("El valor leido que llego fue: %u\n",*valor_leido); //no imprime el valor leido
+				//printf("El valor leido que llego fue: %u\n",*valor_leido); //no imprime el valor leido
 				sem_post(&sem_lectura);
 				break;
 			case ESCRITO:
-				printf("Teoricamente se ha escrito el valor en la direccion fisica\n");
+				//printf("Teoricamente se ha escrito el valor en la direccion fisica\n");
 				sem_post(&sem_escritura);
 				//
 				break;
 			case COPY_STRING:
-				printf("Teoricamente el valor se ha copiado correctamente\n");
+				//printf("Teoricamente el valor se ha copiado correctamente\n");
 				sem_post(&sem_escritura);
 				//
 				break;
 			case MARCO:
 
 				//llega el marco de memoria
-				printf("Me encuentro en la parte de marco\n");
+				//printf("Me encuentro en la parte de marco\n");
 				free(num_marco);
 				num_marco = malloc(sizeof(int));
 				int* marcoLeido = paquete->buffer->stream;

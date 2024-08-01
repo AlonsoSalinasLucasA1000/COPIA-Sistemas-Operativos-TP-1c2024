@@ -159,26 +159,24 @@ bool es_elemento_buscado(void* elemento, void* valor_buscado) {
     return *((uint32_t*)elemento) == *((uint32_t*)valor_buscado);
 }
 
-// Función para eliminar un elemento de la lista
-bool eliminar_elemento(t_list* lista, uint32_t valor) 
-{
-	bool to_ret;
-    uint32_t* valor_buscado = malloc(sizeof(uint32_t));
-    *valor_buscado = valor;
 
-    // Iterar sobre la lista para encontrar el elemento
+bool eliminar_elemento(t_list* lista, uint32_t pid_buscado) 
+{
+    bool to_ret = false;  // Inicializar el retorno en false
     for (int i = 0; i < list_size(lista); i++) {
-        uint32_t* elemento = list_get(lista, i);
-        if (es_elemento_buscado(elemento, valor_buscado)) {
-            list_remove(lista, i);
-			to_ret = true;
-            return to_ret;
+        PCB* elemento = list_get(lista, i);
+        if (elemento->PID == pid_buscado) {  // Comparar el PID
+            list_remove(lista, i);  // Eliminar el elemento de la lista
+            // Liberar la memoria del elemento si es necesario
+            free(elemento->path);  // Liberar el campo path, si es dinámico
+            free(elemento);  // Liberar el PCB en sí
+            to_ret = true;
+            break;  // Salir del bucle después de eliminar el elemento
         }
     }
-    free(valor_buscado);
-	to_ret = false;
-	return to_ret;
+    return to_ret;
 }
+
 
 //Función para generar los recursos a partir del archivo de configuración
 t_list* generarRecursos(char* recursos, char* instancias_recursos)
@@ -203,6 +201,8 @@ t_list* generarRecursos(char* recursos, char* instancias_recursos)
 		list_add(ret,to_add);
 		i++;
 	}
+	string_array_destroy(recursos_separados);
+	string_array_destroy(instancias_recursos_separados);
 	return ret;
 }
 
@@ -218,66 +218,12 @@ void ejecutar_interfaz_generica(char* instruccion, op_code tipoDeInterfaz, int f
 
 	enviarEntero(pid_io,fd_io,NUEVOPID);
 	enviarEntero(unidadesDeTrabajo,fd_io,GENERICA);
+
+	string_array_destroy(instruccion_split);
+	free(unidadesDeTrabajo);
+	free(pid_io);
 }
 
-//Ejecuta tanto stdin como stdout
-void ejecutar_interfaz_stdinstdout(char* instruccion, op_code tipoDeInterfaz, int fd_io, int pid_actual)
-{
-	char** instruccion_split = string_split(instruccion," ");
-	//IO_STDIN_READ (Interfaz, Registro Direccion, Registro Tamaño)
-	//Debemos enviar la direccion y el tamanio a escribir
-	int* direccionFisica = malloc(sizeof(int));
-	int* tamanio = malloc(sizeof(int));
-	*direccionFisica = atoi(instruccion_split[4]);
-	*tamanio = atoi(instruccion_split[5]);
-
-	//antes que todo enviamos del pid del proceso que actualmente lo usa
-	int* pid = malloc(sizeof(int));
-	*pid = pid_actual;
-	enviarEntero(pid,fd_io,NUEVOPID);
-
-	//mandaremos
-	//printf("mandaremos la siguiente direccion fisica: %d\n",*direccionFisica);
-	//printf("mandaremos el siguiente tamanio: %d\n",*tamanio);
-
-	//printf("Voy a mandar algo para el stdin\n");
-	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
-
-    //Calculamos su tamaño
-	buffer->size = sizeof(int)*2;
-    buffer->offset = 0;
-    buffer->stream = malloc(buffer->size);
-	
-    //Movemos los valores al buffer
-    memcpy(buffer->stream + buffer->offset,direccionFisica, sizeof(int));
-    buffer->offset += sizeof(int);
-	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
-    buffer->offset += sizeof(int);
-
-	//Creamos un Paquete
-    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
-    //Podemos usar una constante por operación
-    paquete->codigo_operacion = tipoDeInterfaz;
-    paquete->buffer = buffer;
-
-	//Empaquetamos el Buffer
-    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
-    int offset = 0;
-    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
-    offset += sizeof(op_code);
-    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
-    //Por último enviamos
-    send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
-	//printf("Lo mande\n");
-    // No nos olvidamos de liberar la memoria que ya no usaremos
-    free(a_enviar);
-    free(paquete->buffer->stream);
-    free(paquete->buffer);
-    free(paquete);
-	
-}
 
 void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfaz, int fd_io, int pid_actual)
 {
@@ -323,9 +269,12 @@ void new_ejecutar_interfaz_stdin_stdout(char* instruccion, op_code tipoDeInterfa
 	
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
+	free(to_send);
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
+	free(tamanio);
+	free(pid);
 }
 
 //Se buscan las IO dentro de la lista
@@ -358,10 +307,8 @@ PCB* encontrar_por_pid(t_list* lista, uint32_t pid_buscado) {
 
 void encolar_procesos_vrr(PCB* proceso)
 {
-	//printf("[CHECKPOINT VRR] En este instante el quantum es %d\n",proceso->quantum);
 	if( proceso->quantum > 0 )
 	{
-		//printf("A la cola de máxima prioridad llegó el proceso de PID %d\n",proceso->PID);
 		sem_wait(&sem_ready_prio);
 		queue_push(cola_ready_prioridad,proceso);
 
@@ -414,11 +361,6 @@ void liberar_recursos(int pid)
 					PCB* proceso_desbloqueado = list_remove(r->listBloqueados, 0);
 					//*to_ready = *proceso_desbloqueado;
 
-					//printf("El proceso desbloqueado es el siguiente: \n");
-					//printf("PID: %d\n", proceso_desbloqueado->PID);
-					//printf("QUANTUM: %d\n",proceso_desbloqueado->quantum);
-					//printf("PATH: %s\n",proceso_desbloqueado->path);
-					//el proceso ya no queda bloquedo, lo sacamos de la cola general de bloqueados
 					sem_wait(&sem_blocked);
 					eliminar_elemento(cola_blocked->elements,proceso_desbloqueado->PID);
 					sem_post(&sem_blocked);
@@ -488,20 +430,7 @@ void kernel_escuchar_cpu ()
 				char* estado_anterior = estado_proceso_to_string(proceso->estado);
 				proceso->estado = EXIT;
 				char* estado_actual = estado_proceso_to_string(proceso->estado);
-				/*
-				printf("Recibimos el proceso con el pid: %d\n",proceso->PID);
-				printf("Recibimos el proceso con el quantum en: %d\n",proceso->quantum);
-				printf("Recibimos el proceso con el AX: %d\n",proceso->registro.AX);//cambios
-				printf("Recibimos el proceso con el BX: %d\n",proceso->registro.BX);//cambios
-				printf("Recibimos el proceso con el CX: %d\n",proceso->registro.CX);//cambios
-				printf("Recibimos el proceso con el DX: %d\n",proceso->registro.DX);//cambios
-				printf("Recibimos el proceso con el EAX: %d\n",proceso->registro.EAX);//cambios
-				printf("Recibimos el proceso con el EBX: %d\n",proceso->registro.EBX);//cambios
-				printf("Recibimos el proceso con el ECX: %d\n",proceso->registro.ECX);//cambios
-				printf("Recibimos el proceso con el EDX: %d\n",proceso->registro.EDX);//cambios
-				printf("Recibimos el proceso con el SI: %d\n",proceso->registro.SI);//cambios
-				printf("Recibimos el proceso con el DI: %d\n",proceso->registro.DI);//cambios
-				*/
+				
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n",proceso->PID);
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso->PID, estado_anterior, estado_actual);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <SUCCESS>\n",proceso->PID);
@@ -522,35 +451,13 @@ void kernel_escuchar_cpu ()
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
 
-				/*
-				printf("Los recursos han quedado de la siguiente forma:\n");
-				for(int i = 0; i < list_size(listRecursos); i++)
-				{
-					Recurso* got = list_get(listRecursos,i);
-					printf("El nombre del recurso es %s y tiene %d instancias\n",got->name,got->instancias);
-				}
-				*/				
-			//	
                 break;
 			case OUT_OF_MEMORY:
 				PCB* proceso_out_of_memory = deserializar_proceso_cpu(paquete->buffer);
 				char* estado_anterior_out_of_memory = estado_proceso_to_string(proceso_out_of_memory->estado);
 				proceso_out_of_memory->estado = EXIT;
 				char* estado_actual_out_of_memory = estado_proceso_to_string(proceso_out_of_memory->estado);
-				/*
-				printf("Recibimos el proceso con el pid: %d\n", proceso_out_of_memory->PID);
-				printf("Recibimos el proceso con el quantum en: %d\n", proceso_out_of_memory->quantum);
-				printf("Recibimos el proceso con el AX: %d\n", proceso_out_of_memory->registro.AX);
-				printf("Recibimos el proceso con el BX: %d\n", proceso_out_of_memory->registro.BX);
-				printf("Recibimos el proceso con el CX: %d\n", proceso_out_of_memory->registro.CX);
-				printf("Recibimos el proceso con el DX: %d\n", proceso_out_of_memory->registro.DX);
-				printf("Recibimos el proceso con el EAX: %d\n", proceso_out_of_memory->registro.EAX);
-				printf("Recibimos el proceso con el EBX: %d\n", proceso_out_of_memory->registro.EBX);
-				printf("Recibimos el proceso con el ECX: %d\n", proceso_out_of_memory->registro.ECX);
-				printf("Recibimos el proceso con el EDX: %d\n", proceso_out_of_memory->registro.EDX);
-				printf("Recibimos el proceso con el SI: %d\n", proceso_out_of_memory->registro.SI);
-				printf("Recibimos el proceso con el DI: %d\n", proceso_out_of_memory->registro.DI);
-				*/
+			
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_out_of_memory->PID);
 				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_out_of_memory->PID, estado_anterior_out_of_memory, estado_actual_out_of_memory);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <OUT_OF_MEMORT>\n",proceso_out_of_memory->PID);
@@ -571,34 +478,13 @@ void kernel_escuchar_cpu ()
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
 
-				/*
-				printf("Los recursos han quedado de la siguiente forma:\n");
-				for (int i = 0; i < list_size(listRecursos); i++)
-				{
-					Recurso* got_out_of_memory = list_get(listRecursos, i);
-					printf("El nombre del recurso es %s y tiene %d instancias\n", got_out_of_memory->name, got_out_of_memory->instancias);
-				}
-				*/
 			break;
 			case INTERRUPTED_BY_USER:
 				PCB* proceso_interrupted_by_user = deserializar_proceso_cpu(paquete->buffer);
 				char* estado_anterior_interrupted_by_user = estado_proceso_to_string(proceso_interrupted_by_user->estado);
 				proceso_interrupted_by_user->estado = EXIT;
 				char* estado_actual_interrupted_by_user = estado_proceso_to_string(proceso_interrupted_by_user->estado);
-				/*
-				printf("Recibimos el proceso con el pid: %d\n", proceso_interrupted_by_user->PID);
-				printf("Recibimos el proceso con el quantum en: %d\n", proceso_interrupted_by_user->quantum);
-				printf("Recibimos el proceso con el AX: %d\n", proceso_interrupted_by_user->registro.AX);
-				printf("Recibimos el proceso con el BX: %d\n", proceso_interrupted_by_user->registro.BX);
-				printf("Recibimos el proceso con el CX: %d\n", proceso_interrupted_by_user->registro.CX);
-				printf("Recibimos el proceso con el DX: %d\n", proceso_interrupted_by_user->registro.DX);
-				printf("Recibimos el proceso con el EAX: %d\n", proceso_interrupted_by_user->registro.EAX);
-				printf("Recibimos el proceso con el EBX: %d\n", proceso_interrupted_by_user->registro.EBX);
-				printf("Recibimos el proceso con el ECX: %d\n", proceso_interrupted_by_user->registro.ECX);
-				printf("Recibimos el proceso con el EDX: %d\n", proceso_interrupted_by_user->registro.EDX);
-				printf("Recibimos el proceso con el SI: %d\n", proceso_interrupted_by_user->registro.SI);
-				printf("Recibimos el proceso con el DI: %d\n", proceso_interrupted_by_user->registro.DI);
-				*/
+		
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_interrupted_by_user->PID);
 				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_interrupted_by_user->PID, estado_anterior_interrupted_by_user, estado_actual_interrupted_by_user);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INTERRUPTED_BY_USER>\n", proceso_interrupted_by_user->PID);
@@ -618,14 +504,7 @@ void kernel_escuchar_cpu ()
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
 
-				/*
-				printf("Los recursos han quedado de la siguiente forma:\n");
-				for (int i = 0; i < list_size(listRecursos); i++)
-				{
-					Recurso* got_interrupted_by_user = list_get(listRecursos, i);
-					printf("El nombre del recurso es %s y tiene %d instancias\n", got_interrupted_by_user->name, got_interrupted_by_user->instancias);
-				}
-				*/
+				
 			break;
 			case PROCESOIO:
 
@@ -634,21 +513,7 @@ void kernel_escuchar_cpu ()
 				proceso_io->estado = BLOCKED;
 				char* estado_actual_io = estado_proceso_to_string(proceso_io->estado);
 
-				/*
-				printf("Recibimos el proceso con el pid: %d\n",proceso_io->PID);
-				printf("Recibimos el proceso con el siguiente quantum: %d\n",proceso_io->quantum);
-				printf("Recibimos el proceso con el AX: %d\n",proceso_io->registro.AX);//cambios
-				printf("Recibimos el proceso con el BX: %d\n",proceso_io->registro.BX);//cambios
-				printf("Recibimos el proceso con el CX: %d\n",proceso_io->registro.CX);//cambios
-				printf("Recibimos el proceso con el DX: %d\n",proceso_io->registro.DX);//cambios
-				printf("Recibimos el proceso con el EAX: %d\n",proceso_io->registro.EAX);//cambios
-				printf("Recibimos el proceso con el EBX: %d\n",proceso_io->registro.EBX);//cambios
-				printf("Recibimos el proceso con el ECX: %d\n",proceso_io->registro.ECX);//cambios
-				printf("Recibimos el proceso con el EDX: %d\n",proceso_io->registro.EDX);//cambios
-				printf("Recibimos el proceso con el SI: %d\n",proceso_io->registro.SI);//cambios
-				printf("Recibimos el proceso con el DI: %d\n",proceso_io->registro.DI);//cambios
-				printf("Este SE HA BLOQUEADO\n");
-				*/
+				
 				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_io->PID,estado_anterior_io,estado_actual_io);
 
 				//ACTUALIZAMOS EN LA LISTA GENERAL
@@ -666,6 +531,7 @@ void kernel_escuchar_cpu ()
 					//printf("La cantidad de tiempo que ha transcurrido: %d\n",quantum_transcurrido);
 					sem_post(&sem_mutex_cronometro);
 					proceso_io->quantum -= quantum_transcurrido;
+					temporal_destroy(cronometro);
 					//printf("[ACTUALIZACIÓN] Hemos actualizado el quantum y ha quedado de la siguiente forma: %d\n",proceso_io->quantum);
 				}
 
@@ -686,22 +552,7 @@ void kernel_escuchar_cpu ()
 				char* estado_anterior_fin_de_quantum = estado_proceso_to_string(proceso_fin_de_quantum->estado);
 				proceso_fin_de_quantum->estado = READY;
 				char* estado_actual_fin_de_quantum = estado_proceso_to_string(proceso_fin_de_quantum->estado);
-				/*
-				printf("Recibimos el proceso con el pid: %d\n",proceso_fin_de_quantum->PID);
-				printf("Recibimos el proceso con el siguiente quantum: %d\n",proceso_fin_de_quantum->quantum);
-				printf("Recibimos el proceso con el AX: %d\n",proceso_fin_de_quantum->registro.AX);//cambios
-				printf("Recibimos el proceso con el BX: %d\n",proceso_fin_de_quantum->registro.BX);//cambios
-				printf("Recibimos el proceso con el CX: %d\n",proceso_fin_de_quantum->registro.CX);//cambios
-				printf("Recibimos el proceso con el DX: %d\n",proceso_fin_de_quantum->registro.DX);//cambios
-				printf("Recibimos el proceso con el EAX: %d\n",proceso_fin_de_quantum->registro.EAX);//cambios
-				printf("Recibimos el proceso con el EBX: %d\n",proceso_fin_de_quantum->registro.EBX);//cambios
-				printf("Recibimos el proceso con el ECX: %d\n",proceso_fin_de_quantum->registro.ECX);//cambios
-				printf("Recibimos el proceso con el EDX: %d\n",proceso_fin_de_quantum->registro.EDX);//cambios
-				printf("Recibimos el proceso con el SI: %d\n",proceso_fin_de_quantum->registro.SI);//cambios
-				printf("Recibimos el proceso con el DI: %d\n",proceso_fin_de_quantum->registro.DI);//cambios
-				printf("SE HA ACABADO EL QUANTUM DE ESTE PROCESO\n");
-				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_fin_de_quantum->PID,estado_anterior_fin_de_quantum,estado_actual_fin_de_quantum);
-				*/
+				
 				sem_wait(&sem_procesos);
 				PCB* actualizado_quantum = encontrarProceso(lista_procesos,proceso_fin_de_quantum->PID);
 				actualizado_quantum->estado = READY;
@@ -733,12 +584,12 @@ void kernel_escuchar_cpu ()
 				
 				//Deserializamos
 				Instruccion_io* instruccion_io_gen = deserializar_instruccion_io(paquete->buffer);
-				//printf("La instruccion es: %s\n",instruccion_io_gen->instruccion);
-				//printf("El PID del proceso es: %d\n",instruccion_io_gen->proceso.PID);
-
+				
 				//Debemos obtener el IO específico de la lista
 				sem_wait(&sem_mutex_lists_io);
-				EntradaSalida* io_gen = encontrar_io(listGenericas,string_split(instruccion_io_gen->instruccion," ")[1]);
+				char** io_gen_split = string_split(instruccion_io_gen->instruccion," ");
+				EntradaSalida* io_gen = encontrar_io(listGenericas,io_gen_split[1]);
+				string_array_destroy(io_gen_split);
 				sem_post(&sem_mutex_lists_io);
 
                 char** instruccion_partida_gen = string_split(instruccion_io_gen->instruccion," ");
@@ -749,14 +600,9 @@ void kernel_escuchar_cpu ()
 				//verificamos que exista
 				if( io_gen != NULL )
 				{
-					//una vez encontrada la io, veo si está ocupado
-					//printf("El io encontrado tiene como nombre %s\n",io_gen->nombre);
+					
 					if( io_gen->ocupado )
 					{
-						//de estar ocupado, añado el proceso a la lista de este (al proceso con la instruccion y todo)
-						//printf("La IO está ocupada, se bloqueará en su lista propia\n");
-						//printf("En la lista se guarda la instruccion %s\n",instruccion_io_gen->instruccion);
-						//printf("En la lista se guarda el PID %d\n",instruccion_io_gen->proceso.PID);
 						list_add(io_gen->procesos_bloqueados, instruccion_io_gen);
 					}
 					else
@@ -764,6 +610,8 @@ void kernel_escuchar_cpu ()
 						//marcamos la io como ocupada y ejecutamos
 						io_gen->ocupado = true;
 						ejecutar_interfaz_generica(instruccion_io_gen->instruccion,GENERICA,io_gen->fd_cliente,instruccion_io_gen->proceso.PID);
+						free(instruccion_io_gen->instruccion);
+						free(instruccion_io_gen);
 					}
 				}
 				else
@@ -790,6 +638,8 @@ void kernel_escuchar_cpu ()
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
+					free(instruccion_io_gen->instruccion);
+					free(instruccion_io_gen);
 				}
 					//CPU desocupada
 					sem_wait(&sem_mutex_cpu_ocupada);
@@ -799,12 +649,12 @@ void kernel_escuchar_cpu ()
 			case STDIN:
 				//Deserializamos
 				Instruccion_io* instruccion_io_stdin = deserializar_instruccion_io(paquete->buffer);
-				//printf("La instruccion es: %s\n",instruccion_io_stdin->instruccion);
-				//printf("El PID del proceso es: %d\n",instruccion_io_stdin->proceso.PID);
 
 				//debemos obtener el io específico de la lista
 				sem_wait(&sem_mutex_lists_io);
-				EntradaSalida* io_stdin = encontrar_io(listStdin,string_split(instruccion_io_stdin->instruccion," ")[1]);
+				char** io_stdin_split = string_split(instruccion_io_stdin->instruccion," ");
+				EntradaSalida* io_stdin = encontrar_io(listStdin,io_stdin_split[1]);
+				string_array_destroy(io_stdin_split);
 				sem_post(&sem_mutex_lists_io);
 
 				char** instruccion_partida_stdin = string_split(instruccion_io_stdin->instruccion," ");
@@ -859,11 +709,13 @@ void kernel_escuchar_cpu ()
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
 					free(proceso_to_end->path);
 					free(proceso_to_end);
+
 				}
 
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
+				free(instruccion_io_stdin->instruccion);
 				free(instruccion_io_stdin); //ESTE FREE ES PELIGROSÍSIMO, ESTAMOS BORRANDO UN DATO DE LA LISTA DE BLOQUEADOS DEL PROCESO
 				break;
 			case STDOUT:
@@ -874,7 +726,9 @@ void kernel_escuchar_cpu ()
 
 				//debemos obtener el io específico de la lista
 				sem_wait(&sem_mutex_lists_io);
-				EntradaSalida* io_stdout = encontrar_io(listStdout,string_split(instruccion_io_stdout->instruccion," ")[1]);
+				char** io_stdout_split = string_split(instruccion_io_stdout->instruccion," ");
+				EntradaSalida* io_stdout = encontrar_io(listStdout,io_stdout_split[1]);
+				string_array_destroy(io_stdout_split);
 				sem_post(&sem_mutex_lists_io);
 
 				char** instruccion_partida_stdout = string_split(instruccion_io_stdout->instruccion," ");
@@ -931,6 +785,7 @@ void kernel_escuchar_cpu ()
 				sem_wait(&sem_mutex_cpu_ocupada);
 				cpu_ocupada = false;
 				sem_post(&sem_mutex_cpu_ocupada);
+				free(instruccion_io_stdout->instruccion);
 				free(instruccion_io_stdout);
 				break;
 			case WAIT:
@@ -976,8 +831,7 @@ void kernel_escuchar_cpu ()
 						sem_wait(&sem_blocked);
 						queue_push(cola_blocked,proceso_recurso);
 						sem_post(&sem_blocked);
-
-						
+			
 						
 
 						sem_wait(&sem_procesos);
@@ -1077,7 +931,7 @@ void kernel_escuchar_cpu ()
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
 				}
-				
+				string_array_destroy(instruccion_partida_wait);
 				break;
 			case SIGNAL:
 				// Deserializamos el recurso
@@ -1098,7 +952,7 @@ void kernel_escuchar_cpu ()
 					i_signal++;
 				}
 
-				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_wait->proceso.PID,instruccion_partida_wait[1]);
+				log_info(kernel_logs_obligatorios,"PID: <%d> - Bloqueado por: <%s>\n",instruccion_recurso_signal->proceso.PID,instruccion_partida_signal[1]);
 
 				// Si existe
 				if (existe_signal) 
@@ -1163,24 +1017,7 @@ void kernel_escuchar_cpu ()
 					sem_wait(&sem_mutex_cpu_ocupada);
 					cpu_ocupada = true;
 					sem_post(&sem_mutex_cpu_ocupada);
-					/*
-					if( strcmp(ALGORITMO_PLANIFICACION, "VRR") == 0 )
-					{
-						encolar_procesos_vrr(proceso_recurso);
-					}
-					else
-					{
-						sem_wait(&sem_ready);   // mutex hace wait
-						queue_push(cola_ready,proceso_recurso);	//agrega el proceso a la cola de ready
-						sem_post(&sem_ready); 
-						sem_post(&sem_cant_ready);  // mutex hace wait
-						printf("(EXISTE SIGNAL)Se ha añadido un proceso con PID %d\n",proceso_recurso->PID);
-
-						sem_wait(&sem_mutex_cpu_ocupada);
-						cpu_ocupada = false;
-						sem_post(&sem_mutex_cpu_ocupada);
-					}
-					*/
+					
 
 				} 
 				else 
@@ -1212,9 +1049,8 @@ void kernel_escuchar_cpu ()
 					cpu_ocupada = false;
 					sem_post(&sem_mutex_cpu_ocupada);
 				}
-
-				break;
-				
+				string_array_destroy(instruccion_partida_signal);
+				break;				
 			case DIALFS:
 				
 				// Deserializamos
@@ -1224,7 +1060,9 @@ void kernel_escuchar_cpu ()
 
 					// Debemos obtener la IO específica de la lista
 					sem_wait(&sem_mutex_lists_io);
-					EntradaSalida* io_fs = encontrar_io(listDialfs, string_split(instruccion_io_fs->instruccion, " ")[1]);
+					char** io_fs_split = string_split(instruccion_io_fs->instruccion, " ");
+					EntradaSalida* io_fs = encontrar_io(listDialfs, io_fs_split[1]);
+					string_array_destroy(io_fs_split);
 					sem_post(&sem_mutex_lists_io);
 
 
@@ -1365,6 +1203,10 @@ void modificar_io_en_listas(int fd_io)
 			//printf("De la lista hemos extraído la instrucción %s\n",proceso_bloqueado_io->instruccion);
 			//printf("De la lista hemos extraído el pid %d\n",proceso_bloqueado_io->proceso.PID);
 			ejecutar_interfaz_generica(proceso_bloqueado_io->instruccion,GENERICA,fd_io,proceso_bloqueado_io->proceso.PID);
+
+			//Cuidado que puede romper 1/8 12:03hs
+			free(proceso_bloqueado_io->instruccion);
+			free(proceso_bloqueado_io);
 		}
 	}
 	else
@@ -1377,6 +1219,8 @@ void modificar_io_en_listas(int fd_io)
 			{
 				Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
 				new_ejecutar_interfaz_stdin_stdout(proceso_bloqueado_io->instruccion,STDIN,fd_io,proceso_bloqueado_io->proceso.PID);
+				free(proceso_bloqueado_io->instruccion);
+				free(proceso_bloqueado_io);
 			}
 		}
 		else
@@ -1389,6 +1233,8 @@ void modificar_io_en_listas(int fd_io)
 				{
 					Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
 					new_ejecutar_interfaz_stdin_stdout(proceso_bloqueado_io->instruccion,STDOUT,fd_io,proceso_bloqueado_io->proceso.PID);
+					free(proceso_bloqueado_io->instruccion);
+					free(proceso_bloqueado_io);
 				}
 			}
 			else
@@ -1399,6 +1245,8 @@ void modificar_io_en_listas(int fd_io)
 				{
 					Instruccion_io* proceso_bloqueado_io = list_remove(to_ret->procesos_bloqueados,0);
 					new_ejecutar_interfaz_stdin_stdout(proceso_bloqueado_io->instruccion,DIALFS,fd_io,proceso_bloqueado_io->proceso.PID);
+					free(proceso_bloqueado_io->instruccion);
+					free(proceso_bloqueado_io);
 				}
 			}
 		}
@@ -1648,9 +1496,11 @@ void iniciar_proceso(char* path)
 	strcpy(proceso->path, pcb->path);
 	proceso->PID = pcb->PID;
 	proceso->path_length = strlen(pcb->path)+1;
-	proceso->TablaDePaginas = list_create();
 
 	enviarProcesoMemoria(proceso,fd_memoria);
+
+	free(proceso->path);
+	free(proceso);
 
 	//agrego el pcb a la cola new
 	
@@ -1707,6 +1557,7 @@ void finalizar_proceso (char* pid) {
             int* pid_del_proceso = malloc(sizeof(int));
             *pid_del_proceso = proceso_a_terminar->PID;
             enviarEntero(pid_del_proceso, fd_cpu_interrupt, FINALIZAR_PROCESO);
+			free(pid_del_proceso);
             break;
         case BLOCKED:
            // printf("El proceso de pid %d es eliminado estando en BLOCKED\n", proceso_a_terminar->PID);
@@ -1903,15 +1754,11 @@ void mover_procesos_a_ready()
 		sem_wait(&sem_cant);   // mutex hace wait
 		sem_wait(&sem);   // mutex hace wait
 		if (iniciar_planificacion == true){
-			//pido los semaforos de cada cola
-			//printf("Ingresamos a mover procesos a ready\n");
 			sem_wait(&sem_grado_mult);
 			sem_wait(&sem_blocked);
 			sem_wait(&sem_ready);
 			if( (queue_size(cola_ready) + queue_size(cola_blocked) + 1) < grado_multiprogramacion )
 			{
-				//printf("[NICE] EL GRADO DE MULTIPROGRAMACIÓN NO HA SIDO SUPERADO, UN NUEVO PROCESO ES ADMITIDO\n");
-				//si se cumple, significa que podemos incluir un nuevo proceso en ready
 				PCB* pcb = queue_pop(cola_new);
 				sem_post(&sem_blocked);
 				sem_post(&sem_grado_mult);
@@ -1924,7 +1771,6 @@ void mover_procesos_a_ready()
 				sem_post(&sem_procesos);
 
 				queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
-				//printf("El proceso de PID %d ha ingresado a la cola de ready desde el planificador de largo plazo\n",pcb->PID);
 				char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
 				log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
 				free(cadena_pids);
@@ -1936,7 +1782,6 @@ void mover_procesos_a_ready()
 			}
 			else
 			{
-				//printf("[BAD] EL GRADO DE MULTIPROGRAMACIÓN HA SIDO SUPERADO, EL PROCESO NO ES ADMITIDO\n");
 				sem_post(&sem_grado_mult);
 				sem_post(&sem_blocked);
 				sem_post(&sem_ready);
@@ -1989,6 +1834,7 @@ void interrumpir_por_quantum_vrr(int proceso_quantum)
 	int* enteroRandom = malloc(sizeof(int));
 	*enteroRandom = 0;
 	enviarEntero(enteroRandom,fd_cpu_interrupt,FIN_DE_QUANTUM);
+	free(enteroRandom);
 }
 
 void interrumpir_por_quantum()
@@ -2002,6 +1848,7 @@ void interrumpir_por_quantum()
 	*enteroRandom = 0;
  	//printf("Me desperte uwu\n");
 	enviarEntero(enteroRandom,fd_cpu_interrupt,FIN_DE_QUANTUM);
+	free(enteroRandom);
 }
 
 void enviar_pcb_a_cpu()
@@ -2022,12 +1869,7 @@ void enviar_pcb_a_cpu()
 
 	sem_wait(&sem_cant_ready);   // mutex hace wait
 	sem_wait(&sem_ready);   // mutex hace wait
-
 	PCB* pcb_cola = queue_pop(cola_ready); //saca el proceso de la cola de ready
-	//printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->PID);
-	//printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->quantum);
-	//printf("A LA CPU SE LE ENVIARÁ: %d\n",pcb_cola->path_length);
-			
 	sem_post(&sem_ready); // mutex hace signal
 	
 
@@ -2060,6 +1902,10 @@ void enviar_pcb_a_cpu()
 	{
 		interrumpir_por_quantum();
 	}
+	free(pcb_cola->path);
+	free(pcb_cola);
+	free(to_send->path);
+	free(to_send);
 }
 
 void enviar_pcb_a_cpu_vrr()
@@ -2101,10 +1947,6 @@ void enviar_pcb_a_cpu_vrr()
 	to_send->quantum = pcb_cola->quantum;
 	to_send->estado = EXEC;
 	to_send->registro = pcb_cola->registro;//cambios
-	/*to_send->registro.BX = pcb_cola->registro.BX;//cambios
-	to_send->registro.CX = pcb_cola->registro.CX;//cambios
-	to_send->registro.DX = pcb_cola->registro.DX;//cambios*/
-
 	to_send->path = string_duplicate( pcb_cola->path);
 
 	//ACTUALIZAMOS EN LA LISTA GENERAL
@@ -2124,6 +1966,10 @@ void enviar_pcb_a_cpu_vrr()
 	{
 		interrumpir_por_quantum_vrr(pcb_cola->quantum);
 	}
+	free(pcb_cola->path);
+	free(pcb_cola);
+	free(to_send->path);
+	free(to_send);
 }
 
 void planificador_corto_plazo()
