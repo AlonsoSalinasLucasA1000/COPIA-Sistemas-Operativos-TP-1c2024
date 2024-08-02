@@ -219,8 +219,8 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	memcpy(&(to_return->path_length), stream, sizeof(uint32_t));
 	stream += sizeof(uint32_t);
 	// deserailizamos el path como tal
-	to_return->path = malloc(to_return->path_length);
-	memcpy(to_return->path, stream, to_return->path_length);//ERROR AL 3 INTENTO
+	//to_return->path = malloc(to_return->path_length);
+	//memcpy(to_return->path, stream, to_return->path_length);//ERROR AL 3 INTENTO
 
 	return to_return;
 }
@@ -450,7 +450,7 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
     // Para el nombre primero mandamos el tamaño y luego el texto en sí:
     memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
-    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
+   // memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
     
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));

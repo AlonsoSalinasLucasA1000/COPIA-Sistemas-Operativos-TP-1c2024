@@ -465,7 +465,7 @@ void kernel_escuchar_cpu ()
 				liberar_recursos(proceso->PID);
 				enviarPCB(proceso,fd_memoria,PROCESOFIN);
 
-				free(proceso->path);
+				//free(proceso->path);
 				free(proceso);
 				
 				sem_wait(&sem_mutex_cpu_ocupada);

@@ -1867,7 +1867,7 @@ void cpu_escuchar_kernel_dispatch (){
 				printf("/////////////\n");*/
 				ejecutar_proceso(proceso);
 
-				free(proceso->path);
+				//free(proceso->path);
 				free(proceso);
 				sem_init(&sem_exe_a,0,1);
                 sem_init(&sem_exe_b,0,0);

@@ -127,7 +127,7 @@ void memoria_escuchar_cpu (){
 				//printf("Me voy a mimir, buenas noches\n");
 				usleep(RETARDO_RESPUESTA*1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
-				free(proceso->path);
+				//free(proceso->path);
 				free(proceso);
 				free(instruccion);
 				break;
@@ -167,7 +167,8 @@ void memoria_escuchar_cpu (){
 								//reemplazo dicha casilla con el pid del proceso
 								uint32_t* pid = malloc(sizeof(u_int32_t));
 								*pid = proceso_resize->PID;
-								list_replace(listMarcos,i,pid);
+								void* replaced = list_replace(listMarcos,i,pid);
+								free(replaced);
 								paginas_requeridas--;
 							}
 							i++; 
@@ -227,6 +228,7 @@ void memoria_escuchar_cpu (){
 						char* to_send = malloc(hola);
 						strncpy(to_send, "vegeta", hola - 1);
 						to_send[hola - 1] = '\0';
+						usleep(RETARDO_RESPUESTA*1000);
 						enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
 						free(to_send);
 					}
@@ -237,6 +239,7 @@ void memoria_escuchar_cpu (){
 						char* to_send = malloc(hola);
 						strncpy(to_send, "vegeta", hola - 1);
 						to_send[hola - 1] = '\0';
+						usleep(RETARDO_RESPUESTA*1000);
 						enviar_mensaje_cpu_memoria(instruccion,fd_cpu,OUT_OF_MEMORY);
 						free(to_send);
 					}
@@ -301,38 +304,14 @@ void memoria_escuchar_cpu (){
 					char* to_send = malloc(hola);
 					strncpy(to_send, "vegeta", hola - 1);
 					to_send[hola - 1] = '\0';
+					usleep(RETARDO_RESPUESTA*1000);
 					enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
 					free(to_send);
 				}
+				free(proceso_resize);
 				printf("EL TAMANIO DE LA LISTA AL MOMENTO DE HACER RESIZE QUEDA DE LA SIGUIENTE FORMA: %d\n",datos_resize->TablaDePaginas);
 				break;
-				/*
-			case LECTURA:
 				
-				void* copy_stream = paquete->buffer->stream;
-				printf("He recibido un pedido de LECTURA\n");
-				int* direccionFisica = malloc(sizeof(int));
-				int* tamanioDato = malloc(sizeof(int));		//puede que sea int*
-				memcpy(direccionFisica,copy_stream,sizeof(int));
-				copy_stream += sizeof(int);
-				memcpy(tamanioDato,copy_stream,sizeof(int));
-
-				printf("Recibimos la direccion fisica: %d\n",*direccionFisica);
-				printf("Recibimos la del tamaño del dato: %d\n",*tamanioDato);
-
-
-				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
-				int* datoObtenido = malloc(sizeof(*tamanioDato));
-				memcpy(datoObtenido, espacio_usuario + *direccionFisica,*tamanioDato);
-				printf("Enviaremos %d\n",*(int*)datoObtenido);
-				enviarEntero(datoObtenido,fd_cpu,LECTURA);
-				//
-				free (direccionFisica);
-				free (tamanioDato);
-				free (datoObtenido);
-				
-				break;
-				*/
 			case LECTURA:
 				void* copy_stream = paquete->buffer->stream;
 				printf("He recibido un pedido de LECTURA\n");
@@ -352,6 +331,7 @@ void memoria_escuchar_cpu (){
 				printf("Enviaremos %d\n", *(uint8_t*)datoObtenido);
 				uint8_t* to_enviar = malloc(sizeof(uint8_t));
 				*to_enviar = *(uint8_t*)datoObtenido;
+				usleep(RETARDO_RESPUESTA*1000);
 				enviarUint8(to_enviar, fd_cpu, LECTURA);
 
 				// liberar memoria
@@ -361,38 +341,6 @@ void memoria_escuchar_cpu (){
 
    				break;
 
-			/*
-			case ESCRITURA_CADENA:
-				void* copia_stream = paquete->buffer->stream;
-				printf("He recibido un pedido de ESCRITURA_CADENA\n");
-				int* direccionFisica = malloc(sizeof(int));
-				int* tamanioCadena = malloc(sizeof(int)); 
-				char* cadena = malloc(sizeof(char));
-				
-				memcpy(direccionFisica, copia_stream, sizeof(int));
-				copia_stream += sizeof(int);
-				memcpy(tamanioCadena, copia_stream, sizeof(int));
-				copia_stream += sizeof(int);
-				memcpy(cadena, copia_stream, *tamanioCadena);
-				
-				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
-				memmove (espacio_usuario + *direccionFisica, cadena, *tamanioCadena);
-
-				void* to_show = malloc(*tamanioCadena);
-				memcpy(to_show,espacio_usuario + *direccionFisica,*tamanioCadena);
-
-				char* show = (char*)to_show;
-				printf("Mostrar lo escrito %s",show);
-
-Copy N bytes of SRC to DEST, guaranteeing
-   correct behavior for overlapping strings. 
-extern void *memmove (void *__dest, const void *__src, size_t __n)
-     __THROW __nonnull ((1, 2));
-
-
-			
-				break;  
-			*/
 			case ESCRITURA_NUMERICO:
 
 				void* copy_stream_e_n = paquete->buffer->stream;
@@ -417,9 +365,12 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				char* to_send = malloc(hola);
 				strncpy(to_send, "vegeta", hola - 1);//mensaje aleatorio
 				to_send[hola - 1] = '\0';
+				usleep(RETARDO_RESPUESTA*1000);
 				enviar_mensaje_cpu_memoria(to_send,fd_cpu,ESCRITO);
 				free(to_send);
-				
+				free(valor);
+				free(direccionFisica_e_n);
+				free(to_show_n);
 				break;
 			case COPY_STRING:
 				//
@@ -431,6 +382,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 
 				memmove(espacio_usuario + *df_destino, espacio_usuario + *df_origen,1);
 				int* random = malloc(sizeof(int));
+				usleep(RETARDO_RESPUESTA*1000);
 				enviarEntero(random,fd_cpu,COPY_STRING);
 				free(random);
 				break;
@@ -438,6 +390,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				//
 				break;
 			case MARCO:
+			/*
 				//llega de cpu numero_pagina y pid del proceso
 				void* copy_stream_m = paquete->buffer->stream;
 				printf("He recibido un pedido de MARCO\n");
@@ -470,7 +423,7 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 					{
 						//enviar el marco
 						//int* marco = pag_proceso_encontrado;
-						marco = pag_proceso_encontrado;
+						*marco = *pag_proceso_encontrado;
 						printf("Numero de marco a enviar: %d\n", *marco);
 						
 						//enviarEntero(marco,fd_cpu,MARCO);
@@ -478,7 +431,61 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 					}
 				}
 				printf("Estoy a punto de enviar el marco\n");
-				enviarEntero(marco,fd_cpu,MARCO);						
+				usleep(RETARDO_RESPUESTA*1000);
+				enviarEntero(marco,fd_cpu,MARCO);
+				free(marco);
+				free(numero_pagina);		
+				free(pid);	
+			*/
+			void* copy_stream_m = paquete->buffer->stream;
+				printf("He recibido un pedido de MARCO\n");
+
+				// No es necesario usar malloc aquí
+				int numero_pagina;
+				uint32_t pid;
+
+				// Copiamos directamente los valores
+				memcpy(&numero_pagina, copy_stream_m, sizeof(int));
+				copy_stream_m += sizeof(int);
+				memcpy(&pid, copy_stream_m, sizeof(uint32_t));
+
+				printf("Recibimos numero de pagina: %d\n", numero_pagina);
+				printf("Recibimos el pid: %d\n", pid);
+
+				ProcesoMemoria* proceso_encontrado = NULL;
+				for (int i = 0; i < list_size(listProcesos); i++) {
+					ProcesoMemoria* proceso_actual = list_get(listProcesos, i);
+					if (proceso_actual->PID == pid) {
+						proceso_encontrado = proceso_actual;
+						break;
+					}
+				}
+
+				if (proceso_encontrado != NULL) {
+					printf("El proceso encontrado es: %d\n", proceso_encontrado->PID);
+					printf("El tamanio de la lista es %d\n", list_size(proceso_encontrado->TablaDePaginas));
+
+					int* marco = NULL;
+					for (int i = 0; i < list_size(proceso_encontrado->TablaDePaginas); i++) {
+						int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas, i);
+						if (i == numero_pagina) {
+							marco = pag_proceso_encontrado;
+							printf("Numero de marco a enviar: %d\n", *marco);
+							break;
+						}
+					}
+
+					if (marco != NULL) {
+						printf("Estoy a punto de enviar el marco\n");
+						usleep(RETARDO_RESPUESTA * 1000);
+						enviarEntero(marco, fd_cpu, MARCO);
+						// No liberar marco ya que no fue asignado dinámicamente en este contexto
+					} else {
+						printf("No se encontró el marco para la página %d del proceso %d\n", numero_pagina, pid);
+					}
+				} else {
+					printf("No se encontró el proceso con PID: %d\n", pid);
+				}			
 				break;
 			case -1:
 				log_error(memoria_logger, "El cliente cpu se desconecto. Terminando servidor");
@@ -529,6 +536,7 @@ void enviar_texto_io(char* text, int fd_io, op_code codigo_operacion)
 
     // No nos olvidamos de liberar la memoria que ya no usaremos
     free(a_enviar);
+	free(tamanio);
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
@@ -556,7 +564,7 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				//
 				break;
 			case STDIN_TOWRITE:
-
+				/*
 				int* direccionFisicaIN = malloc(sizeof(int));
 				direccionFisicaIN = paquete->buffer->stream;
 				char* caracter_to_write = malloc(sizeof(char));
@@ -571,12 +579,24 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				}
 				else
 				{
-					printf("*/*/*/*/ EN LA DIRECCIÓN %d escribiremos el caracter %c\n",*direccionFisicaIN,*caracter_to_write);
+					printf("--------EN LA DIRECCIÓN %d escribiremos el caracter %c\n",*direccionFisicaIN,*caracter_to_write);
 					memmove(espacio_usuario + *direccionFisicaIN, caracter_to_write, 1);
 					//usleep(atoi(RETARDO_RESPUESTA)*1000);
 				}
+				free(direccionFisicaIN);
+				free(caracter_to_write);
+				*/
+				int* direccionFisicaIN = (int*) paquete->buffer->stream;
+				char* caracter_to_write = (char*) (paquete->buffer->stream + sizeof(int));
 
-				//
+				if (*direccionFisicaIN == -1) {
+					int random = 10;
+					enviarEntero(&random, *fd_io, DESPERTAR);
+				} else {
+					printf("*/*/*/*/ EN LA DIRECCIÓN %d escribiremos el caracter %c\n", *direccionFisicaIN, *caracter_to_write);
+					memmove(espacio_usuario + *direccionFisicaIN, caracter_to_write, 1);
+				}
+
 				break;
 			case STDOUT:
 
@@ -620,7 +640,6 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 				// liberar memoria
 				free(text);
 				list_destroy(direcciones_fisicas);
-
 				break;
 			case DIALFS:
 
@@ -832,7 +851,8 @@ void memoria_escuchar_kernel (){
 						{
 							int* to_add = malloc(sizeof(int));
 							*to_add = (-1);
-							list_replace(listMarcos,i,to_add);
+							void* replaced = list_replace(listMarcos,i,to_add);
+							free(replaced);
 						}
 						i++;
 					}
@@ -859,12 +879,13 @@ void memoria_escuchar_kernel (){
 					ProcesoMemoria* dato = encontrarProceso(listProcesos,proceso->PID);
 					sem_post(&protect_list_procesos);
 					printf("Borraremos [CONFIRMADO] el proceso con pid: %d\n", dato->PID);
-					list_destroy(dato->TablaDePaginas);
+					list_destroy_and_destroy_elements(dato->TablaDePaginas,free);
 					free(dato->path);
 					free(dato);
-					free(proceso->path);
+					//free(proceso->path);
 					free(proceso);
 					printf("Proceso borrado con exito\n");
+					usleep(RETARDO_RESPUESTA*1000);
 					break;
 			case PAQUETE:
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);

@@ -109,7 +109,7 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
         return;
     }
 
-	printf("Enviaremos la siguiente direccion fisica: %d y el siguiente caracter: %c\n",*direccionFisica,*caracter);
+	//printf("Enviaremos la siguiente direccion fisica: %d y el siguiente caracter: %c\n",*direccionFisica,*caracter);
 
     int offset = 0;
     memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
@@ -318,7 +318,7 @@ void levantarArchivoDeBloques() {
     strcat(path_copia, "/bloques.dat");
 
     printf("%s\n", path_copia);
-    printf("Hola, entré acá\n");
+   // printf("Hola, entré acá\n");
 
     // Abre el archivo en modo lectura/escritura
 	fd_bloque = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -357,7 +357,7 @@ void levantarArchivoBitMap() {
     strcat(path_copia, "/bitmap.dat");
 
     printf("%s\n", path_copia);
-    printf("Hola, entré acá\n");
+    //printf("Hola, entré acá\n");
 
     // Abre el archivo en modo lectura/escritura
     fd_bitmap = open(path_copia, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -492,10 +492,10 @@ void crear_archivo(char* nombre)
 
 bool esPosibleTruncar(int base, int cantidad)
 {
-    printf("La base encontrada es: %d\n", base);
-    printf("La cantidad a aumentar es: %d\n", cantidad);
-    printf("Mostremos los valores que tenemos en el bitmap\n");
-    printf("El tamanio que posee es: %d\n", bit_map->size);
+    //printf("La base encontrada es: %d\n", base);
+    //printf("La cantidad a aumentar es: %d\n", cantidad);
+    //printf("Mostremos los valores que tenemos en el bitmap\n");
+   // printf("El tamanio que posee es: %d\n", bit_map->size);
 	int cant_bloques = (int)ceil((double)cantidad / BLOCK_SIZE);
 
     for (int i = base + 1; i < cant_bloques + base; i++)
@@ -503,14 +503,14 @@ bool esPosibleTruncar(int base, int cantidad)
         // Verificar si 'i' excede el tamaño del bitmap
         if (i >= bit_map->size * 8)
         {
-            printf("El valor de i es: %d\n", i);
-            printf("i ha excedido el tamaño del bitmap\n");
+            //printf("El valor de i es: %d\n", i);
+            //printf("i ha excedido el tamaño del bitmap\n");
             return false;
         }
 
         int value = bitarray_test_bit(bit_map, i);
-        printf("El valor de i es: %d\n", i);
-        printf("El valor del bit es %d\n", value);
+        //printf("El valor de i es: %d\n", i);
+        //printf("El valor del bit es %d\n", value);
 
         if (value != 0)
         {
@@ -1191,7 +1191,7 @@ void entradasalida_escuchar_memoria (){
 
 			switch (cod_op) {
 			case STDOUT_TOPRINT:
-				printf("Entramos acá adentro reyes\n");
+				//printf("Entramos acá adentro reyes\n");
 				char* text_to_print = malloc(paquete->buffer->size + 1);  // Reservar un byte extra para '\0'
 				if (text_to_print != NULL) {
                     memcpy(text_to_print, paquete->buffer->stream, paquete->buffer->size);
@@ -1207,12 +1207,12 @@ void entradasalida_escuchar_memoria (){
 				break;
 			case DESPERTAR:
 			//
-				printf("Hola, entré a despertar\n");
+				//printf("Hola, entré a despertar\n");
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 			break;
 			case IO_FS_WRITE:
 				//
-				printf("Entramos acá adentro reyes\n");
+				//printf("Entramos acá adentro reyes\n");
 				dialfs_to_write = malloc(paquete->buffer->size + 1);
                 if (dialfs_to_write != NULL) {
                     memcpy(dialfs_to_write, paquete->buffer->stream, paquete->buffer->size);
@@ -1356,7 +1356,7 @@ void entradasalida_escuchar_kernel (){
 	while (control_key) {
 			int cod_op = recibir_operacion(fd_kernel);
 
-			printf("Checkpoin1 \n");
+			//printf("Checkpoin1 \n");
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			if (paquete == NULL) {
             perror("malloc");
@@ -1424,7 +1424,6 @@ void entradasalida_escuchar_kernel (){
 				//printf("Voy a dormir, reyes, la cantidad de %d unidades de trabajo\n", *unidadesDeTrabajo);
 				//printf("Voy a dormir: %d\n", (*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO));
 				//sleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO) / 1000);
-
 				usleep((*unidadesDeTrabajo * TIEMPO_UNIDAD_TRABAJO)*1000);
 				// DEVOLVER AL KERNEL PARA DESPERTAR
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
@@ -1623,6 +1622,7 @@ void entradasalida_escuchar_kernel (){
 				crear_archivo(instruccion_fs_partida_create[2]);
 				free(instruccion_fs_create);
 				string_array_destroy(instruccion_fs_partida_create);
+				usleep(TIEMPO_UNIDAD_TRABAJO*1000);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			case IO_FS_TRUNCATE:
@@ -1647,6 +1647,7 @@ void entradasalida_escuchar_kernel (){
 				truncarArchivo(instruccion_fs_partida_truncate[2], atoi(instruccion_fs_partida_truncate[4]));
 				free(instruccion_fs_truncate);
 				string_array_destroy(instruccion_fs_partida_truncate);
+				usleep(TIEMPO_UNIDAD_TRABAJO*1000);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			break;
@@ -1672,6 +1673,7 @@ void entradasalida_escuchar_kernel (){
 				escribirArchivo(instruccion_fs_partida_write);
 				free(instruccion_fs_write);
 				string_array_destroy(instruccion_fs_partida_write);
+				usleep(TIEMPO_UNIDAD_TRABAJO*1000);
 				enviarEntero(pid_actual, fd_kernel, DESPERTAR);
 				break;
 			case IO_FS_READ:
@@ -1694,6 +1696,7 @@ void entradasalida_escuchar_kernel (){
 				// Mostramos por pantalla
 				//printf("La instrucción que ha llegado es: %s\n", instruccion_fs_read);
 				// Realiza la operación de lectura aquí (por ejemplo, llamando a una función)
+				usleep(TIEMPO_UNIDAD_TRABAJO*1000);
 				leerArchivo(instruccion_fs_partida_read);
 				free(instruccion_fs_read);
                 string_array_destroy(instruccion_fs_partida_read);
@@ -1721,6 +1724,7 @@ void entradasalida_escuchar_kernel (){
 				eliminarArchivo(instruccion_fs_partida_delete);
 				free(instruccion_fs_delete);
                 string_array_destroy(instruccion_fs_partida_delete);
+				usleep(TIEMPO_UNIDAD_TRABAJO*1000);
 				enviarEntero(pid_actual,fd_kernel,DESPERTAR);
 			break;
 			case PAQUETE:
