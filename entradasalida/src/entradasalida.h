@@ -108,6 +108,9 @@ void new_enviar_stdin_to_write_memoria(int* direccionFisica, char* caracter)
         free(paquete);
         return;
     }
+
+	printf("Enviaremos la siguiente direccion fisica: %d y el siguiente caracter: %c\n",*direccionFisica,*caracter);
+
     int offset = 0;
     memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
     offset += sizeof(op_code);

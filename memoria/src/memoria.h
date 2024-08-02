@@ -134,14 +134,16 @@ void memoria_escuchar_cpu (){
 
 			case RESIZE:
 				PCB* proceso_resize = deserializar_proceso_cpu(paquete->buffer);
-				printf("Los datos recibidos de CPU para HACER RESIZE son pid: %d\n",proceso->PID);
-				printf("Los datos recibidos de CPU para HACER RESIZE pc: %d\n",proceso->PC);
+				printf("Los datos recibidos de CPU para HACER RESIZE son pid: %d\n",proceso_resize->PID);
+				printf("Los datos recibidos de CPU para HACER RESIZE pc: %d\n",proceso_resize->PC);
 				
 				sem_wait(&protect_list_procesos);
 				ProcesoMemoria* datos_resize = encontrarProceso(listProcesos,proceso_resize->PID);
 				sem_post(&protect_list_procesos);
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos_resize->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos_resize->path);
+
+				printf("Se busca hacer el siguiente resize %d\n",proceso_resize->path_length);
 
 				printf("Voy a asignarle marcos al proceso\n");
 				//veamos el tamaño actual de la lista del proceso
@@ -188,11 +190,11 @@ void memoria_escuchar_cpu (){
 							j++;
 							printf("-----------------\n");					
 						}
-						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS2");
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS2\n");
 						for(int k = 0; k < list_size(listMarcos); k++)
 						{
 							int * marco = list_get(listMarcos,k);
-							if( *marco == proceso->PID )
+							if( *marco == proceso_resize->PID )
 							{
 								//añado el marco a la tabla de paginas del proceso
 								int* to_add = malloc(sizeof(int));
@@ -201,7 +203,7 @@ void memoria_escuchar_cpu (){
 							}
 						}
 
-						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS3");
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS3\n");
 						//pude asignar los marcos, la lista del proceso quedó así:
 						int l = 0;
 						while( l < list_size(datos_resize->TablaDePaginas) )
@@ -301,8 +303,8 @@ void memoria_escuchar_cpu (){
 					to_send[hola - 1] = '\0';
 					enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
 					free(to_send);
-
 				}
+				printf("EL TAMANIO DE LA LISTA AL MOMENTO DE HACER RESIZE QUEDA DE LA SIGUIENTE FORMA: %d\n",datos_resize->TablaDePaginas);
 				break;
 				/*
 			case LECTURA:
@@ -459,6 +461,8 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 					}
 				}
 				int* marco = malloc(sizeof(int));
+				printf("El proceso encontrado es: %d\n",proceso_encontrado->PID);
+				printf("EL tamanio de la lista es %d\n",list_size(proceso_encontrado->TablaDePaginas));
 				for(int i = 0; i < list_size(proceso_encontrado->TablaDePaginas);i++)
 				{
 					int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas,i);
