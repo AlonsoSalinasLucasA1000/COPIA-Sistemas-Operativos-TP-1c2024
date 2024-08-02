@@ -1758,10 +1758,10 @@ void consolaInteractiva()
 void mover_procesos_a_ready()
 {
 	bool added = false;
+	sem_wait(&sem_cant);   // mutex hace wait
+	sem_wait(&sem);   // mutex hace wait
 	while( added != true )
 	{
-		sem_wait(&sem_cant);   // mutex hace wait
-		sem_wait(&sem);   // mutex hace wait
 		if (iniciar_planificacion == true){
 			sem_wait(&sem_grado_mult);
 			sem_wait(&sem_blocked);
