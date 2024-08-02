@@ -1652,6 +1652,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = "";
 			string_array_destroy(instruccion_split);
 			free(instruccion);
+			free(parametros);
 			free(instruccion_to_send);
 		 	return;
 		}
@@ -1770,6 +1771,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = "";
 			free(instruccion);
 			string_array_destroy(instruccion_split);
+			free(parametros);
 		 	return;
 		 }
 		//CASO DE TENER UNA INSTRUCCION SIGNAL (Recurso): 
