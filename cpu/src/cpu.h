@@ -1064,7 +1064,8 @@ void ejecutar_proceso(PCB* proceso)
 			string_array_destroy(instruccion_split);
 			free(parametros);
 			//DEBEMOS LIBERAR LISTA Y SUS ELEMENTOS
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy(direcciones_fisicas);
+
 		 	return;
 		}
 
@@ -1207,7 +1208,7 @@ void ejecutar_proceso(PCB* proceso)
 			free(instruccion);
 			free(instruccion_to_send);
 			string_array_destroy(instruccion_split);
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy(direcciones_fisicas);
 			free(parametros);
 
 		 	return;
@@ -1322,7 +1323,7 @@ void ejecutar_proceso(PCB* proceso)
 		 			printf("El registro no se encontró en el proceso.\n");
 		 		}
 		 	}
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy(direcciones_fisicas);
 		}
 
 
@@ -1445,7 +1446,7 @@ void ejecutar_proceso(PCB* proceso)
 		 		}
 				
 		 	}
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy(direcciones_fisicas);
 		 }
 
 
@@ -1471,8 +1472,8 @@ void ejecutar_proceso(PCB* proceso)
 			}
 			
 			printf("Copia finalizada\n");
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
-			list_destroy_and_destroy_elements(direcciones_fisicas_destino,free);
+			list_destroy(direcciones_fisicas);
+			list_destroy(direcciones_fisicas_destino);
 		} 
 
 
@@ -1645,7 +1646,7 @@ void ejecutar_proceso(PCB* proceso)
 			free(d_logica);
 			free(tamanio);
 			free(pointer_archivo);
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy(direcciones_fisicas);
 		 	free(instruccionActual);
 		 	//instruccionActual = malloc(1);
 		 	//instruccionActual = "";
@@ -1747,7 +1748,7 @@ void ejecutar_proceso(PCB* proceso)
 		 	//instruccionActual = malloc(1);
 		 	//instruccionActual = "";
 			string_array_destroy(instruccion_split);
-			list_destroy_and_destroy_elements(direcciones_fisicas,free);
+			list_destroy(direcciones_fisicas);
 			free(parametros);
 			free(instruccion);
 			free(instruccion_to_send);
