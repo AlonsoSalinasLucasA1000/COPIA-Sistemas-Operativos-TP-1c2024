@@ -16,7 +16,15 @@
 #include<commons/collections/queue.h>
 #include <semaphore.h>
 #include<commons/collections/list.h>
+#include<commons/temporal.h>
 #include <math.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <commons/bitarray.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <limits.h>
+
 
 
 typedef enum
@@ -27,15 +35,17 @@ typedef enum
 	PROCESOFIN,
 	INTERRUPCION,
 	FIN_DE_QUANTUM,
+	WAIT,
+	SIGNAL,
 
-	MARCO,
-	NUMERO,
+	MARCO, //envia y recibe un Entero
 
 	PROCESOIO,
 	GENERICA,
 	STDIN,
 	STDIN_TOWRITE,
 	STDOUT,
+	STDOUT_TOPRINT,
 	DIALFS,
 	DESPERTAR,
 	WRONG,
@@ -44,20 +54,38 @@ typedef enum
 	ASIGNACION_CORRECTA,
 	OUT_OF_MEMORY,
 
-	LECTURA,
+	LECTURA, //recibe un Entero, 
 	//LEIDO,
 	ESCRITURA_NUMERICO,
 	ESCRITURA_CADENA,
 	ESCRITO,
-	GOKU
+	GOKU,
+	NUEVOPID,
+	FINALIZAR_PROCESO,
+
+	TAMPAGINA, //tamaño de pagina
+	COPY_STRING,
+
+	IO_FS_CREATE,
+	IO_FS_DELETE,
+	IO_FS_TRUNCATE,
+	IO_FS_WRITE,
+	IO_FS_READ,
+	FINSUCCESS,
+	INTERRUPTED_BY_USER
 }op_code;
 
-/*typedef struct
+
+typedef struct 
 {
-	int size;
-	void* stream;
-} t_buffer;
-*/
+	char name[100];
+	int instancias;
+	t_list* listBloqueados;
+	t_list* pid_procesos; //una lista con los pid de los procesos que poseen instancias
+} Recurso;
+
+
+
 typedef struct
 {
 	uint32_t size; // Tamaño del payload
@@ -103,7 +131,7 @@ typedef struct
 {
 	uint32_t PID;
 	uint32_t PC;
-	uint32_t quantum; //es para VRR
+	int quantum; //es para VRR
 	RegistrosCPU registro;//descomente para implementarlo
 	estado_proceso estado;
 	uint32_t path_length;
@@ -124,7 +152,7 @@ typedef struct
 	int pagina;
 	int marco; //
 	//si se necesita se puede agrgar campos extras
-	//int contadorLRU;  //agregado reciente para LRU
+	int contadorLRU;  //agregado reciente para LRU
 } TLB;
 
 typedef struct 
@@ -134,6 +162,8 @@ typedef struct
 	char* nombre;
 	uint32_t path_length;
 	char* path;
+	t_list* procesos_bloqueados;
+	bool ocupado;
 } EntradaSalida;
 
 typedef struct 
@@ -142,6 +172,14 @@ typedef struct
 	char* instruccion;
 	PCB proceso;
 } Instruccion_io;
+
+typedef struct
+{
+	uint32_t path_length;
+	char* path;
+	int fd_archivo; //fd de la metadata abierto
+	int bloque_inicial;
+} Archivo;
 
 
 //funciones crear conexion

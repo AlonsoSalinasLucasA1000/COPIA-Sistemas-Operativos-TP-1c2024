@@ -219,8 +219,8 @@ PCB *deserializar_proceso_cpu(t_newBuffer *buffer)
 	memcpy(&(to_return->path_length), stream, sizeof(uint32_t));
 	stream += sizeof(uint32_t);
 	// deserailizamos el path como tal
-	to_return->path = malloc(to_return->path_length);
-	memcpy(to_return->path, stream, to_return->path_length);//ERROR AL 3 INTENTO
+	//to_return->path = malloc(to_return->path_length);
+	//memcpy(to_return->path, stream, to_return->path_length);//ERROR AL 3 INTENTO
 
 	return to_return;
 }
@@ -397,6 +397,7 @@ void liberar_logger(t_log *logger)
 void liberar_config(t_config *config)
 {
 	config_destroy(config);
+
 	free(config);
 }
 
@@ -449,7 +450,7 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
     // Para el nombre primero mandamos el tamaño y luego el texto en sí:
     memcpy(buffer->stream + buffer->offset, &proceso->path_length, sizeof(uint32_t));
     buffer->offset += sizeof(uint32_t);
-    memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
+   // memcpy(buffer->stream + buffer->offset, proceso->path, proceso->path_length);
     
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -478,6 +479,8 @@ void enviarPCB (PCB* proceso, int socket_servidor,op_code codigo)
 EntradaSalida* deserializar_entrada_salida(t_newBuffer* buffer)
 {
 	EntradaSalida* to_return = malloc(sizeof(EntradaSalida));
+	to_return->procesos_bloqueados = list_create();
+	to_return->ocupado = false;
 	void* stream = buffer->stream;
 
 	//deserializamos los campos del buffer
@@ -522,7 +525,7 @@ Instruccion_io* deserializar_instruccion_io(t_newBuffer *buffer){
 //serializamos
 void enviarEntero(int* entero_a_enviar, int fd_cliente, op_code codigoDeOperacion)
 {
-	printf("Voy a mandar algo\n");
+	//printf("Voy a mandar algo\n");
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
@@ -531,8 +534,47 @@ void enviarEntero(int* entero_a_enviar, int fd_cliente, op_code codigoDeOperacio
     buffer->stream = malloc(buffer->size);
 	
     //Movemos los valores al buffer
-    memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(int));
+    memcpy(buffer->stream + buffer->offset, entero_a_enviar, sizeof(int));
     buffer->offset += sizeof(int);
+
+	//Creamos un Paquete
+    t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigoDeOperacion;
+    paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_cliente, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+	//printf("Lo mande\n");
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
+void enviarUint8(uint8_t* entero_a_enviar, int fd_cliente, op_code codigoDeOperacion)
+{
+	printf("Voy a mandar algo\n");
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+
+    //Calculamos su tamaño
+	buffer->size = sizeof(uint8_t);
+    buffer->offset = 0;
+    buffer->stream = malloc(buffer->size);
+	
+	printf("Ahora mismo estoy mandando %u\n",*entero_a_enviar);
+
+    //Movemos los valores al buffer
+    memcpy(buffer->stream + buffer->offset, entero_a_enviar, sizeof(uint8_t));
 
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));

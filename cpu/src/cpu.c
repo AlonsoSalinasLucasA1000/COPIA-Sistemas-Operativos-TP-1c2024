@@ -17,7 +17,10 @@ int main(int argc, char* argv[])
 	//semaforos para revisar interrupcion
 	sem_init(&interrupt_mutex,0,1);
 
-	any_interrupcion = 0;
+	sem_init(&sem_mmu,0,0);
+
+	any_interrupcion = malloc(sizeof(int));
+	*any_interrupcion = 0;
 
 	cpu_logger = log_create(".//tp.log", "log_cliente", true, LOG_LEVEL_INFO);
 		if (cpu_logger == NULL)
@@ -25,6 +28,8 @@ int main(int argc, char* argv[])
 			perror("Algo paso con el log. No se pudo crear.");
 			exit(EXIT_FAILURE);
 		}
+	
+	cpu_logs_obligatorios = log_create(".//cpu_logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
 
 	//cambiar la ruta del archivo config a una abreviatura
 	t_config *cpu_config = config_create("src/cpu.config");
@@ -80,6 +85,8 @@ int main(int argc, char* argv[])
 	pthread_create (&hilo_memoria, NULL, (void*)cpu_escuchar_memoria, NULL);
 	pthread_detach (hilo_memoria);
 	//si el ultimo hilo se desacopla el programa termina, JOIN HACE QUE EL PROGRAMA NO TERMINE HASTA QUE EL ULTIMO HILO FINALICE
+	
+	listaTLB = list_create();
 
 	while(1)
 	{

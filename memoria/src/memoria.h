@@ -32,6 +32,8 @@ int RETARDO_RESPUESTA;
 void* espacio_usuario;
 void* espacio_pagina;
 
+t_log *memoria_logs_obligatorios;// LOGS MINIMOS Y OBLIGATORIOS
+
 t_list* generarListaDeMarcos(t_list* listMarcos)
 {
 	t_list* to_return = list_create();
@@ -110,34 +112,39 @@ void memoria_escuchar_cpu (){
 				//desearializamos lo recibido
 				
 				PCB* proceso = deserializar_proceso_cpu(paquete->buffer);
-				printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
-				printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
+				//printf("Los datos recibidos de CPU son pid: %d\n",proceso->PID);
+				//printf("Los datos recibidos de CPU son pc: %d\n",proceso->PC);
 				
 				sem_wait(&protect_list_procesos);
 				ProcesoMemoria* datos = encontrarProceso(listProcesos,proceso->PID);
 				sem_post(&protect_list_procesos);
-				printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
-				printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
+				//printf("Los datos encontrados son los siguientes pid: %d\n",datos->PID);
+				//printf("Los datos encontrados son los siguientes path: %s\n",datos->path);
 
 				//leemos la linea indicada por el PC
 			    char* instruccion = abrir_archivo(datos->path, proceso->PC); 
-				printf("Enviaremos a la cpu: %s\n",instruccion); 
+				//printf("Enviaremos a la cpu: %s\n",instruccion); 
 				//enviamos, sin antes dormir el tiempo esperado
-				printf("Me voy a mimir, buenas noches\n");
-				sleep(RETARDO_RESPUESTA/1000);
+				//printf("Me voy a mimir, buenas noches\n");
+				usleep(RETARDO_RESPUESTA*1000);
 				enviar_mensaje_cpu_memoria(instruccion,fd_cpu,MENSAJE);
+				//free(proceso->path);
+				free(proceso);
+				free(instruccion);
 				break;
 
 			case RESIZE:
 				PCB* proceso_resize = deserializar_proceso_cpu(paquete->buffer);
-				printf("Los datos recibidos de CPU para HACER RESIZE son pid: %d\n",proceso->PID);
-				printf("Los datos recibidos de CPU para HACER RESIZE pc: %d\n",proceso->PC);
+				printf("Los datos recibidos de CPU para HACER RESIZE son pid: %d\n",proceso_resize->PID);
+				printf("Los datos recibidos de CPU para HACER RESIZE pc: %d\n",proceso_resize->PC);
 				
 				sem_wait(&protect_list_procesos);
 				ProcesoMemoria* datos_resize = encontrarProceso(listProcesos,proceso_resize->PID);
 				sem_post(&protect_list_procesos);
 				printf("Los datos encontrados son los siguientes pid: %d\n",datos_resize->PID);
 				printf("Los datos encontrados son los siguientes path: %s\n",datos_resize->path);
+
+				printf("Se busca hacer el siguiente resize %d\n",proceso_resize->path_length);
 
 				printf("Voy a asignarle marcos al proceso\n");
 				//veamos el tamaño actual de la lista del proceso
@@ -161,12 +168,16 @@ void memoria_escuchar_cpu (){
 								//reemplazo dicha casilla con el pid del proceso
 								uint32_t* pid = malloc(sizeof(u_int32_t));
 								*pid = proceso_resize->PID;
-								list_replace(listMarcos,i,pid);
+								void* replaced = list_replace(listMarcos,i,pid);
+								free(replaced);
 								paginas_requeridas--;
 							}
 							i++; 
+							//free(pid);
 						}
+						
 						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS1");
+						
 						printf("Pude asignarle, la lista de marcos quedó así:\n");
 						int j = 0;
 						while( j < list_size(listMarcos) )
@@ -184,11 +195,11 @@ void memoria_escuchar_cpu (){
 							j++;
 							printf("-----------------\n");					
 						}
-						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS2");
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS2\n");
 						for(int k = 0; k < list_size(listMarcos); k++)
 						{
 							int * marco = list_get(listMarcos,k);
-							if( *marco == proceso->PID )
+							if( *marco == proceso_resize->PID )
 							{
 								//añado el marco a la tabla de paginas del proceso
 								int* to_add = malloc(sizeof(int));
@@ -196,8 +207,11 @@ void memoria_escuchar_cpu (){
 								list_add(datos_resize->TablaDePaginas,to_add);
 							}
 						}
+						//free(to_add);
+						int tamanio_ampliado = list_size(datos_resize->TablaDePaginas);
+						log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Ampliar: <%d>", proceso_resize->PID , tam_actual_tabla, tamanio_ampliado);
 
-						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS3");
+						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS3\n");
 						//pude asignar los marcos, la lista del proceso quedó así:
 						int l = 0;
 						while( l < list_size(datos_resize->TablaDePaginas) )
@@ -221,6 +235,7 @@ void memoria_escuchar_cpu (){
 						char* to_send = malloc(hola);
 						strncpy(to_send, "vegeta", hola - 1);
 						to_send[hola - 1] = '\0';
+						usleep(RETARDO_RESPUESTA*1000);
 						enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
 						free(to_send);
 					}
@@ -231,6 +246,7 @@ void memoria_escuchar_cpu (){
 						char* to_send = malloc(hola);
 						strncpy(to_send, "vegeta", hola - 1);
 						to_send[hola - 1] = '\0';
+						usleep(RETARDO_RESPUESTA*1000);
 						enviar_mensaje_cpu_memoria(instruccion,fd_cpu,OUT_OF_MEMORY);
 						free(to_send);
 					}
@@ -250,7 +266,7 @@ void memoria_escuchar_cpu (){
 						list_replace(listMarcos,*marco_asignado,liberado);
 
 						//saco el elemento de la tabla
-						list_remove(datos_resize->TablaDePaginas,i);
+						list_remove_and_destroy_element(datos_resize->TablaDePaginas,i,free);
 						i--;
 					}
 
@@ -289,104 +305,123 @@ void memoria_escuchar_cpu (){
 						l++;
 						printf("-----------------\n");					
 					}
+					int tamanio_reducido = list_size(datos_resize->TablaDePaginas);
+					log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Reducir: <%d>", proceso_resize->PID , tam_actual_tabla, tamanio_reducido);
+
 
 					//EXITOSA ASIGNACION, o exitosa reduccion
 					int hola = 20;
 					char* to_send = malloc(hola);
 					strncpy(to_send, "vegeta", hola - 1);
 					to_send[hola - 1] = '\0';
+					usleep(RETARDO_RESPUESTA*1000);
 					enviar_mensaje_cpu_memoria(instruccion,fd_cpu,ASIGNACION_CORRECTA);
 					free(to_send);
-
 				}
+				free(proceso_resize);
+				printf("EL TAMANIO DE LA LISTA AL MOMENTO DE HACER RESIZE QUEDA DE LA SIGUIENTE FORMA: %d\n",datos_resize->TablaDePaginas);
 				break;
-			case LECTURA:
 				
+			case LECTURA:
 				void* copy_stream = paquete->buffer->stream;
 				printf("He recibido un pedido de LECTURA\n");
+
 				int* direccionFisica = malloc(sizeof(int));
-				int* tamanioDato = malloc(sizeof(int));		//puede que sea int*
-				memcpy(direccionFisica,copy_stream,sizeof(int));
+				int* tamanioDato = malloc(sizeof(int)); // puede que sea int*
+				int* pid_lectura = malloc(sizeof(int));
+				memcpy(direccionFisica, copy_stream, sizeof(int));
 				copy_stream += sizeof(int);
-				memcpy(tamanioDato,copy_stream,sizeof(int));
+				memcpy(tamanioDato, copy_stream, sizeof(int));
+				copy_stream += sizeof(int);
+				memcpy(pid_lectura, copy_stream, sizeof(int));
 
-				printf("Recibimos la direccion fisica: %d\n",*direccionFisica);
-				printf("Recibimos la del tamaño del dato: %d\n",*tamanioDato);
+				printf("Recibimos la direccion fisica: %d\n", *direccionFisica);
+				printf("Recibimos el tamaño del dato: %d\n", *tamanioDato);
+				printf("Recibimos el PID: %d\n", *pid_lectura);
 
+				// OBTENER LO ALMACENADO EN LA DIRECCION FISICA
+				void* datoObtenido = malloc(*tamanioDato);
+				memcpy(datoObtenido, espacio_usuario + *direccionFisica, *tamanioDato);
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <LEER> - Dirección fisica: <%d> - Tamaño <%d>", *pid_lectura, *direccionFisica, *tamanioDato);
+				printf("Enviaremos %d\n", *(uint8_t*)datoObtenido);
+				uint8_t* to_enviar = malloc(sizeof(uint8_t));
+				*to_enviar = *(uint8_t*)datoObtenido;
+				usleep(RETARDO_RESPUESTA*1000);
+				enviarUint8(to_enviar, fd_cpu, LECTURA);
 
-				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
-				int* datoObtenido = malloc(sizeof(int));
-				memcpy(datoObtenido,espacio_usuario + *direccionFisica,*tamanioDato);
-				printf("Enviaremos %d\n",*datoObtenido);
-				enviarEntero(datoObtenido,fd_cpu,LECTURA);
-				//
-				break;
-			/*
-			case ESCRITURA_CADENA:
-				void* copia_stream = paquete->buffer->stream;
-				printf("He recibido un pedido de ESCRITURA_CADENA\n");
-				int* direccionFisica = malloc(sizeof(int));
-				int* tamanioCadena = malloc(sizeof(int)); 
-				char* cadena = malloc(sizeof(char));
-				
-				memcpy(direccionFisica, copia_stream, sizeof(int));
-				copia_stream += sizeof(int);
-				memcpy(tamanioCadena, copia_stream, sizeof(int));
-				copia_stream += sizeof(int);
-				memcpy(cadena, copia_stream, *tamanioCadena);
-				
-				//OBTENER LO ALMACENADO EN LA DIRECCION FISICA
-				memmove (espacio_usuario + *direccionFisica, cadena, *tamanioCadena);
+				// liberar memoria
+				free(to_enviar);
+				free(direccionFisica);
+				free(pid_lectura);
+				free(tamanioDato);
+				free(datoObtenido);
 
-				void* to_show = malloc(*tamanioCadena);
-				memcpy(to_show,espacio_usuario + *direccionFisica,*tamanioCadena);
+   				break;
 
-				char* show = (char*)to_show;
-				printf("Mostrar lo escrito %s",show);
-
-Copy N bytes of SRC to DEST, guaranteeing
-   correct behavior for overlapping strings. 
-extern void *memmove (void *__dest, const void *__src, size_t __n)
-     __THROW __nonnull ((1, 2));
-
-
-			
-				break;  
-			*/
 			case ESCRITURA_NUMERICO:
 
 				void* copy_stream_e_n = paquete->buffer->stream;
 				printf("He recibido un pedido de ESCRITURA_NUMERICO\n");
 				int* direccionFisica_e_n = malloc(sizeof(int));
-				int* valor = malloc(sizeof(int));
+				uint8_t* valor = malloc(sizeof(uint8_t));
+				int* pid_e_n = malloc(sizeof(int));
 				memcpy(direccionFisica_e_n,copy_stream_e_n,sizeof(int));
 				copy_stream_e_n += sizeof(int);
-				memcpy(valor,copy_stream_e_n,sizeof(int));
-				
+				memcpy(valor,copy_stream_e_n,sizeof(uint8_t));
+				copy_stream_e_n += sizeof(uint8_t);
+				memcpy(pid_e_n,copy_stream_e_n,sizeof(int));
+				copy_stream_e_n += sizeof(int);
+
 				printf("Recibimos la siguiente direccion: %d\n",*direccionFisica_e_n);//BX
 				printf("Recibimos el siguiente valor a escribir: %d\n",*valor);//AX
-				memmove(espacio_usuario + *direccionFisica_e_n, valor, sizeof(int));
+				printf("Recibimos el siguiente PID: %d\n",*pid_e_n);
+				
+				memmove(espacio_usuario + *direccionFisica_e_n, valor, sizeof(uint8_t));
 
-				void* to_show_n = malloc(sizeof(int));
-				memcpy(to_show_n,espacio_usuario + *direccionFisica_e_n, sizeof(int));
+				void* to_show_n = malloc(sizeof(uint8_t));
+				memcpy(to_show_n,espacio_usuario + *direccionFisica_e_n, sizeof(uint8_t));
 
-				int* show_n = (int*)to_show_n;
-				printf("Mostrar lo escrito %d\n",*show_n);
+				uint8_t* show_n = (uint8_t*)to_show_n;
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <ESCRIBIR> - Dirección fisica: <%d> - Tamaño <%d>", *pid_e_n, *direccionFisica_e_n, sizeof(*valor));
+				printf("Mostrar lo escrito %u\n",*show_n);
 
 				int hola = 20;
 				char* to_send = malloc(hola);
-				strncpy(to_send, "vegeta", hola - 1);
+				strncpy(to_send, "vegeta", hola - 1);//mensaje aleatorio
 				to_send[hola - 1] = '\0';
+				usleep(RETARDO_RESPUESTA*1000);
 				enviar_mensaje_cpu_memoria(to_send,fd_cpu,ESCRITO);
 				free(to_send);
-				
+				free(valor);
+				free(pid_e_n);
+				free(direccionFisica_e_n);
+				free(to_show_n);
+				break;
+			case COPY_STRING:
+				//
+				int* df_origen = paquete->buffer->stream;
+				int* df_destino = paquete->buffer->stream + sizeof(int);
+				int* pid_c_s = paquete->buffer->stream + sizeof(int);
+
+				printf("Ha llegado la siguiente dirección origen: %d\n",*df_origen);
+				printf("Ha llegado la siguiente dirección destino: %d\n", *df_destino);	
+				printf("Ha llegado la siguiente PID: %d\n", *pid_c_s);	
+
+				memmove(espacio_usuario + *df_destino, espacio_usuario + *df_origen,1);
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <LEER> - Dirección fisica: <%d> - Tamaño <%d>", *pid_c_s, *df_origen, sizeof(uint8_t));
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <ESCRIBIR> - Dirección fisica: <%d> - Tamaño <%d>", *pid_c_s, *df_destino, sizeof(u_int8_t));
+
+				int* random = malloc(sizeof(int));
+				usleep(RETARDO_RESPUESTA*1000);
+				enviarEntero(random,fd_cpu,COPY_STRING);
+				free(random);
 				break;
 			case PAQUETE:
 				//
 				break;
 			case MARCO:
+			/*
 				//llega de cpu numero_pagina y pid del proceso
-				/*
 				void* copy_stream_m = paquete->buffer->stream;
 				printf("He recibido un pedido de MARCO\n");
 				int* numero_pagina = malloc(sizeof(int));
@@ -398,26 +433,89 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 				printf("Recibimos numero de pagina: %d\n",*numero_pagina);
 				printf("Recibimos el pid: %d\n",*pid);
 
+				ProcesoMemoria* proceso_encontrado;
 				for(int i=0; i < list_size(listProcesos); i++)
 				{
-					PCB *proceso_actual = list_get(listProcesos,i);
-					if(proceso_actual->PID == pid)
+					ProcesoMemoria *proceso_actual = list_get(listProcesos,i);
+					
+					if(proceso_actual->PID == *pid)
 					{
-						PCB* proceso_encontrado = proceso_actual;
+						proceso_encontrado = proceso_actual;
 					}
 				}
+				int* marco = malloc(sizeof(int));
+				printf("El proceso encontrado es: %d\n",proceso_encontrado->PID);
+				printf("EL tamanio de la lista es %d\n",list_size(proceso_encontrado->TablaDePaginas));
 				for(int i = 0; i < list_size(proceso_encontrado->TablaDePaginas);i++)
 				{
-					if(proceso_encontrado->TablaDePaginas == numero_pagina)
+					int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas,i);
+					if(i == *numero_pagina)
 					{
 						//enviar el marco
-						enviarEntero(marco, fd_cpu,)
+						//int* marco = pag_proceso_encontrado;
+						*marco = *pag_proceso_encontrado;
+						printf("Numero de marco a enviar: %d\n", *marco);
+						
+						//enviarEntero(marco,fd_cpu,MARCO);
+						i=list_size(proceso_encontrado->TablaDePaginas)+1;
 					}
 				}
-				
-*/
+				printf("Estoy a punto de enviar el marco\n");
+				usleep(RETARDO_RESPUESTA*1000);
+				enviarEntero(marco,fd_cpu,MARCO);
+				free(marco);
+				free(numero_pagina);		
+				free(pid);	
+			*/
+			void* copy_stream_m = paquete->buffer->stream;
+				printf("He recibido un pedido de MARCO\n");
 
-				
+				// No es necesario usar malloc aquí
+				int numero_pagina;
+				uint32_t pid;
+
+				// Copiamos directamente los valores
+				memcpy(&numero_pagina, copy_stream_m, sizeof(int));
+				copy_stream_m += sizeof(int);
+				memcpy(&pid, copy_stream_m, sizeof(uint32_t));
+
+				printf("Recibimos numero de pagina: %d\n", numero_pagina);
+				printf("Recibimos el pid: %d\n", pid);
+
+				ProcesoMemoria* proceso_encontrado = NULL;
+				for (int i = 0; i < list_size(listProcesos); i++) {
+					ProcesoMemoria* proceso_actual = list_get(listProcesos, i);
+					if (proceso_actual->PID == pid) {
+						proceso_encontrado = proceso_actual;
+						break;
+					}
+				}
+
+				if (proceso_encontrado != NULL) {
+					printf("El proceso encontrado es: %d\n", proceso_encontrado->PID);
+					printf("El tamanio de la lista es %d\n", list_size(proceso_encontrado->TablaDePaginas));
+					int* marco = NULL;
+					for (int i = 0; i < list_size(proceso_encontrado->TablaDePaginas); i++) {
+						int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas, i);
+						if (i == numero_pagina) {
+							marco = pag_proceso_encontrado;
+							printf("Numero de marco a enviar: %d\n", *marco);
+							break;
+						}
+					}
+					log_info (memoria_logs_obligatorios,  "Acceso a Tabla de Páginas: PID: <%d> - Pagina: <%d> - Marco: <%d>", proceso_encontrado->PID , numero_pagina, *marco);
+
+					if (marco != NULL) {
+						printf("Estoy a punto de enviar el marco\n");
+						usleep(RETARDO_RESPUESTA * 1000);
+						enviarEntero(marco, fd_cpu, MARCO);
+						// No liberar marco ya que no fue asignado dinámicamente en este contexto
+					} else {
+						printf("No se encontró el marco para la página %d del proceso %d\n", numero_pagina, pid);
+					}
+				} else {
+					printf("No se encontró el proceso con PID: %d\n", pid);
+				}			
 				break;
 			case -1:
 				log_error(memoria_logger, "El cliente cpu se desconecto. Terminando servidor");
@@ -434,16 +532,56 @@ extern void *memmove (void *__dest, const void *__src, size_t __n)
 		}
 }
 
-void memoria_escuchar_entradasalida (){
+void enviar_texto_io(char* text, int fd_io, op_code codigo_operacion)
+{
+	int* tamanio = malloc(sizeof(int));
+	*tamanio = strlen(text)+1;
+
+	//Preparamos el buffer
+	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
+	buffer->offset = 0;
+	buffer->size = sizeof(int) + *tamanio;
+	buffer->stream = malloc(buffer->size);
+
+	//vamos reservando la memoria
+	memcpy(buffer->stream + buffer->offset,tamanio, sizeof(int));
+    buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset,text, *tamanio);
+
+	t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
+    //Podemos usar una constante por operación
+    paquete->codigo_operacion = codigo_operacion;
+	paquete->buffer = buffer;
+
+	//Empaquetamos el Buffer
+    void* a_enviar = malloc(buffer->size + sizeof(op_code) + sizeof(uint32_t));
+    int offset = 0;
+    memcpy(a_enviar + offset, &(paquete->codigo_operacion), sizeof(op_code));
+    offset += sizeof(op_code);
+    memcpy(a_enviar + offset, &(paquete->buffer->size), sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+    memcpy(a_enviar + offset, paquete->buffer->stream, paquete->buffer->size);
+    //Por último enviamos
+    send(fd_io, a_enviar, buffer->size + sizeof(op_code) + sizeof(uint32_t), 0);
+
+    // No nos olvidamos de liberar la memoria que ya no usaremos
+    free(a_enviar);
+	free(tamanio);
+    free(paquete->buffer->stream);
+    free(paquete->buffer);
+    free(paquete);
+}
+
+void memoria_escuchar_entradasalida_mult(int* fd_io){
 	bool control_key = 1;
 	while (control_key) {
-			int cod_op = recibir_operacion(fd_entradasalida);
+			int cod_op = recibir_operacion(*fd_io);
 
 			t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
 			paquete->buffer = malloc(sizeof(t_newBuffer));
-			recv(fd_entradasalida,&(paquete->buffer->size),sizeof(uint32_t),0);	
+			recv(*fd_io,&(paquete->buffer->size),sizeof(uint32_t),0);	
 			paquete->buffer->stream = malloc(paquete->buffer->size);
-			recv(fd_entradasalida,paquete->buffer->stream, paquete->buffer->size,0);
+			recv(*fd_io,paquete->buffer->stream, paquete->buffer->size,0);
 
 			switch (cod_op) {
 			case STDIN:
@@ -456,27 +594,39 @@ void memoria_escuchar_entradasalida (){
 				//
 				break;
 			case STDIN_TOWRITE:
+				/*
+				int* direccionFisicaIN = malloc(sizeof(int));
+				direccionFisicaIN = paquete->buffer->stream;
+				char* caracter_to_write = malloc(sizeof(char));
+				caracter_to_write = paquete->buffer->stream + sizeof(int);
 
-				int* direccionFisica = malloc(sizeof(int));
-				direccionFisica = paquete->buffer->stream;
-				int* tamanio = malloc(sizeof(int));
-				tamanio = paquete->buffer->stream + sizeof(int);
-				char* text = malloc(*tamanio);
-				text = paquete->buffer->stream + sizeof(int)*2;
+				if( *direccionFisicaIN == -1 )
+				{
+					int* random = malloc(sizeof(int));
+					*random = 10;
+					enviarEntero(random,*fd_io,DESPERTAR);
+					free(random);
+				}
+				else
+				{
+					printf("--------EN LA DIRECCIÓN %d escribiremos el caracter %c\n",*direccionFisicaIN,*caracter_to_write);
+					memmove(espacio_usuario + *direccionFisicaIN, caracter_to_write, 1);
+					//usleep(atoi(RETARDO_RESPUESTA)*1000);
+				}
+				free(direccionFisicaIN);
+				free(caracter_to_write);
+				*/
+				int* direccionFisicaIN = (int*) paquete->buffer->stream;
+				char* caracter_to_write = (char*) (paquete->buffer->stream + sizeof(int));
 
-				//imprimamos los valores que llegaron
-				printf("direccion fisica que llego fue: %d\n",*direccionFisica);
-				printf("el tamanio que llego fue: %d\n",*tamanio);
-				printf("el texto a escribir es: %s\n",text);
+				if (*direccionFisicaIN == -1) {
+					int random = 10;
+					enviarEntero(&random, *fd_io, DESPERTAR);
+				} else {
+					printf("*/*/*/*/ EN LA DIRECCIÓN %d escribiremos el caracter %c\n", *direccionFisicaIN, *caracter_to_write);
+					memmove(espacio_usuario + *direccionFisicaIN, caracter_to_write, 1);
+				}
 
-				memmove(espacio_usuario + *direccionFisica, text, *tamanio);
-
-				char* hola = malloc(*tamanio);
-				strcpy(hola,espacio_usuario + *direccionFisica);
-
-				printf("Leyendo nuevamente de la dirección física obtuvimos: %s\n",hola);
-
-				//
 				break;
 			case STDOUT:
 
@@ -487,6 +637,41 @@ void memoria_escuchar_entradasalida (){
 				list_add(listStdout,new_io_stdout);
 				//
 				break;
+			case STDOUT_TOPRINT:
+
+				int* tamanio_out = (int*)paquete->buffer->stream;
+				printf("El tamanio es el siguiente %d\n", *tamanio_out);
+
+				t_list* direcciones_fisicas = list_create();
+				for (int i = 1; i < *(tamanio_out) + 1; i++) {
+					list_add(direcciones_fisicas, paquete->buffer->stream + sizeof(int) * i);
+				}
+
+				for (int i = 0; i < list_size(direcciones_fisicas); i++) {
+					int* df = list_get(direcciones_fisicas, i);
+					printf("Las direcciones fisicas que he obtenido es: %d\n", *df);
+				}
+
+				// debemos leer las direcciones y concatenarlas
+				char* text = (char*)malloc(*tamanio_out + 1); // +1 para el carácter nulo
+				text[0] = '\0'; // inicializar la cadena
+
+				for (int i = 0; i < *tamanio_out; i++) {
+					int* df = list_get(direcciones_fisicas, i);
+					char caracter = *(char*)(espacio_usuario + *df);
+					text[i] = caracter; // asignar directamente el carácter
+					printf("El caracter leído es: caracter\n");
+				}
+				text[*tamanio_out] = '\0'; // añadir el carácter nulo al final
+
+				printf("El texto quedó de la siguiente forma: %s\n", text);
+				
+				enviar_texto_io(text,*fd_io,STDOUT_TOPRINT);
+
+				// liberar memoria
+				free(text);
+				list_destroy(direcciones_fisicas);
+				break;
 			case DIALFS:
 
 				EntradaSalida* new_io_dialfs = deserializar_entrada_salida(paquete->buffer);
@@ -495,6 +680,39 @@ void memoria_escuchar_entradasalida (){
 				
 				list_add(listStdin,new_io_dialfs);
 				//
+				break;
+			case IO_FS_WRITE:
+				//
+				int* tamanio_out_FS = (int*)paquete->buffer->stream;
+				printf("El tamanio es el siguiente %d\n", *tamanio_out_FS);
+
+				t_list* direcciones_fisicas_FS = list_create();
+				for (int i = 1; i < *(tamanio_out_FS) + 1; i++) {
+					list_add(direcciones_fisicas_FS, paquete->buffer->stream + sizeof(int) * i);
+				}
+
+				for (int i = 0; i < list_size(direcciones_fisicas_FS); i++) {
+					int* df_FS = list_get(direcciones_fisicas_FS, i);
+					printf("Las direcciones fisicas que he obtenido es: %d\n", *df_FS);
+				}
+
+				char* text_FS = (char*)malloc(*tamanio_out_FS + 1); // +1 para el carácter nulo
+				text_FS[0] = '\0'; // inicializar la cadena
+
+				for (int i = 0; i < *tamanio_out_FS; i++) {
+					int* df_FS = list_get(direcciones_fisicas_FS, i);
+					char caracter = *(char*)(espacio_usuario + *df_FS);
+					text_FS[i] = caracter; // asignar directamente el carácter
+				}
+				text_FS[*tamanio_out_FS] = '\0'; // añadir el carácter nulo al final
+
+				printf("El texto quedó de la siguiente forma: %s\n", text_FS);
+
+				enviar_texto_io(text_FS, *fd_io,IO_FS_WRITE);
+
+				// liberar memoria
+				free(text_FS);
+				list_destroy(direcciones_fisicas_FS);
 				break;
 			case MENSAJE:
 				//
@@ -509,8 +727,29 @@ void memoria_escuchar_entradasalida (){
 				log_warning(memoria_logger,"Operacion desconocida. No quieras meter la pata\n");
 				break;
 			}
+			free(paquete->buffer->stream);
+    	    free(paquete->buffer);
+	        free(paquete);
 		}
 }
+
+
+void escuchar_io()
+{
+	printf("Hola, estoy acá\n");
+	while (1) 
+	{
+		pthread_t thread;
+		int *fd_conexion_ptr = malloc(sizeof(int));
+		*fd_conexion_ptr = accept(fd_memoria, NULL, NULL);
+		printf("(1)Se ha conectado un cliente de tipo IO\n");
+		handshakeServer(*fd_conexion_ptr);
+		printf("Se ha conectado un cliente de tipo IO\n");
+		pthread_create(&thread, NULL, (void*) memoria_escuchar_entradasalida_mult, fd_conexion_ptr);
+		pthread_detach(thread);
+	}
+}
+
 
 void iterator(char* value) 
 {
@@ -521,7 +760,7 @@ void iterator(char* value)
 
 char* leerArchivo(FILE* file)
 {
-	fseek(file,0,SEEK_END); //
+	fseek(file,0,SEEK_END); //a veces falla
 
 	int tamanioArchivo = ftell(file);
 
@@ -583,6 +822,9 @@ char* abrir_archivo(char* path, int PC)
 		//to_ret = newContent[PC];
 		if (to_ret == NULL) {
         printf("Error al asignar memoria para to_ret\n");
+		free(content);
+		string_array_destroy(newContent);
+		fclose(file);
         // Manejar el error apropiadamente
     	}
     	
@@ -590,10 +832,18 @@ char* abrir_archivo(char* path, int PC)
 	}
 	else
 	{
-		to_ret = "";
+		to_ret = strdup("");
+		if (to_ret == NULL){
+			free(content);
+			string_array_destroy(newContent);
+			fclose(file);
+			return NULL;
+		}
+		
 	}
 
     free(content);
+	string_array_destroy(newContent);
 	fclose(file);
 	return to_ret;
 }
@@ -632,7 +882,8 @@ void memoria_escuchar_kernel (){
 						{
 							int* to_add = malloc(sizeof(int));
 							*to_add = (-1);
-							list_replace(listMarcos,i,to_add);
+							void* replaced = list_replace(listMarcos,i,to_add);
+							free(replaced);
 						}
 						i++;
 					}
@@ -659,10 +910,14 @@ void memoria_escuchar_kernel (){
 					ProcesoMemoria* dato = encontrarProceso(listProcesos,proceso->PID);
 					sem_post(&protect_list_procesos);
 					printf("Borraremos [CONFIRMADO] el proceso con pid: %d\n", dato->PID);
-					list_destroy(dato->TablaDePaginas);
+					log_info (memoria_logs_obligatorios,  "Destruccion de Tabla de Paginas: PID: <%d> - Tamaño: <%d>", dato->PID , list_size(dato->TablaDePaginas));
+					list_destroy_and_destroy_elements(dato->TablaDePaginas,free);
 					free(dato->path);
 					free(dato);
+					//free(proceso->path);
+					free(proceso);
 					printf("Proceso borrado con exito\n");
+					usleep(RETARDO_RESPUESTA*1000);
 					break;
 			case PAQUETE:
 				ProcesoMemoria* nuevoProceso = deserializar_proceso_memoria(paquete->buffer);
@@ -676,6 +931,8 @@ void memoria_escuchar_kernel (){
 					sem_post(&protect_list_procesos);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
+					log_info (memoria_logs_obligatorios,  "Creacion: PID: <%d> - Tamaño: <%d>", nuevoProceso->PID , list_size(nuevoProceso->TablaDePaginas));
+
 				} else{
 					printf("No se pudo deserializar\n");
 				}
