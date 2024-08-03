@@ -569,7 +569,7 @@ void kernel_escuchar_cpu ()
 					int quantum_restado;
 					if (quantum_transcurrido > INT_MAX) {
 						quantum_restado = -1;
-						proceso_io->quantum -= quantum_restado;
+						proceso_io->quantum = quantum_restado;
 					} else {
 						quantum_restado = (int)quantum_transcurrido;
 						proceso_io->quantum -= quantum_restado;
@@ -1174,8 +1174,8 @@ void kernel_escuchar_cpu ()
 								}
 								
 							}
-							string_array_destroy(instruccion_partida_dialfs);
 						}
+						string_array_destroy(instruccion_partida_dialfs);
 					}
 					else
 					{
