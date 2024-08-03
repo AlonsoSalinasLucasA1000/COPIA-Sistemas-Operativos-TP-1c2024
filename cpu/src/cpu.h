@@ -793,13 +793,25 @@ void ejecutar_proceso(PCB* proceso)
 			if( esRegistroUint8(instruccion_split[1]) )
 			{
 				//si es un registro de 8 bits, tenemos que interpretarlo como tal
-				uint8_t* valor_registro1 = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
-				uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
-				if (valor_registro1 != NULL && valor_registro2 != NULL) 
+			uint8_t* valor_registro1 = (uint8_t*)obtener_registro(instruccion_split[1],proceso);
+				if (esRegistroUint32(instruccion_split[2]))
 				{
-					*valor_registro1 = *valor_registro1 + *valor_registro2; // Asigna el valor a través del puntero
-					printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
-				} 
+					uint32_t* valor_registro2 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+					if (valor_registro1 != NULL && valor_registro2 != NULL) 
+					{
+						*valor_registro1 = *valor_registro1 + *valor_registro2;
+						printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+					}
+				}
+				else if (esRegistroUint8(instruccion_split[2]))
+				{
+					uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
+					if (valor_registro1 != NULL && valor_registro2 != NULL) 
+					{
+						*valor_registro1 = *valor_registro1 + *valor_registro2;
+						printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+					}
+				}
 				else 
 				{
 					printf("El registro no se encontró en el proceso.\n");
@@ -810,12 +822,24 @@ void ejecutar_proceso(PCB* proceso)
 				if( esRegistroUint32(instruccion_split[1]) )
 				{
 					uint32_t* valor_registro1 = (uint32_t*)obtener_registro(instruccion_split[1],proceso);
-					uint32_t* valor_registro2 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
-					if (valor_registro1 != NULL && valor_registro2 != NULL) 
+					if (esRegistroUint32(instruccion_split[2]))
 					{
-						*valor_registro1 = *valor_registro1 + *valor_registro2;
-						printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
-					} 
+						uint32_t* valor_registro2 = (uint32_t*)obtener_registro(instruccion_split[2],proceso);
+						if (valor_registro1 != NULL && valor_registro2 != NULL) 
+						{
+							*valor_registro1 = *valor_registro1 + *valor_registro2;
+							printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+						}
+					}
+					else if (esRegistroUint8(instruccion_split[2]))
+					{
+						uint8_t* valor_registro2 = (uint8_t*)obtener_registro(instruccion_split[2],proceso);
+						if (valor_registro1 != NULL && valor_registro2 != NULL) 
+						{
+							*valor_registro1 = *valor_registro1 + *valor_registro2;
+							printf("El valor de %s es: %d\n", instruccion_split[1], *valor_registro1);
+						}
+					}
 					else 
 					{
 						printf("El registro no se encontró en el proceso.\n");

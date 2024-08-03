@@ -339,7 +339,7 @@ void memoria_escuchar_cpu (){
 				// OBTENER LO ALMACENADO EN LA DIRECCION FISICA
 				void* datoObtenido = malloc(*tamanioDato);
 				memcpy(datoObtenido, espacio_usuario + *direccionFisica, *tamanioDato);
-				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <LEER> - Dirección fisica: <%d> - Tamaño <%d>", pid_lectura, *direccionFisica, *tamanioDato);
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <LEER> - Dirección fisica: <%d> - Tamaño <%d>", *pid_lectura, *direccionFisica, *tamanioDato);
 				printf("Enviaremos %d\n", *(uint8_t*)datoObtenido);
 				uint8_t* to_enviar = malloc(sizeof(uint8_t));
 				*to_enviar = *(uint8_t*)datoObtenido;
@@ -905,6 +905,7 @@ void memoria_escuchar_kernel (){
 					ProcesoMemoria* dato = encontrarProceso(listProcesos,proceso->PID);
 					sem_post(&protect_list_procesos);
 					printf("Borraremos [CONFIRMADO] el proceso con pid: %d\n", dato->PID);
+					log_info (memoria_logs_obligatorios,  "Destruccion de Tabla de Paginas: PID: <%d> - Tamaño: <%d>", dato->PID , list_size(dato->TablaDePaginas));
 					list_destroy_and_destroy_elements(dato->TablaDePaginas,free);
 					free(dato->path);
 					free(dato);
@@ -925,7 +926,7 @@ void memoria_escuchar_kernel (){
 					sem_post(&protect_list_procesos);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
-					log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño: <%d>", nuevoProceso->PID , list_size(nuevoProceso->TablaDePaginas));
+					log_info (memoria_logs_obligatorios,  "Creacio: PID: <%d> - Tamaño: <%d>", nuevoProceso->PID , list_size(nuevoProceso->TablaDePaginas));
 
 				} else{
 					printf("No se pudo deserializar\n");
