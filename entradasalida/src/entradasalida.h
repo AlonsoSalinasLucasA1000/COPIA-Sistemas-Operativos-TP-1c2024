@@ -471,7 +471,7 @@ void crear_archivo(char* nombre)
 			//printf("valor de i es: %d\n",i);
 			i++;
 		}
-
+		printf("El nuevo valor base es %d\n",i);
 		archivo->bloque_inicial = i;
 		list_add(lista_archivos, archivo);
 		msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
@@ -543,17 +543,32 @@ int encontrar_bloques_continuos(t_bitarray* bit_array, size_t desired_length) {
     return -1;
 }
 
-bool hay_bloques_libres(t_bitarray* bitarray, int cantidad_bloques) {
+bool hay_bloques_libres(t_bitarray* bitarray, int cantidad_bloques, int base) {
     int contador_libres = 0;
     int tamanio = bitarray_get_max_bit(bitarray);
+	printf("El tamanio del bitarray es: %d\n",tamanio);
+
+	printf("Antes mostramos cómo está el bitarray\n");
+	for(int i = 0; i < tamanio; i++)
+	{
+		int j = bitarray_test_bit(bitarray,i);
+		printf("%d\n",j);
+	}
+
 
     for (int i = 0; i < tamanio; i++) {
         if (!bitarray_test_bit(bitarray, i)) {
             contador_libres++;
         }
+		if(i == base) //no contamos a la base
+		{
+			contador_libres++;
+		}
         if (contador_libres >= cantidad_bloques) {
+			printf("El tamanio de libres FINAL es %d\n",contador_libres);
             return true;
         }
+		printf("El tamanio de libres es %d\n",contador_libres);
     }
     return false;
 }
@@ -852,7 +867,11 @@ void truncarArchivo(char* nombre, int cantidad)
 	int base = config_get_int_value(metadata_archivo,"BLOQUE_INICIAL");
 	int tamanio = config_get_int_value(metadata_archivo,"TAMANIO_ARCHIVO");
 	int cant_bloques = (int)ceil((double)cantidad / BLOCK_SIZE);
-	//printf("Para el archivo: %s, necesitamos la cantidad de bloques de %d\n",nombre,cant_bloques);
+	printf("El archivo es: %s\n",archivo->path);
+	printf("La base es: %d\n",base);
+	printf("El tamanio es: %d\n",tamanio);
+
+	printf("Para el archivo: %s, necesitamos la cantidad de bloques de %d\n",nombre,cant_bloques);
 
 	if( cantidad > tamanio )
 	{
@@ -900,6 +919,8 @@ void truncarArchivo(char* nombre, int cantidad)
 				//antes liberamos el bloque que poseía anteriormente
 				bitarray_clean_bit(bit_map,base);
 
+				msync(espacio_bit_map,BLOCK_COUNT/8,MS_SYNC);
+
 				//llevamos a cabo la asignación
 				for(int i = new_base; i < cant_bloques+new_base; i++)
 				{
@@ -935,7 +956,7 @@ void truncarArchivo(char* nombre, int cantidad)
 			{
 				//llevar a cabo compactación
 				//antes de llevar a cabo la compactación debemos ver si siquiera existe la cantidad de bloques libres 
-				if( hay_bloques_libres(bit_map,cant_bloques) )
+				if( hay_bloques_libres(bit_map,cant_bloques,base) )
 				{
 					//printf("Existe la cantidad de bloques libres, pero no se encuentran de forma continua. Debemos llevar a cabo la compactación\n");
 					compactacion(archivo,metadata_archivo,tamanio);

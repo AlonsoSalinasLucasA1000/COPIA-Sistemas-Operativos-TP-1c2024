@@ -387,7 +387,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 }
 
 
-void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
+void pedido_lectura_numerico(int direccion_fisica, int tamanioDato, int pid)
 {
 	int* entero_a_enviar = malloc(sizeof(int));
 	*entero_a_enviar = direccion_fisica;
@@ -395,10 +395,13 @@ void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
 	int* size_a_enviar = malloc(sizeof(int));
 	*size_a_enviar = tamanioDato;
 
+	int* pid_a_enviar = malloc(sizeof(int));
+	*pid_a_enviar = pid;
+
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-	buffer->size = sizeof(int)*2;
+	buffer->size = sizeof(int)*3;
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
@@ -406,6 +409,9 @@ void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
     memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(int));
     buffer->offset += sizeof(int);
 	memcpy(buffer->stream + buffer->offset,size_a_enviar, sizeof(int));
+    buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset,pid_a_enviar, sizeof(int));
+
 
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -429,11 +435,14 @@ void pedido_lectura_numerico(int direccion_fisica, int tamanioDato)
     free(paquete->buffer->stream);
     free(paquete->buffer);
     free(paquete);
+	free(entero_a_enviar);
+	free(size_a_enviar);
+	free(pid_a_enviar);
 
 }
 
 
-void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
+void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir , int pid)
 {
 	int* direccion_a_enviar = malloc(sizeof(int));
 	*direccion_a_enviar = direccion_fisica;
@@ -441,10 +450,13 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
 	uint8_t* entero_a_enviar = malloc(sizeof(uint8_t));
 	*entero_a_enviar = valor_a_escribir;
 
+	int* pid_a_enviar = malloc(sizeof(int));
+	*pid_a_enviar = pid;
+
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-	buffer->size = sizeof(int) + sizeof(uint8_t);
+	buffer->size = sizeof(int)*2+ sizeof(uint8_t);
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 	
@@ -452,6 +464,8 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
     memcpy(buffer->stream + buffer->offset,direccion_a_enviar, sizeof(int));
     buffer->offset += sizeof(int);
 	memcpy(buffer->stream + buffer->offset,entero_a_enviar, sizeof(uint8_t));
+    buffer->offset += sizeof(uint8_t);
+    memcpy(buffer->stream + buffer->offset,pid_a_enviar, sizeof(int));
 
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -478,6 +492,7 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir)
 
 	free(direccion_a_enviar);
 	free(entero_a_enviar);
+	free(pid_a_enviar);
 }
 
 
@@ -650,7 +665,7 @@ bool esRegistroUint32(char* registro)
 	return to_ret;
 }
 
-void enviarDirecciones(int direccion_origen, int direccion_destino)
+void enviarDirecciones(int direccion_origen, int direccion_destino, int pid)
 {
 	//preparamos la primera direccion
 	int* d1_to_send = malloc(sizeof(int));
@@ -660,10 +675,13 @@ void enviarDirecciones(int direccion_origen, int direccion_destino)
 	int* d2_to_send = malloc(sizeof(int));
 	*d2_to_send = direccion_destino;
 
+	int* pid_a_enviar = malloc(sizeof(int));
+	*pid_a_enviar = pid;
+
 	t_newBuffer* buffer = malloc(sizeof(t_newBuffer));
 
     //Calculamos su tamaño
-	buffer->size = sizeof(int)*2;
+	buffer->size = sizeof(int)*3;
     buffer->offset = 0;
     buffer->stream = malloc(buffer->size);
 
@@ -671,6 +689,8 @@ void enviarDirecciones(int direccion_origen, int direccion_destino)
     memcpy(buffer->stream + buffer->offset, d1_to_send, sizeof(int));
 	buffer->offset += sizeof(int);
 	memcpy(buffer->stream + buffer->offset, d2_to_send, sizeof(int));
+	buffer->offset += sizeof(int);
+	memcpy(buffer->stream + buffer->offset, pid_a_enviar, sizeof(int));
 
 	//Creamos un Paquete
     t_newPaquete* paquete = malloc(sizeof(t_newPaquete));
@@ -696,6 +716,7 @@ void enviarDirecciones(int direccion_origen, int direccion_destino)
     free(paquete);
 	free(d1_to_send); //
 	free(d2_to_send); //
+	free(pid_a_enviar);
 }
 
 
@@ -1233,7 +1254,7 @@ void ejecutar_proceso(PCB* proceso)
 							direccion_fisica = list_get(direcciones_fisicas,i);
 						}
 
-						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
+						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t), proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria
 		 				sem_wait(&sem_lectura);
 					
 		 				*registro_datos = *valor_leido; //asigna ese valor al registro
@@ -1250,7 +1271,7 @@ void ejecutar_proceso(PCB* proceso)
 							for(int i=0; i < list_size(direcciones_fisicas);i++)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
-								pedido_lectura_numerico (direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
+								pedido_lectura_numerico (direccion_fisica, sizeof(uint8_t),proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria
 								
 								sem_wait(&sem_lectura);
 
@@ -1285,7 +1306,7 @@ void ejecutar_proceso(PCB* proceso)
 							direccion_fisica = list_get(direcciones_fisicas,i);
 						}
 
-						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
+						pedido_lectura_numerico(direccion_fisica, sizeof(uint8_t),proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria
 		 				sem_wait(&sem_lectura);
 					
 		 				*registro_datos = *valor_leido; //asigna ese valor al registro
@@ -1302,7 +1323,7 @@ void ejecutar_proceso(PCB* proceso)
 							for(int i=0; i < list_size(direcciones_fisicas);i++)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
-								pedido_lectura_numerico (direccion_fisica, sizeof(uint8_t));//devuelve el valor de lo que esta en esa posicion de memoria
+								pedido_lectura_numerico (direccion_fisica, sizeof(uint8_t),proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria
 								
 								sem_wait(&sem_lectura);
 
@@ -1352,7 +1373,7 @@ void ejecutar_proceso(PCB* proceso)
 					printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
 					printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
 
-					pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
+					pedido_escritura_numerico (direccion_fisica, *registro_datos, proceso->PID);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
 					sem_wait(&sem_escritura);
 
 					log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%d>", proceso->PID, direccion_fisica, *registro_datos);
@@ -1377,7 +1398,7 @@ void ejecutar_proceso(PCB* proceso)
 						{
 							int direccion_fisica = list_get(direcciones_fisicas,i);
 							//printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
-							pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
+							pedido_escritura_numerico (direccion_fisica, byte[i],proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria		
 							sem_wait(&sem_escritura);
 							log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%u>", proceso->PID, direccion_fisica, byte[i]);
 						}
@@ -1409,7 +1430,7 @@ void ejecutar_proceso(PCB* proceso)
 						printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
 						printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
 
-						pedido_escritura_numerico (direccion_fisica, *registro_datos);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
+						pedido_escritura_numerico (direccion_fisica, *registro_datos,proceso->PID);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
 						sem_wait(&sem_escritura);
 						log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%d>", proceso->PID, direccion_fisica, *registro_datos);
 
@@ -1433,7 +1454,7 @@ void ejecutar_proceso(PCB* proceso)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
 								printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
-								pedido_escritura_numerico (direccion_fisica, byte[i]);//devuelve el valor de lo que esta en esa posicion de memoria		
+								pedido_escritura_numerico (direccion_fisica, byte[i],proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria		
 								sem_wait(&sem_escritura);
 								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%u>", proceso->PID, direccion_fisica, byte[i]);
 							}
@@ -1466,7 +1487,7 @@ void ejecutar_proceso(PCB* proceso)
 				printf("El destino a enviar es: %d\n",d1);
 				int d2 = list_get(direcciones_fisicas_destino,i);
 				printf("El destino a enviar es: %d\n",d2);
-				enviarDirecciones(d1, d2);
+				enviarDirecciones(d1, d2, proceso->PID);
 				//esperamos a recibir la señal para continuar
 				sem_wait(&sem_escritura);
 			}

@@ -21,6 +21,14 @@ int main(int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+memoria_logs_obligatorios = log_create(".//logs_obligatorios.log", "logs", true, LOG_LEVEL_INFO);
+
+if (memoria_logs_obligatorios == NULL)
+{
+    perror("Algo paso con el log_Obligatorio. No se pudo crear.");
+	exit(EXIT_FAILURE);
+}
+
 	//t_config *memoria_config = config_create("/home/utnso/tp-2024-1c-Grupo-120/memoria/src/memoria.config");
 	t_config *memoria_config = config_create("src/memoria.config");
 	if (memoria_config == NULL)

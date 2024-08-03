@@ -32,6 +32,7 @@ int RETARDO_RESPUESTA;
 void* espacio_usuario;
 void* espacio_pagina;
 
+t_log *memoria_logs_obligatorios;// LOGS MINIMOS Y OBLIGATORIOS
 
 t_list* generarListaDeMarcos(t_list* listMarcos)
 {
@@ -174,6 +175,7 @@ void memoria_escuchar_cpu (){
 							i++; 
 						}
 						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS1");
+						
 						printf("Pude asignarle, la lista de marcos quedó así:\n");
 						int j = 0;
 						while( j < list_size(listMarcos) )
@@ -203,6 +205,8 @@ void memoria_escuchar_cpu (){
 								list_add(datos_resize->TablaDePaginas,to_add);
 							}
 						}
+						int tamanio_ampliado = list_size(datos_resize->TablaDePaginas);
+						log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Ampliar: <%d>", proceso_resize->PID , tam_actual_tabla, tamanio_ampliado);
 
 						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS3\n");
 						//pude asignar los marcos, la lista del proceso quedó así:
@@ -298,6 +302,9 @@ void memoria_escuchar_cpu (){
 						l++;
 						printf("-----------------\n");					
 					}
+					int tamanio_reducido = list_size(datos_resize->TablaDePaginas);
+					log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Reducir: <%d>", proceso_resize->PID , tam_actual_tabla, tamanio_reducido);
+
 
 					//EXITOSA ASIGNACION, o exitosa reduccion
 					int hola = 20;
@@ -318,16 +325,21 @@ void memoria_escuchar_cpu (){
 
 				int* direccionFisica = malloc(sizeof(int));
 				int* tamanioDato = malloc(sizeof(int)); // puede que sea int*
+				int* pid_lectura = malloc(sizeof(int));
 				memcpy(direccionFisica, copy_stream, sizeof(int));
 				copy_stream += sizeof(int);
 				memcpy(tamanioDato, copy_stream, sizeof(int));
+				copy_stream += sizeof(int);
+				memcpy(pid_lectura, copy_stream, sizeof(int));
 
 				printf("Recibimos la direccion fisica: %d\n", *direccionFisica);
 				printf("Recibimos el tamaño del dato: %d\n", *tamanioDato);
+				printf("Recibimos el PID: %d\n", *pid_lectura);
 
 				// OBTENER LO ALMACENADO EN LA DIRECCION FISICA
 				void* datoObtenido = malloc(*tamanioDato);
 				memcpy(datoObtenido, espacio_usuario + *direccionFisica, *tamanioDato);
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <LEER> - Dirección fisica: <%d> - Tamaño <%d>", pid_lectura, *direccionFisica, *tamanioDato);
 				printf("Enviaremos %d\n", *(uint8_t*)datoObtenido);
 				uint8_t* to_enviar = malloc(sizeof(uint8_t));
 				*to_enviar = *(uint8_t*)datoObtenido;
@@ -336,6 +348,7 @@ void memoria_escuchar_cpu (){
 
 				// liberar memoria
 				free(direccionFisica);
+				free(pid_lectura);
 				free(tamanioDato);
 				free(datoObtenido);
 
@@ -347,18 +360,25 @@ void memoria_escuchar_cpu (){
 				printf("He recibido un pedido de ESCRITURA_NUMERICO\n");
 				int* direccionFisica_e_n = malloc(sizeof(int));
 				uint8_t* valor = malloc(sizeof(uint8_t));
+				int* pid_e_n = malloc(sizeof(int));
 				memcpy(direccionFisica_e_n,copy_stream_e_n,sizeof(int));
 				copy_stream_e_n += sizeof(int);
 				memcpy(valor,copy_stream_e_n,sizeof(uint8_t));
-				
+				copy_stream_e_n += sizeof(uint8_t);
+				memcpy(pid_e_n,copy_stream_e_n,sizeof(int));
+				copy_stream_e_n += sizeof(int);
+
 				printf("Recibimos la siguiente direccion: %d\n",*direccionFisica_e_n);//BX
 				printf("Recibimos el siguiente valor a escribir: %d\n",*valor);//AX
+				printf("Recibimos el siguiente PID: %d\n",*pid_e_n);
+				
 				memmove(espacio_usuario + *direccionFisica_e_n, valor, sizeof(uint8_t));
 
 				void* to_show_n = malloc(sizeof(uint8_t));
 				memcpy(to_show_n,espacio_usuario + *direccionFisica_e_n, sizeof(uint8_t));
 
 				uint8_t* show_n = (uint8_t*)to_show_n;
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <ESCRIBIR> - Dirección fisica: <%d> - Tamaño <%d>", *pid_e_n, *direccionFisica_e_n, sizeof(*valor));
 				printf("Mostrar lo escrito %u\n",*show_n);
 
 				int hola = 20;
@@ -369,6 +389,7 @@ void memoria_escuchar_cpu (){
 				enviar_mensaje_cpu_memoria(to_send,fd_cpu,ESCRITO);
 				free(to_send);
 				free(valor);
+				free(pid_e_n);
 				free(direccionFisica_e_n);
 				free(to_show_n);
 				break;
@@ -376,11 +397,16 @@ void memoria_escuchar_cpu (){
 				//
 				int* df_origen = paquete->buffer->stream;
 				int* df_destino = paquete->buffer->stream + sizeof(int);
+				int* pid_c_s = paquete->buffer->stream + sizeof(int);
 
 				printf("Ha llegado la siguiente dirección origen: %d\n",*df_origen);
 				printf("Ha llegado la siguiente dirección destino: %d\n", *df_destino);	
+				printf("Ha llegado la siguiente PID: %d\n", *pid_c_s);	
 
 				memmove(espacio_usuario + *df_destino, espacio_usuario + *df_origen,1);
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <LEER> - Dirección fisica: <%d> - Tamaño <%d>", *pid_c_s, *df_origen, sizeof(uint8_t));
+				log_info (memoria_logs_obligatorios,  "PID: <%d> - Accion: <ESCRIBIR> - Dirección fisica: <%d> - Tamaño <%d>", *pid_c_s, *df_destino, sizeof(u_int8_t));
+
 				int* random = malloc(sizeof(int));
 				usleep(RETARDO_RESPUESTA*1000);
 				enviarEntero(random,fd_cpu,COPY_STRING);
@@ -464,7 +490,6 @@ void memoria_escuchar_cpu (){
 				if (proceso_encontrado != NULL) {
 					printf("El proceso encontrado es: %d\n", proceso_encontrado->PID);
 					printf("El tamanio de la lista es %d\n", list_size(proceso_encontrado->TablaDePaginas));
-
 					int* marco = NULL;
 					for (int i = 0; i < list_size(proceso_encontrado->TablaDePaginas); i++) {
 						int* pag_proceso_encontrado = list_get(proceso_encontrado->TablaDePaginas, i);
@@ -474,6 +499,7 @@ void memoria_escuchar_cpu (){
 							break;
 						}
 					}
+					log_info (memoria_logs_obligatorios,  "PID: <%d> - Pagina: <%d> - Marco: <%d>", proceso_encontrado->PID , numero_pagina, *marco);
 
 					if (marco != NULL) {
 						printf("Estoy a punto de enviar el marco\n");
@@ -899,6 +925,8 @@ void memoria_escuchar_kernel (){
 					sem_post(&protect_list_procesos);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
+					log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño: <%d>", nuevoProceso->PID , list_size(nuevoProceso->TablaDePaginas));
+
 				} else{
 					printf("No se pudo deserializar\n");
 				}

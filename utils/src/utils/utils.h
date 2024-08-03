@@ -23,6 +23,8 @@
 #include <commons/bitarray.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <limits.h>
+
 
 
 typedef enum
