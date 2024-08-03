@@ -173,7 +173,9 @@ void memoria_escuchar_cpu (){
 								paginas_requeridas--;
 							}
 							i++; 
+							//free(pid);
 						}
+						
 						printf("LLEGUE HASTA ACA EN LA PARTE DE ASIGNAR MARCOS1");
 						
 						printf("Pude asignarle, la lista de marcos quedó así:\n");
@@ -205,6 +207,7 @@ void memoria_escuchar_cpu (){
 								list_add(datos_resize->TablaDePaginas,to_add);
 							}
 						}
+						//free(to_add);
 						int tamanio_ampliado = list_size(datos_resize->TablaDePaginas);
 						log_info (memoria_logs_obligatorios,  "PID: <%d> - Tamaño Actual: <%d> - Tamaño a Ampliar: <%d>", proceso_resize->PID , tam_actual_tabla, tamanio_ampliado);
 
@@ -263,7 +266,7 @@ void memoria_escuchar_cpu (){
 						list_replace(listMarcos,*marco_asignado,liberado);
 
 						//saco el elemento de la tabla
-						list_remove(datos_resize->TablaDePaginas,i);
+						list_remove_and_destroy_element(datos_resize->TablaDePaginas,i,free);
 						i--;
 					}
 
@@ -347,6 +350,7 @@ void memoria_escuchar_cpu (){
 				enviarUint8(to_enviar, fd_cpu, LECTURA);
 
 				// liberar memoria
+				free(to_enviar);
 				free(direccionFisica);
 				free(pid_lectura);
 				free(tamanioDato);
@@ -499,7 +503,7 @@ void memoria_escuchar_cpu (){
 							break;
 						}
 					}
-					log_info (memoria_logs_obligatorios,  "PID: <%d> - Pagina: <%d> - Marco: <%d>", proceso_encontrado->PID , numero_pagina, *marco);
+					log_info (memoria_logs_obligatorios,  "Acceso a Tabla de Páginas: PID: <%d> - Pagina: <%d> - Marco: <%d>", proceso_encontrado->PID , numero_pagina, *marco);
 
 					if (marco != NULL) {
 						printf("Estoy a punto de enviar el marco\n");
@@ -656,6 +660,7 @@ void memoria_escuchar_entradasalida_mult(int* fd_io){
 					int* df = list_get(direcciones_fisicas, i);
 					char caracter = *(char*)(espacio_usuario + *df);
 					text[i] = caracter; // asignar directamente el carácter
+					printf("El caracter leído es: caracter\n");
 				}
 				text[*tamanio_out] = '\0'; // añadir el carácter nulo al final
 
@@ -926,7 +931,7 @@ void memoria_escuchar_kernel (){
 					sem_post(&protect_list_procesos);
 					printf("El PID que recibi es: %d\n", nuevoProceso->PID);
 					printf("El PATH que recibi es: %s\n", nuevoProceso->path);
-					log_info (memoria_logs_obligatorios,  "Creacio: PID: <%d> - Tamaño: <%d>", nuevoProceso->PID , list_size(nuevoProceso->TablaDePaginas));
+					log_info (memoria_logs_obligatorios,  "Creacion: PID: <%d> - Tamaño: <%d>", nuevoProceso->PID , list_size(nuevoProceso->TablaDePaginas));
 
 				} else{
 					printf("No se pudo deserializar\n");

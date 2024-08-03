@@ -96,6 +96,7 @@ PCB* encontrarProceso(t_list* lista, uint32_t pid)
 	return ret;
 }
 
+/*
 char* obtener_cadena_pids(t_list* lista)
 {
     // Calculamos la longitud total de la cadena
@@ -130,9 +131,49 @@ char* obtener_cadena_pids(t_list* lista)
 
     return cadena_pids;
 }
+*/
 
+char* obtener_cadena_pids(t_list* lista)
+{
+    // Calculamos la longitud total de la cadena
+    size_t longitud_total = 2; // Incluye '[' y ']'
+    for (size_t i = 0; i < list_size(lista); ++i)
+    {
+        PCB* pcb = list_get(lista, i);
+        char buffer[12]; // Suficiente para almacenar un uint32_t con signo
+        int pid_len = snprintf(buffer, sizeof(buffer), "%u", pcb->PID);
+        longitud_total += pid_len;
+        if (i < list_size(lista) - 1)
+            longitud_total += 2; // Espacio para la coma y el espacio
+    }
 
+    // Reservamos memoria para la cadena
+    char* cadena_pids = (char*)malloc(longitud_total + 1); // +1 para el '\0'
+    if (!cadena_pids)
+    {
+        perror("Error al reservar memoria");
+        exit(EXIT_FAILURE);
+    }
+
+    // Construimos la cadena
+    strcpy(cadena_pids, "[");
+    for (size_t i = 0; i < list_size(lista); ++i)
+    {
+        PCB* pcb = list_get(lista, i);
+        char buffer[12];
+        snprintf(buffer, sizeof(buffer), "%u", pcb->PID);
+        strcat(cadena_pids, buffer);
+        if (i < list_size(lista) - 1)
+            strcat(cadena_pids, ", ");
+    }
+    strcat(cadena_pids, "]");
+
+    return cadena_pids;
+}
+
+/*
 char* estado_proceso_to_string(estado_proceso estado) {
+	char* to_ret = malloc(50);
     switch (estado) {
         case NEW: return "NEW";
         case READY: return "READY";
@@ -141,6 +182,25 @@ char* estado_proceso_to_string(estado_proceso estado) {
         case EXIT: return "EXIT";
         default: return "UNKNOWN";
     }
+}
+*/
+char* estado_proceso_to_string(estado_proceso estado) {
+    char* to_ret = malloc(50);
+    if (!to_ret) {
+        perror("Error al asignar memoria");
+        exit(EXIT_FAILURE);
+    }
+
+    switch (estado) {
+        case NEW: strcpy(to_ret, "NEW"); break;
+        case READY: strcpy(to_ret, "READY"); break;
+        case BLOCKED: strcpy(to_ret, "BLOCKED"); break;
+        case EXEC: strcpy(to_ret, "EXEC"); break;
+        case EXIT: strcpy(to_ret, "EXIT"); break;
+        default: strcpy(to_ret, "UNKNOWN"); break;
+    }
+
+    return to_ret;
 }
 
 
@@ -403,8 +463,9 @@ void liberar_recursos(int pid)
 						char* estado_actual_proceso_desbloqueado = estado_proceso_to_string(actualizado_fin->estado);
 						sem_post(&sem_procesos);
 
-						log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso_desbloqueado->PID, estado_anterior_proceso_desbloqueado, estado_actual_proceso_desbloqueado);
-
+						log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso_desbloqueado->PID, estado_anterior_proceso_desbloqueado, estado_actual_proceso_desbloqueado);	
+						free(estado_anterior_proceso_desbloqueado);
+						free(estado_actual_proceso_desbloqueado);
 
 						if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 						{
@@ -457,6 +518,9 @@ void kernel_escuchar_cpu ()
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", proceso->PID, estado_anterior, estado_actual);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <SUCCESS>\n",proceso->PID);
 			
+				free(estado_anterior);
+				free(estado_actual);
+
 				//ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
 				PCB* actualizado_fin = encontrarProceso(lista_procesos,proceso->PID);
@@ -484,6 +548,9 @@ void kernel_escuchar_cpu ()
 				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_out_of_memory->PID, estado_anterior_out_of_memory, estado_actual_out_of_memory);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <OUT_OF_MEMORT>\n",proceso_out_of_memory->PID);
 
+				free(estado_anterior_out_of_memory);
+				free(estado_actual_out_of_memory);
+
 				// ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
 				PCB* actualizado_fin_out_of_memory = encontrarProceso(lista_procesos, proceso_out_of_memory->PID);
@@ -510,6 +577,10 @@ void kernel_escuchar_cpu ()
 				printf("/////////////-----[EL PROCESO DE PID %d ha FINALIZADO]-----////////////\n", proceso_interrupted_by_user->PID);
 				log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_interrupted_by_user->PID, estado_anterior_interrupted_by_user, estado_actual_interrupted_by_user);
 				log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INTERRUPTED_BY_USER>\n", proceso_interrupted_by_user->PID);
+				
+				free(estado_anterior_interrupted_by_user);
+				free(estado_actual_interrupted_by_user);
+
 				// ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
 				PCB* actualizado_fin_interrupted_by_user = encontrarProceso(lista_procesos, proceso_interrupted_by_user->PID);
@@ -537,6 +608,10 @@ void kernel_escuchar_cpu ()
 
 				
 				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_io->PID,estado_anterior_io,estado_actual_io);
+
+				free(estado_anterior_io);
+				free(estado_actual_io);
+
 
 				//ACTUALIZAMOS EN LA LISTA GENERAL
 				sem_wait(&sem_procesos);
@@ -599,10 +674,15 @@ void kernel_escuchar_cpu ()
 				actualizado_quantum->estado = READY;
 				sem_post(&sem_procesos);
 
-				
-				log_info (kernel_logs_obligatorios, "PID: <%d> - Desalojado por fin de Quantum", proceso_fin_de_quantum->PID);
+				int p = proceso_fin_de_quantum->PID;
+
+				//printf("PID: <%d> - Desalojo por fin de Quantum",proceso_fin_de_quantum->PID);
+				log_info (kernel_logs_obligatorios, "PID: <%d> - Desalojado por fin de Quantum", p);
 
 				log_info(kernel_logs_obligatorios,"PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n",proceso_fin_de_quantum->PID,estado_anterior_fin_de_quantum,estado_actual_fin_de_quantum);
+
+				free(estado_anterior_fin_de_quantum);
+				free(estado_actual_fin_de_quantum);
 
 
 				//el quantum vuelve al valor original
@@ -677,6 +757,10 @@ void kernel_escuchar_cpu ()
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 					
+					free(estado_anterior_proceso_to_end);
+					free(estado_actual_proceso_to_end);
+
+
 					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
@@ -748,6 +832,10 @@ void kernel_escuchar_cpu ()
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
 					
+					free(estado_anterior_proceso_to_end);
+					free(estado_actual_proceso_to_end);
+
+
 					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
@@ -819,6 +907,9 @@ void kernel_escuchar_cpu ()
 
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
+
+					free(estado_anterior_proceso_to_end);
+					free(estado_actual_proceso_to_end);
 
 					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PC);
@@ -894,6 +985,10 @@ void kernel_escuchar_cpu ()
 						log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_recurso->PID, estado_anterior_proceso_wait, estado_actual_proceso_wait);
 						log_info(kernel_logs_obligatorios, "El proceso de PID: <%d> - Ha sido bloqueado porque no hay instancias disponibles del recurso\n",actualizado_wait->PID);
 
+						free(estado_anterior_proceso_wait);
+						free(estado_actual_proceso_wait);
+
+
 						//CPU desocupada
 						sem_wait(&sem_mutex_cpu_ocupada);
 						cpu_ocupada = false;
@@ -943,6 +1038,9 @@ void kernel_escuchar_cpu ()
 
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", actualizado_wait->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_RESOURCE>\n", actualizado_wait->PID);
+
+					free(estado_anterior_proceso_to_end);
+					free(estado_actual_proceso_to_end);
 
 					//EN ESTA PARTE, LO IDEAL SERÍA TENER UNA LISTA GLOBAL DE PROCESOS CON LA CUAL PODAMOS TENER SEGUIMIENTO TOTAL DE ELLOS.
 					//De darse este caso, en dicha lista diríamos que el proceso ha finalizado.
@@ -1006,6 +1104,9 @@ void kernel_escuchar_cpu ()
 
 							log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", actualizado_signal->PID, estado_anterior_proceso_desbloqueado, estado_actual_proceso_desbloqueado);
 
+							free(estado_anterior_proceso_desbloqueado);
+							free(estado_actual_proceso_desbloqueado);
+
 							if( strcmp(ALGORITMO_PLANIFICACION,"VRR") == 0 )
 							{
 								encolar_procesos_vrr(proceso_desbloqueado);
@@ -1060,6 +1161,9 @@ void kernel_escuchar_cpu ()
 
 					log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", actualizado_signal->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 					log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_RESOURCE>\n", actualizado_signal->PID);
+
+					free(estado_anterior_proceso_to_end);
+					free(estado_actual_proceso_to_end);
 
 					PCB* proceso_recurso = malloc(sizeof(PCB));
 					*proceso_recurso = instruccion_recurso_signal->proceso;
@@ -1194,6 +1298,9 @@ void kernel_escuchar_cpu ()
 
 						log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_to_end->PID, estado_anterior_proceso_to_end, estado_actual_proceso_to_end);
 						log_info(kernel_logs_obligatorios, "Finaliza el proceso <%u> - Motivo: <INVALID_INTERFACE>\n", proceso_to_end->PID);
+
+						free(estado_anterior_proceso_to_end);
+						free(estado_actual_proceso_to_end);
 
 						//printf("Este proceso ha terminado\n");
 						liberar_recursos(proceso_to_end->PC);
@@ -1426,6 +1533,9 @@ void kernel_escuchar_entradasalida_mult(int* fd_io)
 				sem_post(&sem_procesos);
 
 				log_info(kernel_logs_obligatorios,"PID: <%u> - Estado Anterior : <%s> - Estado Actual: <%s>\n",proceso_awaken->PID,estado_anterior_awaken,estado_actual_awaken);
+
+				free(estado_anterior_awaken);
+				free(estado_actual_awaken);
 
 				//si el quantum del proceso es mayor a cero, debe ir a la cola de mayor prioridad
 				//meter en ready
@@ -1663,6 +1773,8 @@ void finalizar_proceso (char* pid) {
     char* estado_actual = estado_proceso_to_string(proceso_a_terminar->estado);
 
     log_info(kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>\n", proceso_a_terminar->PID, estado_anterior, estado_actual);
+	free(estado_anterior);
+	free(estado_actual);
 }
 
 
@@ -1675,6 +1787,7 @@ void proceso_estado(){
 		PCB* pcb = list_get(lista_procesos,i);
 		char* estado = estado_proceso_to_string (pcb->estado);
 		printf("El proceso %d esta en estado <%s>\n",pcb->PID,estado);
+		free(estado);
 		
 	}
 	sem_post(&sem_procesos);
@@ -1862,10 +1975,17 @@ void mover_procesos_a_ready()
 
 				queue_push(cola_ready,pcb);	//agrega el proceso a la cola de ready
 				char* cadena_pids = obtener_cadena_pids(cola_ready->elements);
-				log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_pids);
+				char* cadena_copied = malloc(strlen(cadena_pids)+1);
+				strncpy(cadena_copied,cadena_pids,strlen(cadena_pids)+1);
+				log_info (kernel_logs_obligatorios, "Cola Ready: %s\n", cadena_copied);
+				//printf("Cola Ready: %s",cadena_pids);
 				free(cadena_pids);
+				free(cadena_copied);
 				log_info (kernel_logs_obligatorios, "PID: <%d> - Estado Anterior: <%s> - Estado Actual: <%s>", pcb->PID, estado_anterior, estado_actual);
 				
+				free(estado_anterior);
+				free(estado_actual);
+
 				sem_post(&sem_ready); 
 				sem_post(&sem_cant_ready);  // mutex hace wait
 				added = true;

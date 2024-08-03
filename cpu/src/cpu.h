@@ -183,7 +183,7 @@ void agregar_a_TLB(int pid, int numero_Pagina, int marco)
 		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
 
 	}
-	printf("Fin de agregar entradas a la TLB\n");
+	//printf("Fin de agregar entradas a la TLB\n");
 
 }
 
@@ -206,13 +206,15 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 
 		list_remove_and_destroy_element(listaTLB,0,free);
 
+		/*
 		for(int i=0; i < list_size(listaTLB); i++){
 		
-		TLB* entrada_tlb = list_get(listaTLB, i);
+			TLB* entrada_tlb = list_get(listaTLB, i);
 
-		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
+			printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
 
-	}
+		}
+		*/
 		//list_add(listaTLB, entrada_mas_antigua);
 		
 	}   
@@ -271,9 +273,9 @@ void algoritmoSustitucion(int pid, int numero_Pagina, int marco)
 		for(int i=0; i < list_size(listaTLB); i++)
 		{
 		
-		TLB* entrada_tlb = list_get(listaTLB, i);
+			TLB* entrada_tlb = list_get(listaTLB, i);
 
-		printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
+			printf("El proceso %d tiene numero de pagina %d y marco %d\n", entrada_tlb->PID, entrada_tlb->pagina, entrada_tlb->marco);
 
 		}
 	}
@@ -334,7 +336,7 @@ t_list* mmu(int dir_Logica, PCB* proceso, int tamanio)  // 1 dir fisica -> uint8
 		int numero_Pagina = floor(dir_Logica/ *TAM_PAGINA); 					//config.TAM_PAGINA. necesitamos traer de memoria.config
 		int desplazamiento = dir_Logica - numero_Pagina * *TAM_PAGINA;   	//dirección_lógica - número_página * tamaño_página     TAM_PAGINA    
 		
-		printf("El desplazamiento es: %d, numero pagina: %d\n",desplazamiento,numero_Pagina);
+		//printf("El desplazamiento es: %d, numero pagina: %d\n",desplazamiento,numero_Pagina);
 		
 		TLB* retorno_TLB = buscar_en_TLB(numero_Pagina, proceso);			//buscar por numero de pagina y pid de proceso	
 			
@@ -498,7 +500,7 @@ void pedido_escritura_numerico (int direccion_fisica, uint8_t valor_a_escribir ,
 
 void* obtener_registro(char* registro, PCB* proceso)
 {
-	printf("Buscamos el siguiente registro: [%s]\n",registro);
+	//printf("Buscamos el siguiente registro: [%s]\n",registro);
 	if( strcmp(registro,"AX") == 0 )
 	{
 		return (void*)&(proceso->registro.AX); // Devuelve un puntero al valor de AX
@@ -565,7 +567,7 @@ void* obtener_registro(char* registro, PCB* proceso)
 											}
 											else
 											{
-												printf("Error, no se ha encontrado el registro\n");
+												//printf("Error, no se ha encontrado el registro\n");
 											}
 										}
 									}
@@ -982,24 +984,24 @@ void ejecutar_proceso(PCB* proceso)
 				int tamanio;
 		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
 		 		int direc_logica = (int)(*registro_uint8); // Conversión explícita a int *
-		 		printf("El valor del registro encontrado es: %d\n",*registro_uint8);
-		 		printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
+		 		//printf("El valor del registro encontrado es: %d\n",*registro_uint8);
+		 		//printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
 		 		//GUARDAMOS EL TAMAÑO
 		 		if( esRegistroUint8(instruccion_split[3]) )
 		 		{
 		 			uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);
 		 			tamanio = (int)(*registro_uint8); // Conversión explícita a int *
-		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 		//	printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+		 		//	printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 		}
 		 		else
 		 		{
 		 			uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);
 		 			tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
-		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 		//	printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+		 		//	printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 		}
 
@@ -1038,25 +1040,25 @@ void ejecutar_proceso(PCB* proceso)
 		 			//GUARDAMOS LA DIRECCION FÍSICA
 					int tamanio;
 		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
-		 			printf("El valor del registro encontrado es: %d\n",*registro_uint32);
+		 			//printf("El valor del registro encontrado es: %d\n",*registro_uint32);
 		 			int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
-		 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
+		 			//printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
 		 			//GUARDAMOS EL TAMAÑO
 		 			if( esRegistroUint8(instruccion_split[3]) )
 		 			{
 		 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
 						tamanio = (int)(*registro_uint8); // Conversión explícita a int *
-		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 			//	printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+		 			//	printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 			}
 		 			else
 		 			{
 		 				uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
 		 				tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
-		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 			//	printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+		 			//	printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 			}
 					
@@ -1127,24 +1129,24 @@ void ejecutar_proceso(PCB* proceso)
 				int tamanio;
 		 		uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[2], proceso);
 		 		int direc_logica = (int)(*registro_uint8); // Conversión explícita a int *
-		 		printf("El valor del registro encontrado es: %d\n",*registro_uint8);
-		 		printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
+		 	//	printf("El valor del registro encontrado es: %d\n",*registro_uint8);
+		 	//	printf("al haberlo transformado en int quedó: %d\n",direc_logica); //no se realiza la conversion correctamente
 
 		 		//GUARDAMOS EL TAMAÑO
 		 		if( esRegistroUint8(instruccion_split[3]) )
 		 		{
 		 			uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);
 		 			tamanio = (int)(*registro_uint8); // Conversión explícita a int *
-		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 	//		printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+		 	//		printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 		}
 		 		else
 		 		{
 		 			uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);
 		 			tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
-		 			printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-		 			printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 		//	printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+		 		//	printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 		}
 
@@ -1183,25 +1185,25 @@ void ejecutar_proceso(PCB* proceso)
 		 			//GUARDAMOS LA DIRECCION FÍSICA
 					int tamanio;
 		 			uint32_t *registro_uint32 = (uint32_t*)obtener_registro(instruccion_split[2], proceso);
-		 			printf("El valor del registro encontrado es: %d\n",*registro_uint32);
+		 		//	printf("El valor del registro encontrado es: %d\n",*registro_uint32);
 		 			int direc_logica = (int)(*registro_uint32); // Conversión explícita a int *
-		 			printf("al haberlo transformado en int quedó: %d\n",direc_logica);
+		 		//	printf("al haberlo transformado en int quedó: %d\n",direc_logica);
 
 		 			//GUARDAMOS EL TAMAÑO
 		 			if( esRegistroUint8(instruccion_split[3]) )
 		 			{
 		 				uint8_t *registro_uint8 = (uint8_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
 						tamanio = (int)(*registro_uint8); // Conversión explícita a int *
-		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
-		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 		//		printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint8 );
+		 		//		printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 			}
 		 			else
 		 			{
 		 				uint32_t *registro_uint32_2 = (uint32_t*)obtener_registro(instruccion_split[3], proceso);	//no entinedo porque le pasamos el tamaño de registro a mmu
 		 				tamanio = (int)(*registro_uint32_2); // Conversión explícita a int *
-		 				printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
-		 				printf("al haberlo transformado en int quedó: %d\n",tamanio);
+		 		//		printf("El valor del registro encontrado TAMANIO: %d\n",*registro_uint32_2);
+		 		//		printf("al haberlo transformado en int quedó: %d\n",tamanio);
 
 		 			}
 					
@@ -1307,7 +1309,7 @@ void ejecutar_proceso(PCB* proceso)
 						
 							uint32_t valor_uint32 = ((uint32_t)valores_leidos[3] << 24) | ((uint32_t)valores_leidos[2] << 16) | ((uint32_t)valores_leidos[1] << 8) | valores_leidos[0];
 							*registro_datos = valor_uint32;
-							printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
+						//	printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
 		 				}
 		 			}
 				 
@@ -1359,7 +1361,7 @@ void ejecutar_proceso(PCB* proceso)
 
 							uint32_t valor_uint32 = ((uint32_t)valores_leidos[3] << 24) | ((uint32_t)valores_leidos[2] << 16) | ((uint32_t)valores_leidos[1] << 8) | valores_leidos[0];
 							*registro_datos = valor_uint32;
-							printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
+						//	printf("El valor registro de datos ha quedado de la siguinte forma: %u\n",*registro_datos);
 		 				}
 		 			}
 		 		}
@@ -1394,8 +1396,8 @@ void ejecutar_proceso(PCB* proceso)
 						direccion_fisica = list_get(direcciones_fisicas,i);
 					}
 
-					printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
-					printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
+				//	printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
+				//	printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
 
 					pedido_escritura_numerico (direccion_fisica, *registro_datos, proceso->PID);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
 					sem_wait(&sem_escritura);
@@ -1451,8 +1453,8 @@ void ejecutar_proceso(PCB* proceso)
 							direccion_fisica = list_get(direcciones_fisicas,i);
 						}
 
-						printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
-						printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
+					//	printf("Enviaremos lo siguiente: %d\n",direccion_fisica);//para hacer pruebas
+					//	printf("Enviaremos lo siguiente: %d\n",*registro_datos);//para hacer pruebas
 
 						pedido_escritura_numerico (direccion_fisica, *registro_datos,proceso->PID);//para pasarle a memoria la direccion fisica y lo que tiene que escribir en esa direccion
 						sem_wait(&sem_escritura);
@@ -1477,7 +1479,7 @@ void ejecutar_proceso(PCB* proceso)
 							for(int i=0; i < list_size(direcciones_fisicas);i++)
 							{
 								int direccion_fisica = list_get(direcciones_fisicas,i);
-								printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
+							//	printf("La dirección física donde escribiremos dicho byte es: %d\n",direccion_fisica); 
 								pedido_escritura_numerico (direccion_fisica, byte[i],proceso->PID);//devuelve el valor de lo que esta en esa posicion de memoria		
 								sem_wait(&sem_escritura);
 								log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d> - Valor: <%u>", proceso->PID, direccion_fisica, byte[i]);
@@ -1508,15 +1510,18 @@ void ejecutar_proceso(PCB* proceso)
 			{
 				//enviamos a memoria dos enteros
 				int d1 = list_get(direcciones_fisicas,i);
-				printf("El destino a enviar es: %d\n",d1);
+				//printf("El destino a enviar es: %d\n",d1);
 				int d2 = list_get(direcciones_fisicas_destino,i);
-				printf("El destino a enviar es: %d\n",d2);
+				//printf("El destino a enviar es: %d\n",d2);
 				enviarDirecciones(d1, d2, proceso->PID);
 				//esperamos a recibir la señal para continuar
 				sem_wait(&sem_escritura);
+				log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <LEER> - Dirección Física: <%d>",proceso->PID, d1);
+				log_info(cpu_logs_obligatorios, "PID: <%d> - Acción: <ESCRIBIR> - Dirección Física: <%d>", proceso->PID, d2);
+
 			}
 			
-			printf("Copia finalizada\n");
+			//printf("Copia finalizada\n");
 			list_destroy(direcciones_fisicas);
 			list_destroy(direcciones_fisicas_destino);
 		} 
@@ -1617,7 +1622,7 @@ void ejecutar_proceso(PCB* proceso)
 			else
 			{
 				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[3],proceso);
-				printf("el valor de %d\n",*dt);
+			//	printf("el valor de %d\n",*dt);
 				*d_logica = *dt;
 			}
 			printf("El valor que nos ha quedado es: %d\n",*d_logica);
@@ -1630,10 +1635,10 @@ void ejecutar_proceso(PCB* proceso)
 			else
 			{
 				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[4],proceso);
-				printf("el valor de %d\n",*dt);
+			//	printf("el valor de %d\n",*dt);
 				*tamanio = *dt;
 			}
-			printf("El valor que nos ha quedado es: %d\n",*tamanio);
+		//	printf("El valor que nos ha quedado es: %d\n",*tamanio);
 
 			uint32_t* pointer_archivo = malloc(sizeof(uint32_t));
 			if( esRegistroUint32(instruccion_split[5]) )
@@ -1643,7 +1648,7 @@ void ejecutar_proceso(PCB* proceso)
 			else
 			{
 				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[5],proceso);
-				printf("el valor de %d\n",*dt);
+			//	printf("el valor de %d\n",*dt);
 				*pointer_archivo = *dt;
 			}
 			printf("El valor que nos ha quedado es: %d\n",*pointer_archivo);
@@ -1667,7 +1672,7 @@ void ejecutar_proceso(PCB* proceso)
 				for(int i=0; i < list_size(direcciones_fisicas);i++)
 				{
 					int direc_fisica = list_get(direcciones_fisicas,i);
-					printf("La direccion fisica %d es: %d\n",i, direc_fisica);
+				//	printf("La direccion fisica %d es: %d\n",i, direc_fisica);
 					//contenamos la direccion fisica
 					char direccionFisica[20];
 					sprintf(direccionFisica, "%d", direc_fisica);
@@ -1715,10 +1720,10 @@ void ejecutar_proceso(PCB* proceso)
 			else
 			{
 				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[3],proceso);
-				printf("el valor de %d\n",*dt);
+			//	printf("el valor de %d\n",*dt);
 				*d_logica = *dt;
 			}
-			printf("El valor que nos ha quedado es: %d\n",*d_logica);
+			//printf("El valor que nos ha quedado es: %d\n",*d_logica);
 
 			uint32_t* tamanio = malloc(sizeof(uint32_t));
 			if( esRegistroUint32(instruccion_split[4]) )
@@ -1728,10 +1733,10 @@ void ejecutar_proceso(PCB* proceso)
 			else
 			{
 				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[4],proceso);
-				printf("el valor de %d\n",*dt);
+			//	printf("el valor de %d\n",*dt);
 				*tamanio = *dt;
 			}
-			printf("El valor que nos ha quedado es: %d\n",*tamanio);
+			//printf("El valor que nos ha quedado es: %d\n",*tamanio);
 
 			uint32_t* pointer_archivo = malloc(sizeof(uint32_t));
 			if( esRegistroUint32(instruccion_split[5]) )
@@ -1741,10 +1746,10 @@ void ejecutar_proceso(PCB* proceso)
 			else
 			{
 				uint8_t* dt = (uint8_t*) obtener_registro(instruccion_split[5],proceso);
-				printf("el valor de %d\n",*dt);
+			//	printf("el valor de %d\n",*dt);
 				*pointer_archivo = *dt;
 			}
-			printf("El valor que nos ha quedado es: %d\n",*pointer_archivo);
+			//printf("El valor que nos ha quedado es: %d\n",*pointer_archivo);
 
 			direcciones_fisicas = mmu(*d_logica, proceso, *tamanio);
 			char* instruccion_to_send = malloc( strlen(instruccion) + 1 + 20*list_size(direcciones_fisicas));
@@ -1969,7 +1974,7 @@ void cpu_escuchar_kernel_interrupt (){
 				//
 				break;
 			case PROCESO:
-				printf("Hola recibi algo por interrupt\n");
+			//	printf("Hola recibi algo por interrupt\n");
 			    break;
 			case -1:
 				log_error(cpu_logger, "El cliente Kernel se desconecto. Terminando servidor\n");
@@ -2087,7 +2092,7 @@ void cpu_escuchar_memoria (){
 			free(paquete->buffer);
 			free(paquete);
 		}
-		printf("Llegué hasta antes el final de escuchar memoria\n");
+	//	printf("Llegué hasta antes el final de escuchar memoria\n");
 }
 
 

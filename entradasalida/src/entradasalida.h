@@ -1710,6 +1710,7 @@ void entradasalida_escuchar_kernel (){
                 }
 				memcpy(instruccion_fs_read, paquete->buffer->stream + sizeof(int), *tamanio_instruccion_fs_read);
 				char** instruccion_fs_partida_read = string_split(instruccion_fs_read, " ");
+				printf("La instruccion que ha llegado es %s\n",instruccion_fs_read);
 
 				//IO_FS_READ FS Goku.config AX ECX EDX //base//0 //tamanio//14 11 12 13 14 15 16 17 18 19 20 21 22 23 24
 				log_info (entradasalida_logger, "PID: <%d> - Leer Archivo: <%s> - Tamaño a Leer: <%s> - Puntero Archivo: <%s>",*pid_actual,instruccion_fs_partida_read[2],instruccion_fs_partida_read[7],instruccion_fs_partida_read[6]);
