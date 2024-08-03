@@ -493,7 +493,7 @@ void kernel_escuchar_cpu ()
 				liberar_recursos(proceso_out_of_memory->PID);
 				enviarPCB(proceso_out_of_memory, fd_memoria, PROCESOFIN);
 
-				free(proceso_out_of_memory->path);
+				//free(proceso_out_of_memory->path);
 				free(proceso_out_of_memory);
 
 				sem_wait(&sem_mutex_cpu_ocupada);
@@ -680,7 +680,7 @@ void kernel_escuchar_cpu ()
 					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
-					free(proceso_to_end->path);
+					//free(proceso_to_end->path);
 					free(proceso_to_end);
 					free(instruccion_io_gen->instruccion);
 					free(instruccion_io_gen);
@@ -751,7 +751,7 @@ void kernel_escuchar_cpu ()
 					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PID);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
-					free(proceso_to_end->path);
+					//free(proceso_to_end->path);
 					free(proceso_to_end);
 
 				}
@@ -823,7 +823,7 @@ void kernel_escuchar_cpu ()
 					//printf("Este proceso ha terminado\n");
 					liberar_recursos(proceso_to_end->PC);
 					enviarPCB(proceso_to_end,fd_memoria,PROCESOFIN);
-					free(proceso_to_end->path);
+					//free(proceso_to_end->path);
 					free(proceso_to_end);
 				}
 				sem_wait(&sem_mutex_cpu_ocupada);
@@ -1198,7 +1198,7 @@ void kernel_escuchar_cpu ()
 						//printf("Este proceso ha terminado\n");
 						liberar_recursos(proceso_to_end->PC);
 						enviarPCB(proceso_to_end, fd_memoria, PROCESOFIN);
-						free(proceso_to_end->path);
+						//free(proceso_to_end->path);
 						free(proceso_to_end);
 					}
 
